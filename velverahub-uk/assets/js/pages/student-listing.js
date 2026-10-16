@@ -132,12 +132,34 @@
             : 'webp';
         const path = `${productId}/${window.crypto.randomUUID()}.${extension}`;
         const bucket = mediaType === 'video' ? 'product-videos' : 'product-images';
-        const result = await supabase.storage.from(bucket).upload(path, blob, {
-            contentType: blob.type,
-            cacheControl: '3600',
-            upsert: false
-        });
-        if (result.error) throw result.error;
+        try {
+            const result = await supabase.storage.from(bucket).upload(path, blob, {
+                contentType: blob.type,
+                cacheControl: '3600',
+                upsert: false
+            });
+            if (result.error) throw result.error;
+        } catch (error) {
+            const requestId = window.AsyncFeedback?.createRequestId('student-listing-media-upload') || 'media-upload';
+            const diagnostic = window.Observability?.formatErrorDiagnostic?.(error) ||
+                'Storage request failed; diagnostic formatter is unavailable.';
+            const status = Number(error?.statusCode ?? error?.status);
+            console.error('[VelveraHub] Product media upload failed', {
+                requestId,
+                bucket,
+                mediaType,
+                httpStatus: Number.isFinite(status) && status > 0 ? status : null,
+                diagnostic
+            });
+            window.AsyncFeedback?.log('student-listing-media-upload', requestId, error, {
+                source: 'storage-upload',
+                action: 'student-listing-media-upload',
+                bucket,
+                mediaType,
+                stage: 'upload'
+            });
+            throw error;
+        }
         const publicUrl = supabase.storage.from(bucket).getPublicUrl(path)?.data?.publicUrl;
         if (!publicUrl) {
             try {

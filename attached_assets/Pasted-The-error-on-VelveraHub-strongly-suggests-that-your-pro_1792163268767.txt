@@ -1,0 +1,84 @@
+The error on VelveraHub strongly suggests that your product listing form is working, but the image-upload process to Supabase Storage is failing.
+
+Because you can publish a listing without product images, the problem is probably not the entire listing system. The failure is likely happening when the website tries to upload the images before saving or completing the listing.
+
+Since VelveraHub uses a static Cloudflare Pages frontend connected directly to Supabase, I'd investigate the following areas first.
+
+### The 5 most likely causes
+
+1\. Supabase Storage policies (RLS)
+
+The Storage bucket may exist, but its policies may not allow authenticated sellers to upload files. For example, a policy might permit reading images but deny `INSERT` operations when sellers try to upload.
+
+Check first
+
+2\. Incorrect bucket name or configuration
+
+Your code may be uploading to a bucket that doesn't exist, uses a different name, or isn't configured as expected in the live Supabase project.
+
+3\. Seller authentication or ownership rules
+
+The upload may be rejected because the seller's session is missing or expired, or because the Storage policy expects a user ID or folder structure that doesn't match the actual upload path.
+
+4\. File restrictions or upload limits
+
+The image may exceed the bucket's file-size limit or use an unsupported format. This is especially worth checking if small images work but larger ones fail.
+
+5\. Frontend upload or error-handling bug
+
+Your listing code might be using the wrong Supabase client, uploading to an incorrect path, or hiding the actual Supabase error behind that generic message.
+
+One important detail: Supabase's documentation explains that even when an upload policy allows `INSERT`, uploads can still fail if the required `SELECT` policy is missing, especially when the upload uses certain return or upsert operations. So don't assume the fix is simply to make the bucket public.
+
+### How I recommend fixing this on VelveraHub
+
+Ask your coding agent to investigate the live upload flow before changing any policies.
+
+**Task: Diagnose and fix VelveraHub product image uploads in production**
+
+Investigate and permanently resolve this error when sellers publish product listings with images:
+
+`Your media could not be saved. Check your connection and the live Supabase Storage policies, then try again.`
+
+Listings without images publish successfully.
+
+**Architecture constraints**
+- Keep the existing static Cloudflare Pages architecture.
+- Use the existing direct Supabase client integration.
+- Do not introduce Cloudflare Workers, a new backend, or an `API_ORIGIN`.
+- Do not expose Supabase service-role or secret keys in frontend code.
+- Do not weaken security policies or grant unrestricted Storage access.
+
+**Investigation steps**
+1. Trace the complete listing publication flow, from image selection through Storage upload and listing database insertion.
+2. Identify the exact production Supabase project, Storage bucket, upload path, authenticated user context, upload method, and any `upsert` option.
+3. Capture the actual Supabase Storage error, HTTP status, error code, and message. Replace generic-only error handling with useful diagnostic logging that does not expose secrets, tokens, or sensitive user information.
+4. Inspect the live `storage.objects` RLS policies for the relevant bucket. Check `INSERT`, `SELECT`, `UPDATE`, and `DELETE` requirements against the actual upload operation. Verify bucket restrictions, seller ownership, folder-name assumptions, and whether the upload path matches the policies.
+5. Check the bucket's existence, allowed MIME types, maximum file size, duplicate filenames, upload headers, Supabase URL and public client key, authentication session, and browser network errors.
+6. Verify whether image uploads use `upsert: true` or another operation requiring additional permissions.
+7. Fix the actual root cause using the least-privilege policy and code changes. Do not blindly add permissive policies or modify unrelated production policies.
+
+**Production acceptance tests**
+- Authenticated seller can publish a listing with one image and with multiple images.
+- Seller can publish without images if images remain optional.
+- Unsupported file types and oversized files receive clear validation messages.
+- Unauthorized users cannot upload into another seller's restricted folder or delete another seller's media.
+- Listing records reference successfully uploaded images, and failed uploads do not leave misleading published listings or orphaned files.
+- Test the live deployment, not just local development.
+- Preserve existing listing, authentication, seller dashboard, and admin functionality.
+
+Report the exact root cause, files changed, any SQL migration or Storage policy changes, and the production test results. Do not claim the issue is fixed until the live image-upload flow has been tested successfully.
+
+### Your next step
+
+To identify the exact cause rather than guessing, tell me one thing:
+
+Does this happen with every product image, even a small JPG/PNG, or only with certain images?
+
+* Every image fails: I'd investigate the live Storage policies, bucket configuration, and upload request first.
+
+* Only large images fail: I'd investigate file-size limits and upload handling.
+
+* Only some formats fail: I'd check MIME-type restrictions and file validation.
+
+We can then narrow this down without unnecessarily changing your production database or security policies.

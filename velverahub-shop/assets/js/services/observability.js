@@ -59,6 +59,21 @@
             .slice(0, 1200);
     }
 
+    function errorStatus(error) {
+        const value = Number(error?.statusCode ?? error?.status);
+        return Number.isFinite(value) && value > 0 ? value : null;
+    }
+
+    function formatErrorDiagnostic(error) {
+        const parts = [error?.message || error];
+        if (error?.details) parts.push(`details: ${error.details}`);
+        if (error?.hint) parts.push(`hint: ${error.hint}`);
+        if (error?.code) parts.push(`code: ${error.code}`);
+        const status = errorStatus(error);
+        if (status) parts.push(`http_status: ${status}`);
+        return cleanDiagnostic(parts.filter(Boolean).join(' | '));
+    }
+
     function track(name, properties = {}) {
         if (!allowedEvents.has(name) || sent >= MAX_EVENTS_PER_PAGE) return;
         sent += 1;
@@ -92,10 +107,11 @@
 
     function reportError(scope, requestId, error, context = {}) {
         if (!error) return requestId;
-        const diagnostic = cleanDiagnostic(error?.message || error);
+        const diagnostic = formatErrorDiagnostic(error);
         if (!diagnostic) return requestId;
         const safeScope = String(scope || 'client').replace(/[^a-z0-9_-]/gi, '-').slice(0, 80);
-        const errorCode = String(error?.code || error?.status || '').replace(/[^a-z0-9_.-]/gi, '').slice(0, 80);
+        const errorCode = String(error?.code || '').replace(/[^a-z0-9_.-]/gi, '').slice(0, 80);
+        const httpStatus = errorStatus(error);
         const dedupeKey = `${safeRoute()}|${errorCode}|${diagnostic}`;
         const now = Date.now();
         if ((recentErrors.get(dedupeKey) || 0) > now - 30000) return requestId;
@@ -109,9 +125,13 @@
             source: context.source || 'handled',
             errorName: String(error?.name || 'Error').slice(0, 80),
             errorCode,
+            httpStatus,
             diagnostic,
             clientRequestId: String(requestId || `client-error-${now.toString(36)}-${++errorSequence}`).slice(0, 120),
-            action: context.action || ''
+            action: context.action || '',
+            bucket: context.bucket || '',
+            mediaType: context.mediaType || '',
+            stage: context.stage || ''
         });
     }
 
@@ -172,6 +192,7 @@
     const Observability = {
         track,
         reportError,
+        formatErrorDiagnostic,
         userMessage(error, fallback = 'We could not complete that request. Please try again.') {
             const message = String(error?.message || error || '').toLowerCase();
             if (/invalid login credentials|invalid email or password|email or password is incorrect/.test(message)) {
