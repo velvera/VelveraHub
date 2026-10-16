@@ -1043,6 +1043,10 @@ button.cs-location-inline-back.is-processing {
     min-height: 56px;
 }
 
+.cs-panel--categories .cs-category-row.cs-category-subcategory.has-image {
+    grid-template-columns: 30px minmax(0, 1fr) auto;
+}
+
 .cs-panel--categories .cs-category-row:hover,
 .cs-panel--categories .cs-category-row:focus-visible,
 .cs-panel--categories .cs-category-row.is-active {
@@ -1096,6 +1100,12 @@ button.cs-location-inline-back.is-processing {
     background: #f5f6f7;
     color: #84929a;
     font-size: 0.9rem;
+}
+
+.cs-category-icon--subcategory {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
 }
 
 .cs-category-copy {

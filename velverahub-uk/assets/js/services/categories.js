@@ -6,6 +6,7 @@
             id: 'baby-kids',
             name: 'Babies & Kids',
             image: '/img/home-category/babies-and-kids.png',
+            subcategoryImageDirectory: '/img/subcategories/baby-kids',
             icon: 'fa-baby',
             subcategories: [
                 "Baby & Kids' Accessories",
@@ -25,6 +26,7 @@
             id: 'beauty',
             name: 'Beauty & Personal Care',
             image: '/img/home-category/beauty-and-personal-care.png',
+            subcategoryImageDirectory: '/img/subcategories/beauty',
             icon: 'fa-spa',
             subcategories: [
                 'Body Care',
@@ -47,6 +49,7 @@
             id: 'business-industry',
             name: 'Business & Industry',
             image: '/img/home-category/business-and-industry.png',
+            subcategoryImageDirectory: '/img/subcategories/business-industry',
             icon: 'fa-briefcase',
             subcategories: ['Business for Sale & Investment', 'Wholesale & Bulk']
         },
@@ -54,6 +57,7 @@
             id: 'commercial-equipment-tools',
             name: 'Commercial Equipment & Tools',
             image: '/img/home-category/commercial-equipment-and-tools.png',
+            subcategoryImageDirectory: '/img/subcategories/commercial-equipment-tools',
             icon: 'fa-toolbox',
             subcategories: [
                 'Manufacturing Equipment',
@@ -72,6 +76,7 @@
             id: 'electronics',
             name: 'Electronics',
             image: '/img/home-category/electronics.png',
+            subcategoryImageDirectory: '/img/subcategories/electronics',
             icon: 'fa-laptop',
             subcategories: [
                 'Accessories & Supplies for Electronics',
@@ -370,6 +375,22 @@
         return childValue(category, subcategoryName);
     }
 
+    function subcategoryImageSlug(value) {
+        return String(value || '')
+            .toLowerCase()
+            .replace(/[’']/g, '')
+            .replace(/&/g, ' and ')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+    }
+
+    function getSubcategoryImage(categoryId, subcategoryName) {
+        const category = byId.get(String(categoryId || ''));
+        if (!category?.subcategoryImageDirectory ||
+            !category.subcategories.includes(subcategoryName)) return null;
+        return `${category.subcategoryImageDirectory}/${subcategoryImageSlug(subcategoryName)}.png`;
+    }
+
     function populateSelect(select) {
         if (!select || select.dataset.categoryEnhanced === 'true') return;
         const currentValue = select.value;
@@ -441,6 +462,7 @@
         getCategory,
         getValues,
         getCategoryValue,
+        getSubcategoryImage,
         labelFor,
         initialize
     };

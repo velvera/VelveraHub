@@ -6,6 +6,7 @@
     "test:product-meta": "node scripts/product-meta-function.test.mjs",
     "test:messages-moderation": "node scripts/messages-moderation.test.mjs",
     "test:storage-policy-safety": "node scripts/storage-policy-safety.test.mjs",
+    "test:category-images": "node scripts/category-subcategory-images.test.mjs",
     "test:domain-routing": "node scripts/domain-routing.test.mjs",
     "auth:browser": "node scripts/authenticated-browser.mjs",
     "auth:seller:acceptance": "node scripts/authenticated-browser.mjs --seller-acceptance",

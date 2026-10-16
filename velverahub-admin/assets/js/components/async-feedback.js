@@ -13,7 +13,7 @@
         const details = { request_id: requestId, scope, ...safeContext };
         if (error) {
             window.Observability?.reportError(scope, requestId, error, {
-                source: recoverable ? 'handled-fallback' : 'handled',
+                source: safeContext.source || (recoverable ? 'handled-fallback' : 'handled'),
                 action: safeContext.action || '',
                 bucket: safeContext.bucket || '',
                 mediaType: safeContext.mediaType || '',

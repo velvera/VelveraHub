@@ -468,6 +468,10 @@
             options = options || {};
             var categoryService = window.VelveraCategories;
             if (!category || !categoryService) return;
+            var subcategoryImage = subcategory
+                ? categoryService.getSubcategoryImage?.(category.id, subcategory)
+                : null;
+            var showSubcategoryImage = Boolean(subcategoryImage && !options.parentChoice && !options.omitIcon);
 
             var value = options.value || (subcategory
                 ? categoryService.getCategoryValue(category.id, subcategory)
@@ -477,6 +481,7 @@
             var row = document.createElement('li');
             row.className = 'cs-option cs-category-row' +
                 (subcategory ? ' cs-category-subcategory' : '') +
+                (showSubcategoryImage ? ' has-image' : '') +
                 (options.parentChoice ? ' cs-category-parent-option' : '') +
                 (value === select.value ? ' is-selected' : '');
             row.setAttribute('role', 'option');
@@ -484,12 +489,14 @@
             row.tabIndex = 0;
             row.dataset.value = value;
 
-            if (!subcategory && !options.parentChoice && !options.omitIcon) {
+            if ((!subcategory || showSubcategoryImage) && !options.parentChoice && !options.omitIcon) {
                 var icon = document.createElement('span');
-                icon.className = 'cs-category-icon';
-                if (category.image) {
+                icon.className = 'cs-category-icon' +
+                    (subcategory ? ' cs-category-icon--subcategory' : '');
+                var imageSource = subcategory ? subcategoryImage : category.image;
+                if (imageSource) {
                     var image = document.createElement('img');
-                    image.src = category.image;
+                    image.src = imageSource;
                     image.alt = '';
                     image.loading = 'lazy';
                     image.addEventListener('error', function () {
