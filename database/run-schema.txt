@@ -30,6 +30,8 @@ Apply these separately only when the stated condition applies:
 - database/account-deletion.sql — legacy databases that predate the deletion-request objects in schema.sql; apply after schema.sql and before cloudflare-supabase-direct.sql
 - database/fix-product-media-delete-ambiguity.sql — existing databases affected by PostgreSQL error 42702 in product-media cleanup; apply after supabase-rls.sql
 - database/storage-public-bucket-list-policy-fix.sql — existing projects with legacy broad SELECT policies on the public product-media buckets; apply after supabase-rls.sql
+- database/product-image-upload-diagnostics.sql — read-only bucket, policy, helper-function, privilege, and trigger inspection when seller photo uploads fail
+- database/product-image-upload-policy-fix.sql — guarded, authenticated-only INSERT-policy repair; run only after diagnostics and only when its preflight conditions pass
 
 After all applicable migrations, run database/safety-verification.sql — read-only checks; it does not change data.
 

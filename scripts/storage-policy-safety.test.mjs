@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import vm from 'node:vm';
 
 const read = (path) => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const rls = read('database/supabase-rls.sql');
 const focusedFix = read('database/storage-public-bucket-list-policy-fix.sql');
 const verification = read('database/safety-verification.sql');
+const uploadDiagnostics = read('database/product-image-upload-diagnostics.sql');
+const uploadPolicyFix = read('database/product-image-upload-policy-fix.sql');
 const studentListing = read('assets/js/pages/student-listing.js');
 const observability = read('assets/js/services/observability.js');
 function collectDatabaseSql(directoryUrl, relativeDirectory = 'database') {
@@ -48,5 +51,51 @@ assert.match(studentListing, /student-listing-media-upload/, 'storage upload fai
 assert.match(observability, /error\?\.details/, 'safe diagnostics must retain server-provided error details');
 assert.match(observability, /error\?\.hint/, 'safe diagnostics must retain server-provided error hints');
 assert.match(observability, /httpStatus/, 'safe diagnostics must retain the HTTP status separately');
+assert.match(observability, /\[storage object path\]/, 'storage object names must be redacted from diagnostics');
+assert.match(studentListing, /stage:\s*failureStage/, 'submit diagnostics must include the failing pipeline stage');
+assert.match(studentListing, /Listing media metadata insert failed/, 'metadata failures must be visible in the browser console');
+assert.match(studentListing, /mediaCount:\s*failureMediaCount/, 'submit diagnostics must include the selected media count');
+
+assert.match(
+    rls,
+    /'product-images',\s*'product-images',\s*TRUE,\s*5242880,\s*ARRAY\['image\/webp'\]::text\[\]/,
+    'the local bucket configuration must match the WebP/5 MiB uploader constraints',
+);
+assert.match(rls, /CREATE POLICY "students can upload listing images"/);
+assert.match(rls, /CREATE POLICY "restrict product media uploads"/);
+assert.match(rls, /public\.can_upload_product_media\(bucket_id, name\)/);
+assert.match(rls, /CREATE POLICY "students can manage their listing images"/);
+assert.match(verification, /product-images bucket matches WebP upload limits/);
+assert.match(verification, /authenticated student product-image upload policy checks ownership/);
+assert.match(verification, /product media has no anon or PUBLIC insert policy/);
+
+assert.doesNotMatch(
+    uploadDiagnostics,
+    /^\s*(?:INSERT|UPDATE|DELETE|CREATE|DROP|ALTER|GRANT|REVOKE)\b/im,
+    'the production diagnostics SQL must remain read-only',
+);
+assert.match(uploadDiagnostics, /FROM pg_policies/);
+assert.match(uploadDiagnostics, /FROM storage\.buckets/);
+assert.match(uploadPolicyFix, /ON storage\.objects AS RESTRICTIVE/);
+assert.match(uploadPolicyFix, /public\.can_upload_product_media\(bucket_id, name\)/);
+assert.match(uploadPolicyFix, /public\.can_manage_product_media\(product_id\)/);
+assert.match(uploadPolicyFix, /An anon\/PUBLIC INSERT policy exists/);
+assert.doesNotMatch(uploadPolicyFix, /GRANT\s+SELECT|CREATE\s+POLICY[\s\S]*?FOR SELECT/i);
+assert.doesNotMatch(uploadPolicyFix, /UPDATE\s+storage\.buckets/i);
+
+const vmContext = {
+    window: { location: { origin: 'https://example.test', pathname: '/veeve/sell.html' } },
+    document: { addEventListener() {} },
+};
+vm.runInNewContext(observability, vmContext);
+const diagnostic = vmContext.window.Observability.formatErrorDiagnostic({
+    message: 'Upload denied for 123e4567-e89b-12d3-a456-426614174000/123e4567-e89b-42d3-a456-426614174000.webp',
+    details: 'Bearer sensitive-value',
+    code: '42501',
+    statusCode: 403,
+});
+assert.match(diagnostic, /\[storage object path\]/);
+assert.doesNotMatch(diagnostic, /123e4567-e89b/);
+assert.doesNotMatch(diagnostic, /sensitive-value/);
 
 console.log('PASS public storage URLs remain usable without broad product-media bucket listing policies');

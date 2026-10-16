@@ -17,7 +17,8 @@
                 action: safeContext.action || '',
                 bucket: safeContext.bucket || '',
                 mediaType: safeContext.mediaType || '',
-                stage: safeContext.stage || ''
+                stage: safeContext.stage || '',
+                mediaCount: Number.isFinite(safeContext.mediaCount) ? safeContext.mediaCount : null
             });
         }
         return requestId;

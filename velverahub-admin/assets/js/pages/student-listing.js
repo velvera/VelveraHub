@@ -118,7 +118,7 @@
         return file;
     }
 
-    async function uploadMedia(supabase, blob, productId, mediaType) {
+    async function uploadMedia(supabase, blob, productId, mediaType, mediaCount = 1) {
         const allowedTypes = mediaType === 'video' ? VIDEO_TYPES : new Set(['image/webp']);
         const maxBytes = mediaType === 'video' ? MAX_VIDEO_BYTES : MAX_IMAGE_UPLOAD_BYTES;
         if (!allowedTypes.has(blob.type) || !blob.size || blob.size > maxBytes) {
@@ -148,6 +148,7 @@
                 requestId,
                 bucket,
                 mediaType,
+                mediaCount,
                 httpStatus: Number.isFinite(status) && status > 0 ? status : null,
                 diagnostic
             });
@@ -156,7 +157,8 @@
                 action: 'student-listing-media-upload',
                 bucket,
                 mediaType,
-                stage: 'upload'
+                stage: 'upload',
+                mediaCount
             });
             throw error;
         }
@@ -331,6 +333,8 @@
             submit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Publishing…';
             let productId = null;
             let failureStage = 'listing details';
+            let failureMediaType = '';
+            let failureMediaCount = 0;
             const uploadedMedia = [];
             try {
                 const profile = window.AuthService?.getProfile() || {};
@@ -339,17 +343,21 @@
                 const stock = Number(data.get('stock'));
                 if (!Number.isFinite(price) || price < 0 || !Number.isInteger(stock) || stock < 1) throw new Error('Enter a valid price and available quantity.');
                 const selectedFiles = Array.from(imageInput.files || []);
+                failureMediaCount = selectedFiles.length;
                 const selectionError = mediaSelectionError(selectedFiles);
                 if (selectionError) throw new Error(selectionError);
                 const preparedMedia = [];
                 failureStage = 'media preparation';
                 for (const file of selectedFiles) {
                     if (IMAGE_TYPES.has(file.type)) {
+                        failureMediaType = 'image';
                         preparedMedia.push({ blob: await compressImage(file), mediaType: 'image' });
                     } else {
+                        failureMediaType = 'video';
                         preparedMedia.push({ blob: readVideo(file), mediaType: 'video' });
                     }
                 }
+                failureMediaType = [...new Set(preparedMedia.map((item) => item.mediaType))].join(',') || failureMediaType;
                 const product = {
                     shop_id: null,
                     seller_id: user.id,
@@ -386,9 +394,13 @@
                 if (inserted.error) throw inserted.error;
                 productId = inserted.data.id;
                 failureStage = 'media upload';
-                for (const item of preparedMedia) uploadedMedia.push(await uploadMedia(supabase, item.blob, productId, item.mediaType));
+                for (const item of preparedMedia) {
+                    failureMediaType = item.mediaType;
+                    uploadedMedia.push(await uploadMedia(supabase, item.blob, productId, item.mediaType, failureMediaCount));
+                }
                 if (uploadedMedia.length) {
                     failureStage = 'media metadata';
+                    failureMediaType = [...new Set(uploadedMedia.map((item) => item.mediaType))].join(',') || failureMediaType;
                     const imageResult = await supabase.from('product_images').insert(uploadedMedia.map((item, index) => ({
                         product_id: productId,
                         url: item.url,
@@ -442,10 +454,26 @@
                 window.CustomSelect?.refresh(schoolSelect);
             } catch (error) {
                 window.Observability?.track('seller_publish_error', { action: 'student_listing' });
-                window.AsyncFeedback?.log('student-listing-submit', window.AsyncFeedback?.createRequestId('student-listing-submit'), error, {
+                const requestId = window.AsyncFeedback?.createRequestId('student-listing-submit') || 'student-listing-submit';
+                window.AsyncFeedback?.log('student-listing-submit', requestId, error, {
                     source: 'listing-submit',
-                    action: 'student-listing'
+                    action: 'student-listing',
+                    stage: failureStage,
+                    mediaType: failureMediaType,
+                    mediaCount: failureMediaCount
                 });
+                if (failureStage === 'media metadata') {
+                    const statusCode = Number(error?.statusCode ?? error?.status);
+                    console.error('[VelveraHub] Listing media metadata insert failed', {
+                        requestId,
+                        stage: failureStage,
+                        mediaType: failureMediaType || null,
+                        mediaCount: failureMediaCount,
+                        httpStatus: Number.isFinite(statusCode) && statusCode > 0 ? statusCode : null,
+                        diagnostic: window.Observability?.formatErrorDiagnostic?.(error) ||
+                            'The product_images insert failed; diagnostic formatter is unavailable.'
+                    });
+                }
                 let cleanupMediaFailed = false;
                 let cleanupErrorCode = null;
                 if (uploadedMedia.length) {

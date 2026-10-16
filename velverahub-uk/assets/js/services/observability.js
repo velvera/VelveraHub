@@ -51,6 +51,7 @@
             .replace(/\bBearer\s+\S+/gi, 'Bearer [redacted]')
             .replace(/\b(password|access[_ -]?token|refresh[_ -]?token|authorization|secret|api[_ -]?key)\b\s*[:=]\s*[^\s,;]+/gi, '$1=[redacted]')
             .replace(/\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/g, '[token]')
+            .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(?:webp|mp4|webm|mov)\b/gi, '[storage object path]')
             .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[email]')
             .replace(/\b(?:\+?\d[\s().-]*){8,}\b/g, '[phone]')
             .replace(/[\u0000-\u001f\u007f]/g, ' ')
@@ -131,7 +132,8 @@
             action: context.action || '',
             bucket: context.bucket || '',
             mediaType: context.mediaType || '',
-            stage: context.stage || ''
+            stage: context.stage || '',
+            mediaCount: Number.isFinite(context.mediaCount) ? context.mediaCount : null
         });
     }
 
