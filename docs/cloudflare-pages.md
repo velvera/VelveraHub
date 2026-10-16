@@ -155,14 +155,27 @@ Storage insert policy to verify the product UUID and its owning shop.
 ### Production upload-policy acceptance
 
 After applying `database/supabase-rls.sql` in the Supabase SQL editor, check that
-the production schema has the restrictive upload policy and both quota triggers:
+the production bucket, the permissive student upload policy, the restrictive
+upload validator, the listing-image metadata policy, and both quota triggers
+are present. Storage uploads need both the permissive insert policy and the
+restrictive validator; a public bucket by itself does not grant upload access.
 
 ```sql
-SELECT policyname, permissive, cmd
+SELECT id, public, file_size_limit, allowed_mime_types
+FROM storage.buckets
+WHERE id = 'product-images';
+
+SELECT policyname, permissive, cmd, roles, with_check
 FROM pg_policies
 WHERE schemaname = 'storage'
   AND tablename = 'objects'
-  AND policyname IN ('restrict product media uploads', 'restrict product media updates');
+  AND policyname IN ('students can upload listing images', 'restrict product media uploads');
+
+SELECT policyname, permissive, cmd, roles, with_check
+FROM pg_policies
+WHERE schemaname = 'public'
+  AND tablename = 'product_images'
+  AND policyname = 'students can manage their listing images';
 
 SELECT tgname
 FROM pg_trigger
@@ -170,6 +183,12 @@ WHERE tgrelid = 'storage.objects'::regclass
   AND NOT tgisinternal
   AND tgname IN ('enforce_product_media_object_quota', 'release_product_media_quota');
 ```
+
+The image bucket should be public for storefront reads, capped at `5242880`
+bytes, and restricted to `image/webp`. The student image policy should be a
+`PERMISSIVE` `INSERT` policy for `authenticated`; the upload validator should
+be `RESTRICTIVE` for `INSERT`. If any row is missing, re-apply
+`database/supabase-rls.sql` before testing uploads.
 
 Then, using an authenticated test seller and a disposable listing they own,
 send direct Storage API requests (not the marketplace upload form) with seven
