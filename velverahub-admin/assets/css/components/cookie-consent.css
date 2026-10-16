@@ -1,0 +1,20 @@
+.cookie-consent-banner { position: fixed; z-index: 10000; left: 1rem; right: 1rem; bottom: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; max-width: 1100px; margin: auto; padding: .75rem 1rem; color: #fff; background: #1a0533; border: 1px solid #8b5cf6; border-radius: .65rem; box-shadow: 0 12px 32px rgba(0,0,0,.28); font-size: .83rem; pointer-events: none; }
+.cookie-consent-banner.is-hidden { display: none; }
+.cookie-consent-banner a { color: #ddd6fe; font-weight: 700; }
+.cookie-consent-banner > * { pointer-events: none; }
+.cookie-consent-banner a, .cookie-consent-banner button { pointer-events: auto; }
+body:has(.modal.active) .cookie-consent-banner,
+body:has(dialog[open]) .cookie-consent-banner { display: none; }
+.cookie-consent-actions { display: flex; flex: 0 0 auto; gap: .45rem; }
+.cookie-consent-actions button, .cookie-settings-actions button { border: 1px solid #c4b5fd; border-radius: .45rem; padding: .48rem .65rem; color: #fff; background: transparent; cursor: pointer; font-weight: 700; font-size: .78rem; }
+.cookie-consent-actions .cookie-primary, .cookie-settings-actions .cookie-primary { background: #8b5cf6; border-color: #8b5cf6; }
+.cookie-settings-dialog { position: fixed; top: 50%; left: 50%; width: min(92vw, 480px); max-width: calc(100vw - 1rem); max-height: min(90vh, 620px); margin: 0; overflow: auto; transform: translate(-50%, -50%); border: 0; border-radius: 1rem; padding: 0; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+.cookie-settings-dialog::backdrop { background: rgba(15, 23, 42, .58); }
+.cookie-settings-dialog form { padding: 1.5rem; }
+.cookie-settings-dialog h2 { margin-top: 0; color: #312e81; }
+.cookie-settings-dialog p { color: #374151; line-height: 1.5; }
+.dialog-close { float: right; border: 0; background: none; font-size: 1.5rem; cursor: pointer; }
+.cookie-setting-row { display: flex; justify-content: space-between; gap: 1rem; padding: .85rem 0; border-top: 1px solid #e5e7eb; }
+.cookie-setting-row small { display: block; margin-top: .2rem; color: #6b7280; }
+.cookie-settings-actions { display: flex; justify-content: flex-end; margin-top: 1rem; }
+@media (max-width: 640px) { .cookie-consent-banner { left: .5rem; right: .5rem; bottom: .5rem; display: block; font-size: .78rem; } .cookie-consent-actions { margin-top: .65rem; justify-content: flex-end; } .cookie-settings-dialog { width: calc(100vw - 1rem); max-height: calc(100vh - 1rem); border-radius: .85rem; } .cookie-settings-dialog form { padding: 1.15rem; } }

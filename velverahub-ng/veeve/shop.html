@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta
+            http-equiv="Cache-Control"
+            content="no-cache, no-store, must-revalidate"
+        />
+        <title>Shop - VelveraHub</title>
+        <meta name="description" content="Discover active VelveraHub products and shops with location-aware marketplace browsing.">
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap"
+            rel="stylesheet"
+        />
+        <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+        />
+        <link href="../assets/css/base.css" rel="stylesheet" />
+        <link href="../assets/css/components/navbar.css" rel="stylesheet" />
+        <link href="../assets/css/components/products.css" rel="stylesheet" />
+        <link href="../assets/css/components/footer.css" rel="stylesheet" />
+        <link href="../assets/css/components/cart.css" rel="stylesheet" />
+        <link href="../assets/css/components/trust.css" rel="stylesheet" />
+        <link href="../assets/css/components/intelligence.css" rel="stylesheet" />
+        <link href="pages.css" rel="stylesheet" />
+        <link href="../assets/css/components/custom-select.css" rel="stylesheet" />
+        <link href="../assets/css/components/smart-features.css" rel="stylesheet" />
+        <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="icon" href="../img/favicon.ico">
+    <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
+    <link rel="manifest" href="../manifest.webmanifest">
+</head>
+    <body class="shop-page">
+    <div id="app">
+        <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
+        <div class="mobile-menu" id="mobileMenu">
+            <div class="mobile-menu-header">
+                <span class="mobile-user-greeting">Hello, Sign in</span>
+                <button class="mobile-menu-close" id="mobileMenuClose">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="mobile-menu-content">
+                <div class="mobile-menu-section">
+                    <h3>Shop By Category</h3>
+                    <a href="?category=electronics"><img src="/img/home-category/electronics.png" alt="" aria-hidden="true"> Electronics</a>
+                    <a href="?category=fashion"><img src="/img/home-category/fashion.png" alt="" aria-hidden="true"> Fashion</a>
+                    <a href="?category=home"><img src="/img/home-category/home-furniture-and-appliances.png" alt="" aria-hidden="true"> Home &amp; Garden</a>
+                    <a href="?category=sports"><img src="/img/home-category/sports.png" alt="" aria-hidden="true"> Sports</a>
+                    <a href="?category=beauty"><img src="/img/home-category/beauty-and-personal-care.png" alt="" aria-hidden="true"> Beauty</a>
+                    <a href="?category=toys"><img src="/img/home-category/toys-and-games.png" alt="" aria-hidden="true"> Toys &amp; Games</a>
+                </div>
+            </div>
+        </div>
+
+        <nav class="navbar" id="navbar">
+            <div class="nav-container">
+                <div class="nav-left">
+                    <button class="mobile-menu-btn" id="mobileMenuBtn">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <a href="/" class="logo">
+                        <span class="logo-icon" aria-hidden="true"></span>
+                        <span class="logo-text">Velvera<span class="accent">Hub</span></span>
+                    </a>
+                </div>
+                    <div class="nav-center">
+                        <div class="search-container">
+                            <select class="category-select" id="searchCategory" aria-label="Search category">
+                                <option value="all">All Categories</option>
+                                <option value="electronics">Electronics</option>
+                                <option value="fashion">Fashion</option>
+                                <option value="home">Home &amp; Garden</option>
+                                <option value="sports">Sports</option>
+                                <option value="beauty">Beauty</option>
+                                <option value="toys">Toys &amp; Games</option>
+                            </select>
+                            <input
+                                type="text"
+                                class="search-input"
+                                id="searchInput"
+                                placeholder="Search in this shop..."
+                            />
+                            <button class="search-btn" id="searchBtn">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="nav-right">
+                        <div class="nav-icons">
+                            <a href="/" class="nav-icon-item"
+                                ><i class="fas fa-home"></i
+                                ><span class="icon-label">Home</span></a
+                            >
+                            <a href="/veeve/browse.html" class="nav-icon-item"
+                                ><i class="fas fa-compass"></i
+                                ><span class="icon-label">Browse</span></a
+                            >
+                            <div class="nav-icon-item" id="cartBtn">
+                                <i class="fas fa-shopping-cart"></i>
+                                <span class="cart-count" id="cartCount">0</span>
+                                <span class="icon-label">Cart</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <header class="shop-page-header" id="shopHeader">
+                <div class="section-container">
+                    <div class="shop-header-content">
+                        <div class="shop-logo-lg" id="shopLogo"></div>
+                        <div class="shop-info-lg">
+                            <h1 id="shopName">Loading...</h1>
+                            <p id="shopDescription"></p>
+                            <div class="shop-stats">
+                                <div class="shop-stat">
+                                    <span
+                                        class="shop-stat-value"
+                                        id="shopProductCount"
+                                        >0</span
+                                    >
+                                    <span class="shop-stat-label"
+                                        >Products</span
+                                    >
+                                </div>
+                                <div class="shop-stat">
+                                    <span class="shop-stat-value" id="shopSales"
+                                        >0</span
+                                    >
+                                    <span class="shop-stat-label">Sales</span>
+                                </div>
+                                <div class="shop-stat">
+                                    <span
+                                        class="shop-stat-value"
+                                        id="shopRating"
+                                        >0</span
+                                    >
+                                    <span class="shop-stat-label">Rating</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <main class="page-main">
+                <div class="section-container" id="shopTrust"></div>
+                <section class="products-page-section">
+                    <div class="section-container">
+                        <div class="products-header">
+                            <h2>All Products from this Shop</h2>
+                            <div class="shop-listing-controls">
+                                <label class="location-control">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    <span>Deliver to</span>
+                                    <select id="locationSelect" data-location-select aria-label="Filter this shop by delivery location">
+                                        <option value="all">All Nigeria</option>
+                                    </select>
+                                </label>
+                                <div class="sort-controls">
+                                <select id="sortBy">
+                                    <option value="default">Recommended</option>
+                                    <option value="price-low">
+                                        Price: Low to High
+                                    </option>
+                                    <option value="price-high">
+                                        Price: High to Low
+                                    </option>
+                                    <option value="newest">Newest First</option>
+                                </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="products-grid" id="shopProducts"></div>
+                    </div>
+                </section>
+            </main>
+
+            <div class="cart-sidebar" id="cartSidebar">
+                <div class="cart-header">
+                    <h3><i class="fas fa-shopping-cart"></i> Your Cart</h3>
+                    <button class="cart-close" id="cartClose">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="cart-items" id="cartItems"></div>
+                <div class="cart-footer">
+                    <div class="cart-summary">
+                        <div class="summary-row">
+                            <span>Subtotal</span
+                            ><span id="cartSubtotal">$0.00</span>
+                        </div>
+                        <div class="summary-row total">
+                            <span>Total</span><span id="cartTotal">$0.00</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary btn-full" id="checkoutBtn">
+                        Proceed to Checkout
+                    </button>
+                </div>
+            </div>
+            <div class="cart-overlay" id="cartOverlay"></div>
+
+            <!-- Footer -->
+            <footer class="footer">
+                <div class="footer-top">
+                    <div class="footer-container">
+                        <div class="footer-col">
+                            <div class="footer-logo">
+                                <span class="logo-icon"
+                                    ><img src="/img/basket.png" alt="" aria-hidden="true" /><!--<i
+                                    class="fas fa-shopping-bag"
+                                ></i
+                            >--></span
+                                >
+                                <span class="logo-text"
+                                    >Velvera<span class="accent"
+                                        >Hub</span
+                                    ></span
+                                >
+                            </div>
+                            <p>
+                                Your ultimate destination for shopping. Discover
+                                Explore live listings from this shop and review delivery coverage before ordering.
+                            </p>
+                            <div class="social-links">
+                                <a href="/veeve/secured-trading.html#help"
+                                    ><img class="footer-social-image" src="/img/footer-social/facebook.png" alt="Facebook"
+                                ></a>
+                                <a href="/veeve/secured-trading.html#help"><i class="fas fa-life-ring"></i> Support</a>
+                            </div>
+                        </div>
+                        <div class="footer-col">
+                            <h4>Shop</h4>
+                            <ul>
+                                <li><a href="/veeve/categories.html">All Categories</a></li>
+                                <li><a href="/veeve/products.html?filter=trending">Deals &amp; Offers</a></li>
+                                <li><a href="/veeve/products.html?filter=new">New Arrivals</a></li>
+                                <li><a href="/veeve/products.html?filter=bestseller">Best Sellers</a></li>
+                                <li><a href="/veeve/new-users.html">Gift Cards</a></li>
+                            </ul>
+                        </div>
+                        <div class="footer-col">
+                            <h4>Account</h4>
+                            <ul>
+                                <li><a href="/veeve/account.html">My Account</a></li>
+                                <li><a href="/veeve/account.html">Orders</a></li>
+                                <li><a href="/veeve/account.html">Wishlist</a></li>
+                                <li><a href="/veeve/account.html">Track Order</a></li>
+                                <li><a href="/veeve/secured-trading.html#help">Returns</a></li>
+                            </ul>
+                        </div>
+                        <div class="footer-col">
+                            <h4>Seller</h4>
+                            <ul>
+                                <li><a href="/veeve/sell.html">Sell on VelveraHub</a></li>
+                                <li><a href="/veeve/seller.html">Seller Workspace</a></li>
+                                <li><a href="/veeve/secured-trading.html#help">Seller Policies</a></li>
+                                <li><a href="/veeve/secured-trading.html#help">Seller Support</a></li>
+                            </ul>
+                        </div>
+                        <div class="footer-col">
+                            <h4>Support</h4>
+                            <ul>
+                                <li><a href="/veeve/secured-trading.html#help">Help Center</a></li>
+                                <li><a href="/veeve/account.html#contact">Contact Us</a></li>
+                                <li><a href="/veeve/secured-trading.html#privacy">Privacy Policy</a></li>
+                                <li><a href="/veeve/secured-trading.html#terms">Terms of Service</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="footer-bottom">
+                    <div class="footer-container">
+                        <p>&copy; 2026 VelveraHub. All rights reserved.</p>
+                    </div>
+                </div>
+            </footer>
+        </div>
+
+        <div id="toastContainer" class="toast-container"></div>
+
+        <script src="../assets/js/services/region.js"></script>
+        <script src="../assets/js/config.js"></script>
+        <script src="../assets/js/services/api.js"></script>
+        <script src="../assets/js/services/publicSupabaseConfig.js"></script>
+        <script src="../assets/js/services/supabaseClient.js"></script>
+    <script src="../assets/js/services/trust.js"></script>
+        <script src="../assets/js/services/products.js"></script>
+        <script src="../assets/js/services/observability.js"></script>
+        <script src="../assets/js/services/marketplace-intelligence.js"></script>
+        <script src="../assets/js/services/cart.js"></script>
+        <script src="../assets/js/state/store.js"></script>
+        <script src="../assets/js/components/ui.js"></script>
+         <script src="../assets/js/components/async-feedback.js"></script>
+         <script src="../assets/js/components/focus-manager.js"></script>
+<script src="../assets/js/components/site-navigation.js"></script>
+        <script src="../assets/js/components/smart-features.js"></script>
+        <script src="../assets/js/components/mobile-nav.js"></script>
+        <script>
+            document.addEventListener("DOMContentLoaded", async function () {
+                sessionStorage.setItem('svLastPage', window.location.pathname + window.location.search);
+                CartService.init();
+
+                if (window.supabaseConfigReady) await window.supabaseConfigReady;
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const shopId = urlParams.get("id");
+
+                await loadShopDetails(shopId);
+                await loadShopProducts(shopId);
+                initCartEvents();
+                document.getElementById("sortBy")?.addEventListener("change", () => loadShopProducts(shopId));
+            });
+
+            async function loadShopDetails(shopId) {
+                const supabase = window.SupabaseClient?.get();
+                if (!supabase || !shopId) {
+                    renderShopUnavailable('This shop is not available.');
+                    return;
+                }
+                const isUuid = /^[0-9a-f-]{36}$/i.test(shopId);
+                const { data: shop, error } = await supabase
+                    .from("shops")
+                    .select("*")
+                    .eq(isUuid ? "id" : "slug", shopId)
+                    .eq("status", "active")
+                    .maybeSingle();
+                if (error || !shop) {
+                    const message = window.AsyncFeedback?.errorMessage(
+                        error,
+                        'This shop is not available right now. Please try again later.',
+                        'public-shop-load'
+                    ) || 'This shop is not available right now. Please try again later.';
+                    renderShopUnavailable(message);
+                    return;
+                }
+
+                document.getElementById("shopLogo").innerHTML =
+                    `<img src="${shop.logo_url}" alt="${shop.name}">`;
+                document.getElementById("shopName").innerHTML =
+                    `${shop.name} ${shop.verified ? '<i class="fas fa-check-circle verified"></i>' : ""}`;
+                document.getElementById("shopDescription").textContent =
+                    shop.description || "";
+                document.getElementById("shopProductCount").textContent =
+                    shop.total_products || 0;
+                document.getElementById("shopSales").textContent = (
+                    shop.total_sales || 0
+                ).toLocaleString();
+                document.getElementById("shopRating").textContent =
+                    shop.rating || "4.5";
+                document.getElementById("shopTrust").innerHTML =
+                    window.TrustService?.renderEvidencePanel(shop) || "";
+                const locationSelect = document.getElementById("locationSelect");
+                window.RegionService?.syncLocationSelect(locationSelect);
+                window.RegionService?.syncLocationSelect(document.getElementById("headerLocationSelect"));
+                document.title = `${shop.name} - VelveraHub`;
+            }
+
+            function renderShopUnavailable(message) {
+                document.getElementById("shopName").textContent = "Shop unavailable";
+                document.getElementById("shopDescription").textContent = message;
+                AsyncFeedback.render(document.getElementById("shopProducts"), 'error', {
+                    errorTitle: 'Shop unavailable',
+                    errorMessage: message || 'We could not load this live shop right now.',
+                    onRetry: () => loadShopProducts(new URLSearchParams(window.location.search).get('id'))
+                });
+            }
+
+            let productsRequestId = 0;
+            async function loadShopProducts(shopId) {
+                const container = document.getElementById("shopProducts");
+                const requestId = ++productsRequestId;
+                const requestKey = AsyncFeedback.createRequestId('shop-products');
+                if (!shopId) {
+                    container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><i class="fas fa-store-slash"></i><h3>Shop unavailable</h3><p>Choose a shop from the live directory.</p><a class="btn btn-primary" href="/veeve/shops.html">Browse shops</a></div>`;
+                    return;
+                }
+                AsyncFeedback.render(container, 'loading', {
+                    loadingTitle: 'Loading shop products',
+                    loadingMessage: 'Checking the latest live inventory.'
+                });
+
+                const sort = document.getElementById("sortBy")?.value;
+                let products = [];
+                try {
+                    const result = await Promise.race([
+                        ProductsService.getProducts({
+                            limit: 20,
+                            shop_id: shopId,
+                            location: window.RegionService?.location,
+                            sort: sort && sort !== "default" ? sort : undefined
+                        }),
+                        new Promise((resolve) => setTimeout(() => resolve({ data: [] }), 8000))
+                    ]);
+                    products = Array.isArray(result?.data) ? result.data : [];
+                } catch (error) {
+                    AsyncFeedback.log('shop-products', requestKey, error, { shop_id: shopId });
+                    if (requestId === productsRequestId) {
+                        AsyncFeedback.render(container, 'error', {
+                            errorTitle: 'Shop products are temporarily unavailable',
+                            errorMessage: 'Check your connection and try again.',
+                            onRetry: () => loadShopProducts(shopId)
+                        });
+                    }
+                    return;
+                }
+                if (requestId !== productsRequestId) return;
+                container.innerHTML = products
+                    .map((p) => UI.renderProductCard(p))
+                    .join("");
+                if (!products.length) AsyncFeedback.render(container, 'empty', {
+                    emptyTitle: 'No products found',
+                    emptyMessage: 'Try another delivery location or check back soon.'
+                });
+
+                container.querySelectorAll(".product-card").forEach((card) => {
+                    card.addEventListener("click", (e) => {
+                        if (
+                            !e.target.closest(".action-btn") &&
+                            !e.target.closest(".add-to-cart-btn")
+                        ) {
+                            const productId = card.dataset.productId;
+                            window.location.href = window.VelveraHubDomains?.productUrl?.(productId)
+                                || `/pages/product.html?id=${encodeURIComponent(productId)}`;
+                        }
+                    });
+                });
+            }
+
+            window.addEventListener("velveraLocationChange", () => {
+                const shopId = new URLSearchParams(window.location.search).get("id");
+                loadShopProducts(shopId);
+            });
+
+            document.addEventListener("click", async (e) => {
+                const btn = e.target.closest('[data-action="add-to-cart"]');
+                if (!btn) return;
+                const productId = btn.dataset.productId;
+                if (!productId) return;
+                try {
+                    const { data: product } = await ProductsService.getProduct(productId);
+                    if (product) {
+                        CartService.addItem(product, 1);
+                        updateCartUI();
+                        UI.showToast("Added to cart!", "success");
+                    }
+                } catch (err) {
+                    UI.showToast("Failed to add item", "error");
+                }
+            });
+
+            function initCartEvents() {
+                const cartBtn = document.getElementById("cartBtn");
+                const cartSidebar = document.getElementById("cartSidebar");
+                const cartOverlay = document.getElementById("cartOverlay");
+                const cartClose = document.getElementById("cartClose");
+
+                cartBtn?.addEventListener("click", () => {
+                    cartSidebar?.classList.add("active");
+                    cartOverlay?.classList.add("active");
+                    document.body.style.overflow = "hidden";
+                    updateCartUI();
+                });
+
+                [cartClose, cartOverlay].forEach((el) => {
+                    el?.addEventListener("click", () => {
+                        cartSidebar?.classList.remove("active");
+                        cartOverlay?.classList.remove("active");
+                        document.body.style.overflow = "";
+                    });
+                });
+
+                // Mobile Menu
+                const mobileMenuBtn = document.getElementById("mobileMenuBtn");
+                const mobileMenu = document.getElementById("mobileMenu");
+                const mobileMenuOverlay = document.getElementById("mobileMenuOverlay");
+                const mobileMenuClose = document.getElementById("mobileMenuClose");
+
+                function openMobileMenu() {
+                    mobileMenu?.classList.add("active");
+                    mobileMenuOverlay?.classList.add("active");
+                    document.body.style.overflow = "hidden";
+                }
+
+                function closeMobileMenu() {
+                    mobileMenu?.classList.remove("active");
+                    mobileMenuOverlay?.classList.remove("active");
+                    document.body.style.overflow = "";
+                }
+
+                mobileMenuBtn?.addEventListener("click", openMobileMenu);
+                mobileMenuClose?.addEventListener("click", closeMobileMenu);
+                mobileMenuOverlay?.addEventListener("click", closeMobileMenu);
+            }
+
+            function updateCartUI() {
+                const cartItems = document.getElementById("cartItems");
+                if (cartItems)
+                    cartItems.innerHTML = UI.renderCartItems(
+                        CartService.getCart(),
+                    );
+                UI.updateCartSummary();
+                CartService.updateCartCount();
+            }
+        </script>
+
+        <nav class="mobile-bottom-nav" id="mobileBottomNav">
+            <div class="bottom-nav-items">
+                <a class="bottom-nav-item" href="/"><i class="fas fa-home"></i><span>Home</span></a>
+                <a class="bottom-nav-item" href="/veeve/browse.html"><i class="fas fa-compass"></i><span>Browse</span></a>
+                <button class="bottom-nav-item" id="bottomCartBtn">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span class="bottom-cart-badge" id="bottomCartBadge" style="display:none">0</span>
+                    <span>Cart</span>
+                </button>
+                <button class="bottom-nav-item" id="bottomAccountBtn"><i class="fas fa-user"></i><span>Account</span></button>
+            </div>
+        </nav>
+        <script src="../assets/js/services/campuses.js"></script>
+        <script src="../assets/js/components/custom-select.js"></script>
+    </body>
+</html>

@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>Seller Workspace - VelveraHub</title>
+    <meta name="description" content="Manage your VelveraHub seller account, shop application, products, orders, and marketplace operations.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="icon" href="../../img/favicon.ico" type="image/x-icon">
+    <link href="../../assets/css/base.css" rel="stylesheet">
+    <link href="dashboard.css" rel="stylesheet">
+    <link href="../../assets/css/components/navbar.css" rel="stylesheet">
+    <link href="../../assets/css/components/seller-updates.css" rel="stylesheet">
+    <link href="../../assets/css/components/footer.css" rel="stylesheet">
+    <link href="../../assets/css/components/custom-select.css" rel="stylesheet">
+    <link href="../../assets/css/components/smart-features.css" rel="stylesheet">
+</head>
+<body data-support-audience="seller">
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/" class="logo">
+                    <span class="logo-icon" aria-hidden="true"></span>
+                    <img src="../../img/velverahub.png" alt="VelveraHub" class="logo-wordmark">
+                </a>
+                <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-label="Collapse sidebar" aria-expanded="true">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <span class="nav-section-title">Main</span>
+                    <a href="#" class="nav-item active" data-page="dashboard">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="/pages/my-listings.html" class="nav-item">
+                        <i class="fas fa-rectangle-list"></i>
+                        <span>My listings</span>
+                    </a>
+                    <a href="#" class="nav-item" data-page="notifications">
+                        <i class="fas fa-bell"></i>
+                        <span>Listing updates</span>
+                    </a>
+                    <a href="#" class="nav-item" data-page="messages">
+                        <i class="fas fa-message"></i>
+                        <span>Messages</span>
+                    </a>
+                    <a href="#" class="nav-item" data-page="products">
+                        <i class="fas fa-box"></i>
+                        <span>Products</span>
+                        <span class="nav-badge" id="productCountBadge">0</span>
+                    </a>
+                    <a href="#" class="nav-item" data-page="orders">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span>Orders</span>
+                        <span class="nav-badge warning" id="orderCountBadge">0</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <span class="nav-section-title">Shop</span>
+                    <a href="#" class="nav-item" data-page="shop-settings">
+                        <i class="fas fa-store"></i>
+                        <span>Shop Settings <small class="owner-only-label">owner</small></span>
+                    </a>
+                    <a href="#" class="nav-item" data-page="reviews">
+                        <i class="fas fa-star"></i>
+                        <span>Reviews</span>
+                    </a>
+                    <a href="#" class="nav-item" data-page="promotions">
+                        <i class="fas fa-percent"></i>
+                        <span>Promotions <small class="owner-only-label">owner</small></span>
+                    </a>
+                    <a href="#" class="nav-item" data-page="advertisements">
+                        <i class="fas fa-fire"></i>
+                        <span>Advertisements</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <span class="nav-section-title">Analytics</span>
+                    <a href="#" class="nav-item" data-page="operations">
+                        <i class="fas fa-gauge-high"></i>
+                        <span>Seller Operations</span>
+                    </a>
+                    <a href="#" class="nav-item" data-page="analytics">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Analytics</span>
+                    </a>
+                    <a href="#" class="nav-item" data-page="reports">
+                        <i class="fas fa-file-alt"></i>
+                        <span>Reports</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <span class="nav-section-title">Account</span>
+                    <a href="#" class="nav-item" data-page="settings">
+                        <i class="fas fa-cog"></i>
+                        <span>Settings</span>
+                    </a>
+                    <a href="/" class="nav-item">
+                        <i class="fas fa-arrow-left"></i>
+                        <span>Back to Store</span>
+                    </a>
+                </div>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <img src="../../img/seller/seller.jpg" alt="Shop owner store image" class="user-avatar">
+                    <div class="user-details">
+                        <span class="user-name">Shop Owner</span>
+                        <span class="user-role" id="userRoleLabel">Seller workspace</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="dashboard-header">
+                <div class="header-left">
+                    <button class="mobile-toggle" id="mobileToggle" type="button" aria-label="Open seller navigation" aria-expanded="false">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1 class="page-title">Dashboard</h1>
+                </div>
+                <div class="header-right">
+                    <div class="header-search">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="Search...">
+                    </div>
+                    <button class="header-icon-btn" id="notificationsBtn">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-dot"></span>
+                    </button>
+                    <button class="header-icon-btn" id="messagesBtn" data-page-link="messages" data-no-processing type="button" aria-label="Open messages">
+                        <i class="fas fa-envelope"></i>
+                    </button>
+                    <div class="user-dropdown" id="userDropdown">
+                        <img src="../../img/seller/seller.jpg" alt="Shop owner store image">
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- Dashboard Content -->
+            <div class="dashboard-content" id="dashboardContent">
+                <!-- Stats Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card gradient-1">
+                        <div class="stat-icon"><i class="fas fa-dollar-sign"></i></div>
+                        <div class="stat-info">
+                            <h3 id="revenueMetric">—</h3>
+                            <p>Total Revenue</p>
+                            <span class="stat-change positive" id="revenueMetricChange">Loading live data</span>
+                        </div>
+                    </div>
+                    <div class="stat-card gradient-2">
+                        <div class="stat-icon"><i class="fas fa-shopping-bag"></i></div>
+                        <div class="stat-info">
+                            <h3 id="ordersMetric">—</h3>
+                            <p>Total Orders</p>
+                            <span class="stat-change positive" id="ordersMetricChange">Loading live data</span>
+                        </div>
+                    </div>
+                    <div class="stat-card gradient-3">
+                        <div class="stat-icon"><i class="fas fa-box"></i></div>
+                        <div class="stat-info">
+                            <h3 id="productsMetric">—</h3>
+                            <p>Products</p>
+                            <span class="stat-change positive" id="productsMetricChange">Loading live data</span>
+                        </div>
+                    </div>
+                    <div class="stat-card gradient-4">
+                        <div class="stat-icon"><i class="fas fa-users"></i></div>
+                        <div class="stat-info">
+                            <h3 id="customersMetric">—</h3>
+                            <p>Customers</p>
+                            <span class="stat-change positive" id="customersMetricChange">Loading live data</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Recent Orders & Quick Actions -->
+                <div class="dashboard-grid">
+                    <div class="dashboard-card orders-card">
+                        <div class="card-header">
+                            <h2>Recent Orders</h2>
+                            <a href="#" class="view-all" data-page-link="orders">View All</a>
+                        </div>
+                        <div class="orders-table">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Order ID</th>
+                                        <th>Customer</th>
+                                        <th>Product</th>
+                                        <th>Amount</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recentOrders">
+                                    <tr><td colspan="6" class="table-empty">Loading live orders…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="dashboard-card quick-actions-card">
+                        <div class="card-header">
+                            <h2>Quick Actions</h2>
+                        </div>
+                        <div class="quick-actions">
+                            <button class="quick-action-btn" id="addProductBtn">
+                                <i class="fas fa-plus"></i>
+                                <span>Add Product</span>
+                            </button>
+                            <button class="quick-action-btn">
+                                <i class="fas fa-tag"></i>
+                                <span>Create Discount</span>
+                            </button>
+                            <button class="quick-action-btn">
+                                <i class="fas fa-bullhorn"></i>
+                                <span>Run Promotion</span>
+                            </button>
+                            <button class="quick-action-btn">
+                                <i class="fas fa-file-export"></i>
+                                <span>Export Report</span>
+                            </button>
+                        </div>
+                        
+                        <div class="card-header mt-2">
+                            <h2>Shop Performance</h2>
+                        </div>
+                        <div class="performance-stats">
+                            <div class="perf-item">
+                                <div class="perf-label">
+                                    <span>Response Rate</span>
+                                    <span class="perf-value">No data yet</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="perf-item">
+                                <div class="perf-label">
+                                    <span>Order Fulfillment</span>
+                                    <span class="perf-value">No data yet</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="perf-item">
+                                <div class="perf-label">
+                                    <span>Customer Rating</span>
+                                    <span class="perf-value">No ratings yet</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Products Section -->
+                <div class="dashboard-card products-card">
+                    <div class="card-header">
+                        <h2>Top Selling Products</h2>
+                        <a href="#" class="view-all" data-page-link="products">View All Products</a>
+                    </div>
+                    <div class="products-list" id="topProducts">
+                        <div class="empty-page dashboard-placeholder"><i class="fas fa-spinner fa-spin"></i><h3>Loading live products…</h3></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Shop Settings Page (Hidden by default) -->
+            <div class="dashboard-content hidden" id="shopSettingsPage">
+                <div class="page-header">
+                    <h2>Shop Settings</h2>
+                </div>
+                
+                <div class="settings-grid">
+                    <!-- Shop Information Card -->
+                    <div class="dashboard-card settings-card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-store"></i> Shop Information</h2>
+                        </div>
+                        <div class="card-body">
+                            <form id="shopInfoForm" class="settings-form">
+                                <div class="form-group">
+                                    <label for="shopName">Shop Name</label>
+                                    <input type="text" id="shopName" placeholder="Enter your shop name" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="shopAddress">Shop Address</label>
+                                    <textarea id="shopAddress" rows="3" placeholder="Enter your complete address"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label for="shopEmail">Business Email</label>
+                                    <input type="email" id="shopEmail" placeholder="shop@example.com" autocomplete="email">
+                                </div>
+                                <div class="form-group">
+                                    <label for="shopPhone">Contact Phone</label>
+                                    <input type="tel" id="shopPhone" placeholder="+234 801 234 5678">
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="shopCity">Store / service city</label>
+                                        <input type="text" id="shopCity" placeholder="Your city or town">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="shopCountry">Country</label>
+                                    <input type="text" id="shopCountry" value="" placeholder="Nigeria or United Kingdom">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="shopServiceLocation">Primary store / service location</label>
+                                    <input type="text" id="shopServiceLocation" placeholder="Your area, city, or service location">
+                                    <small class="form-help">Use a recognizable area, campus, landmark, or full address so buyers can find your nearest service.</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="shopDescription">Shop Description</label>
+                                    <textarea id="shopDescription" rows="4" placeholder="Tell customers about your shop"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> Save Changes
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Shop Key Card -->
+                    <div class="dashboard-card settings-card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-key"></i> Shop Access Key</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="shop-key-container">
+                                <p class="key-description">Your unique shop key provides secure access to your store. Share this only with trusted team members.</p>
+                                <div class="shop-key-display">
+                                    <input type="text" id="shopKeyDisplay" value="SHOP-XXXX-XXXX-XXXX" readonly>
+                                    <button type="button" class="btn btn-icon" id="copyShopKey" title="Copy Key" data-no-processing>
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-icon" id="toggleKeyVisibility" title="Show/Hide" data-no-processing>
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                                <button type="button" class="btn btn-warning" id="regenerateKey">
+                                    <i class="fas fa-sync-alt"></i> Regenerate Key
+                                </button>
+                                <p class="key-warning"><i class="fas fa-exclamation-triangle"></i> Regenerating will invalidate the current key</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Service Coverage Card -->
+                    <div class="dashboard-card settings-card" style="grid-column: 1 / -1;">
+                        <div class="card-header">
+                            <h2><i class="fas fa-map-marker-alt"></i> Service Coverage Areas</h2>
+                        </div>
+                        <div class="card-body">
+                            <p style="color:var(--gray-500);margin-bottom:1rem;font-size:0.9rem;">Select the states/regions where you can deliver and offer services. Customers will see this on your products.</p>
+                            <div id="coverageRegionToggle" style="display:flex;gap:0.75rem;margin-bottom:1.25rem;">
+                                <button type="button" class="btn btn-secondary btn-sm" id="coverageNgBtn" onclick="setCoverageRegion('ng')">🇳🇬 Nigeria (States)</button>
+                                <button type="button" class="btn btn-secondary btn-sm" id="coverageUkBtn" onclick="setCoverageRegion('uk')">🇬🇧 UK (Regions)</button>
+                            </div>
+                            <div id="coverageAreasList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0.5rem;margin-bottom:1.25rem;">
+                            </div>
+                            <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
+                                <button type="button" class="btn btn-primary btn-sm" onclick="saveCoverageAreas()">
+                                    <i class="fas fa-save"></i> Save Coverage Areas
+                                </button>
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="selectAllCoverage()">Select All</button>
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="clearAllCoverage()">Clear All</button>
+                                <span id="coverageCount" style="font-size:0.85rem;color:var(--gray-500);">0 areas selected</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Social Media Card -->
+                    <div class="dashboard-card settings-card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-share-alt"></i> Social Media</h2>
+                        </div>
+                        <div class="card-body">
+                            <form id="socialMediaForm" class="settings-form">
+                                <div class="form-group social-input">
+                                    <label for="whatsappHandle">
+                                        <i class="fab fa-whatsapp whatsapp-icon"></i> WhatsApp
+                                    </label>
+                                    <input type="text" id="whatsappHandle" placeholder="+234 801 234 5678">
+                                </div>
+                                <div class="form-group social-input">
+                                    <label for="facebookHandle">
+                                        <i class="fab fa-facebook facebook-icon"></i> Facebook
+                                    </label>
+                                    <input type="text" id="facebookHandle" placeholder="facebook.com/yourshop">
+                                </div>
+                                <div class="form-group social-input">
+                                    <label for="instagramHandle">
+                                        <i class="fab fa-instagram instagram-icon"></i> Instagram
+                                    </label>
+                                    <input type="text" id="instagramHandle" placeholder="@yourshop">
+                                </div>
+                                <div class="form-group social-input">
+                                    <label for="twitterHandle">
+                                        <i class="fab fa-twitter twitter-icon"></i> Twitter
+                                    </label>
+                                    <input type="text" id="twitterHandle" placeholder="@yourshop">
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> Save Social Links
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Password & Security Card -->
+                    <div class="dashboard-card settings-card password-security-card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-lock"></i> Password & Security</h2>
+                        </div>
+                        <div class="card-body">
+                            <form id="passwordForm" class="settings-form">
+                                <input type="email" name="username" autocomplete="username" tabindex="-1" aria-hidden="true" style="display:none">
+                                <div class="form-group">
+                                    <label for="currentPassword">Current Password</label>
+                                    <div class="password-input-group">
+                                        <input type="password" id="currentPassword" placeholder="Enter current password" autocomplete="current-password" required>
+                                        <button type="button" class="toggle-password-btn"><i class="fas fa-eye"></i></button>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="newPassword">New Password</label>
+                                    <div class="password-input-group">
+                                        <input type="password" id="newPassword" placeholder="Enter new password (min 8 chars)" autocomplete="new-password" required minlength="8">
+                                        <button type="button" class="toggle-password-btn"><i class="fas fa-eye"></i></button>
+                                    </div>
+                                    <div class="password-strength-bar" id="newPasswordStrength"></div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="confirmNewPassword">Confirm New Password</label>
+                                    <div class="password-input-group">
+                                        <input type="password" id="confirmNewPassword" placeholder="Confirm new password" autocomplete="new-password" required>
+                                        <button type="button" class="toggle-password-btn"><i class="fas fa-eye"></i></button>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-key"></i> Update Password
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Products Page (Hidden by default) -->
+            <div class="dashboard-content hidden" id="productsPage">
+                <div class="page-header">
+                    <h2>Products Management</h2>
+                    <button class="btn btn-primary" id="addNewProductBtn">
+                        <i class="fas fa-plus"></i> Add New Product
+                    </button>
+                </div>
+                
+                <div class="dashboard-card">
+                    <div class="filters-bar">
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" placeholder="Search products...">
+                        </div>
+                        <select class="filter-select">
+                            <option value="">All Categories</option>
+                            <option value="electronics">Electronics</option>
+                            <option value="fashion">Fashion</option>
+                            <option value="home">Home</option>
+                        </select>
+                        <select class="filter-select">
+                            <option value="">All Status</option>
+                            <option value="active">Active</option>
+                            <option value="draft">Draft</option>
+                            <option value="out-of-stock">Out of Stock</option>
+                        </select>
+                    </div>
+                    
+                    <div class="products-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th><input type="checkbox" id="selectAll"></th>
+                                    <th>Product</th>
+                                    <th>Category</th>
+                                    <th>Price</th>
+                                    <th>Stock</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productsTableBody">
+                                <!-- Products will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="table-footer">
+                        <span id="productsTableSummary">Showing 0 products</span>
+                        <div class="pagination">
+                            <button class="page-btn"><i class="fas fa-chevron-left"></i></button>
+                            <button class="page-btn active">1</button>
+                            <button class="page-btn">2</button>
+                            <button class="page-btn">3</button>
+                            <button class="page-btn"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Add Product Modal -->
+    <div class="modal" id="addProductModal">
+        <div class="modal-overlay"></div>
+        <div class="modal-container modal-lg">
+            <div class="modal-header">
+                <div>
+                    <span class="modal-eyebrow">Product catalogue</span>
+                    <h2>Add New Product</h2>
+                    <p class="modal-subtitle">Add the details customers need to discover and buy this product.</p>
+                </div>
+                <button class="modal-close" type="button" aria-label="Close add product form"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-content">
+                <form id="addProductForm">
+                    <div class="product-moderation-notice" id="productModerationNotice" role="status" hidden></div>
+                    <div class="form-scroll-region">
+                        <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label for="productTitle">Product Title</label>
+                            <input type="text" id="productTitle" placeholder="Enter product title" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="productCategory">Category</label>
+                            <select id="productCategory" required>
+                                <option value="">Select Category</option>
+                                <option value="electronics">Electronics</option>
+                                <option value="fashion">Fashion</option>
+                                <option value="home">Home & Garden</option>
+                                <option value="sports">Sports</option>
+                                <option value="beauty">Beauty</option>
+                                <option value="toys">Toys & Games</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="productBrand">Brand</label>
+                            <input type="text" id="productBrand" placeholder="Brand or manufacturer">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="productSku">SKU</label>
+                            <input type="text" id="productSku" placeholder="Your internal SKU">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="productPrice">Price (<span id="productCurrencyCode">NGN</span>)</label>
+                            <input type="number" id="productPrice" step="0.01" min="0" placeholder="0.00" required>
+                            <small class="form-help" id="productCurrencyHelp">Enter the amount customers will pay in your marketplace currency.</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="productStock">Stock Quantity</label>
+                            <input type="number" id="productStock" placeholder="0" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="productDiscount">Discount (%)</label>
+                            <input type="number" id="productDiscount" placeholder="0" min="0" max="100">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="productLocation">Available in</label>
+                            <select id="productLocation" required>
+                                <option value="">Select state or region</option>
+                            </select>
+                        </div>
+                         <div class="form-group">
+                             <label for="productSchool">School / institution</label>
+                             <select id="productSchool">
+                                 <option value="">State-wide listing</option>
+                             </select>
+                         </div>
+                         <div class="form-group">
+                             <label for="productCondition">Condition</label>
+                             <select id="productCondition">
+                                 <option value="">Not specified</option>
+                                 <option value="new">New</option>
+                                 <option value="used">Used</option>
+                                 <option value="fairly_used">Fairly used</option>
+                             </select>
+                         </div>
+                         <div class="form-group">
+                             <label for="productCampusArea">Campus / local area</label>
+                             <input type="text" id="productCampusArea" maxlength="100" placeholder="e.g. Main gate, hostel area">
+                         </div>
+                        
+                        <div class="form-group full-width">
+                            <label for="productDescription">Description</label>
+                            <textarea id="productDescription" rows="4" placeholder="Enter product description" required></textarea>
+                        </div>
+
+                        <section class="form-group full-width product-delivery-editor" aria-labelledby="productDeliveryHeading">
+                            <h3 id="productDeliveryHeading"><i class="fas fa-truck" aria-hidden="true"></i> Delivery options</h3>
+                            <p class="form-help">Tell buyers what you can offer. Confirm delivery fees and timing with them before payment.</p>
+                            <div class="delivery-option-choices">
+                                <label class="delivery-option-choice"><input type="checkbox" id="productDeliveryPickup" checked><span>Pickup or collection</span></label>
+                                <label class="delivery-option-choice"><input type="checkbox" id="productDeliveryLocal"><span>Local delivery</span></label>
+                                <label class="delivery-option-choice"><input type="checkbox" id="productDeliveryRegional"><span>Delivery beyond the local area</span></label>
+                            </div>
+                            <label for="productDeliveryNotes">Delivery note <span class="optional-label">optional</span></label>
+                            <textarea id="productDeliveryNotes" rows="2" maxlength="300" placeholder="Add a delivery area or handling note. Do not include unconfirmed fees."></textarea>
+                        </section>
+
+                        <section class="form-group full-width product-promotion-editor" aria-labelledby="productPromotionHeading">
+                            <h3 id="productPromotionHeading"><i class="fas fa-bullhorn" aria-hidden="true"></i> Promote your listing</h3>
+                            <p class="form-help">Use VelveraHub’s existing paid promotion request. The amount and payment instructions are set by admin, and requests are reviewed before activation.</p>
+                            <button class="btn btn-secondary" id="promoteCurrentProduct" type="button" disabled>Save this product before requesting promotion</button>
+                        </section>
+
+                        <div class="form-group">
+                            <label for="productAttributes">Product attributes</label>
+                            <textarea id="productAttributes" rows="3" placeholder="Color: Black&#10;Material: Aluminum&#10;Warranty: 12 months"></textarea>
+                            <small class="form-help">One attribute per line in “Name: Value” format.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="productProvenance">Authenticity / provenance URL</label>
+                            <input type="url" id="productProvenance" placeholder="https://manufacturer.example/verify">
+                            <small class="form-help">Add a manufacturer, distributor, invoice, or certificate link where applicable.</small>
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <label>Product Images</label>
+                            <div class="image-upload-area" id="imageUploadArea">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <p>Choose up to six JPEG, PNG, or WebP photos (8 MB each before compression). Each compressed WebP upload must be 5 MB or smaller.</p>
+                                <input type="file" id="productImages" accept="image/jpeg,image/png,image/webp" multiple hidden>
+                            </div>
+                            <div class="uploaded-images" id="uploadedImages"></div>
+                        </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" id="cancelAddProduct">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Add Product</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <nav class="mobile-bottom-nav" aria-label="Mobile navigation">
+        <div class="bottom-nav-items"></div>
+    </nav>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../../assets/js/services/region.js"></script>
+    <script src="../../assets/js/config.js"></script>
+    <script src="../../assets/js/services/api.js"></script>
+    <script src="../../assets/js/services/publicSupabaseConfig.js"></script>
+    <script src="../../assets/js/services/supabaseClient.js"></script>
+    <script src="../../assets/js/services/auth.js"></script>
+    <script src="../../assets/js/services/observability.js"></script>
+    <script src="../../assets/js/services/campuses.js"></script>
+    <script src="../../assets/js/components/site-navigation.js"></script>
+    <script src="../../assets/js/services/categories.js"></script>
+    <script src="../../assets/js/components/async-feedback.js"></script>
+    <script src="../../assets/js/components/password-visibility.js"></script>
+    <script src="../../assets/js/components/interaction-feedback.js"></script>
+    <script src="dashboard.js"></script>
+    <script src="../../assets/js/components/custom-select.js"></script>
+    <script src="../../assets/js/components/smart-features.js"></script>
+    <script src="../../assets/js/components/mobile-nav.js"></script>
+</body>
+</html>

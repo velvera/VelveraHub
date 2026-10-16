@@ -1,0 +1,210 @@
+.trust-score-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-width: 175px;
+    padding: 0.6rem 0.8rem;
+    border: 1px solid rgba(109, 40, 217, 0.18);
+    border-radius: var(--radius-lg);
+    background: rgba(255, 255, 255, 0.96);
+    color: var(--gray-900);
+    box-shadow: 0 8px 24px rgba(17, 24, 39, 0.12);
+}
+
+.trust-score-value {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    border-radius: var(--radius-full);
+    background: var(--primary);
+    color: var(--white);
+    font-size: 1rem;
+    font-weight: 800;
+}
+
+.trust-score-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.trust-score-copy strong {
+    font-size: 0.78rem;
+    line-height: 1.1;
+}
+
+.trust-score-copy small {
+    color: var(--gray-500);
+    font-size: 0.66rem;
+    line-height: 1.25;
+}
+
+.trust-score-badge--compact {
+    min-width: 0;
+    padding: 0.35rem 0.55rem;
+    gap: 0.45rem;
+    border-radius: var(--radius-full);
+    box-shadow: none;
+}
+
+.trust-score-badge--compact .trust-score-value {
+    width: 28px;
+    height: 28px;
+    flex-basis: 28px;
+    font-size: 0.72rem;
+}
+
+.trust-score-badge--compact .trust-score-copy strong {
+    font-size: 0.67rem;
+}
+
+.trust-score-badge--compact .trust-score-copy small {
+    font-size: 0.58rem;
+}
+
+.product-trust-summary {
+    margin: -0.4rem 0 0.8rem;
+}
+
+.shop-card-trust .trust-score-badge {
+    width: fit-content;
+}
+
+.trust-panel {
+    margin-top: 1.5rem;
+    padding: 1.25rem;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-xl);
+    background: var(--white);
+    box-shadow: var(--shadow-sm);
+}
+
+.trust-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.trust-panel-header h2 {
+    margin: 0.25rem 0 0;
+    color: var(--gray-900);
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+}
+
+.trust-eyebrow {
+    color: var(--primary);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.trust-panel-intro {
+    margin: 0.85rem 0 1rem;
+    color: var(--gray-500);
+    font-size: 0.8rem;
+}
+
+.trust-evidence-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+}
+
+.trust-evidence-row {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-width: 0;
+    padding: 0.7rem;
+    border: 1px solid rgba(22, 163, 74, 0.18);
+    border-radius: var(--radius);
+    background: rgba(22, 163, 74, 0.04);
+}
+
+.trust-evidence-row.is-unavailable {
+    border-color: var(--gray-200);
+    background: var(--gray-50);
+}
+
+.trust-evidence-icon {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
+    border-radius: var(--radius-full);
+    background: rgba(22, 163, 74, 0.12);
+    color: var(--success);
+    font-size: 0.75rem;
+}
+
+.is-unavailable .trust-evidence-icon {
+    background: var(--gray-200);
+    color: var(--gray-500);
+}
+
+.trust-evidence-copy {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.trust-evidence-score {
+    flex: 0 0 auto;
+    color: var(--gray-700);
+    font-size: 0.64rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.trust-evidence-copy strong {
+    color: var(--gray-800);
+    font-size: 0.75rem;
+}
+
+.trust-evidence-copy small {
+    overflow: hidden;
+    color: var(--gray-500);
+    font-size: 0.68rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.trust-evidence-status {
+    flex: 0 0 auto;
+    color: var(--success);
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.is-unavailable .trust-evidence-status {
+    color: var(--gray-400);
+}
+
+@media (max-width: 640px) {
+    .trust-panel-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .trust-evidence-list {
+        grid-template-columns: 1fr;
+    }
+
+    .trust-evidence-row {
+        align-items: flex-start;
+    }
+
+    .trust-evidence-status {
+        white-space: nowrap;
+    }
+}

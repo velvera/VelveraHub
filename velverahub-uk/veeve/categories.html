@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Categories - VelveraHub</title>
+    <meta name="description" content="Explore VelveraHub product categories, from electronics and fashion to home, sports, beauty, and toys.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="../assets/css/base.css" rel="stylesheet">
+    <link href="../assets/css/components/navbar.css" rel="stylesheet">
+    <link href="../assets/css/components/footer.css" rel="stylesheet">
+    <link href="../assets/css/components/custom-select.css" rel="stylesheet">
+    <link href="../assets/css/components/smart-features.css" rel="stylesheet">
+    <link href="../assets/css/components/landing-pages.css" rel="stylesheet">
+    <link rel="icon" href="../img/favicon.ico">
+    <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
+    <link rel="manifest" href="../manifest.webmanifest">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-left">
+                <a href="/" class="logo"><span class="logo-icon" aria-hidden="true"></span><span class="logo-text">Velvera<span class="accent">Hub</span></span></a>
+            </div>
+            <div class="nav-center"><div class="search-container"><select class="category-select" id="searchCategory"><option value="all">All Categories</option><option value="electronics">Electronics</option><option value="fashion">Fashion</option><option value="home">Home &amp; Garden</option><option value="sports">Sports</option><option value="beauty">Beauty</option><option value="toys">Toys &amp; Games</option></select><input class="search-input" id="searchInput" placeholder="Search for products..."><button class="search-btn" id="searchBtn" aria-label="Search"><i class="fas fa-search"></i></button></div></div>
+            <div class="nav-right"><div class="nav-icons"><a class="nav-icon-item" href="/"><i class="fas fa-home"></i><span class="icon-label">Home</span></a><a class="nav-icon-item" href="/veeve/products.html"><i class="fas fa-th-large"></i><span class="icon-label">Browse</span></a><a class="nav-icon-item" href="/veeve/account.html"><i class="fas fa-user"></i><span class="icon-label">Account</span></a><a class="nav-icon-item" href="/veeve/cart.html"><i class="fas fa-shopping-cart"></i><span class="icon-label">Cart</span></a></div></div>
+        </div>
+    </nav>
+    <main class="landing-main"><div class="section-container"><header class="landing-hero"><span class="landing-eyebrow"><i class="fas fa-layer-group"></i> Explore VelveraHub</span><h1>Shop by category</h1><p>Browse trusted products from verified shops, with delivery-aware discovery for your location.</p></header><section class="landing-grid" aria-label="Product categories">
+        <a class="landing-card" href="/veeve/products.html?category=electronics"><span class="landing-card-icon"><img src="/img/home-category/electronics.png" alt="" aria-hidden="true"></span><h2>Electronics</h2><p>Phones, computers, accessories, and smart technology.</p><span class="landing-card-link">Browse electronics <i class="fas fa-arrow-right"></i></span></a>
+        <a class="landing-card" href="/veeve/products.html?category=fashion"><span class="landing-card-icon"><img src="/img/home-category/fashion.png" alt="" aria-hidden="true"></span><h2>Fashion</h2><p>Everyday style, footwear, accessories, and more.</p><span class="landing-card-link">Browse fashion <i class="fas fa-arrow-right"></i></span></a>
+        <a class="landing-card" href="/veeve/products.html?category=home"><span class="landing-card-icon"><img src="/img/home-category/home-furniture-and-appliances.png" alt="" aria-hidden="true"></span><h2>Home &amp; Garden</h2><p>Furniture, decor, appliances, and home essentials.</p><span class="landing-card-link">Browse home <i class="fas fa-arrow-right"></i></span></a>
+        <a class="landing-card" href="/veeve/products.html?category=sports"><span class="landing-card-icon"><img src="/img/home-category/sports.png" alt="" aria-hidden="true"></span><h2>Sports</h2><p>Equipment, activewear, and gear for every goal.</p><span class="landing-card-link">Browse sports <i class="fas fa-arrow-right"></i></span></a>
+        <a class="landing-card" href="/veeve/products.html?category=beauty"><span class="landing-card-icon"><img src="/img/home-category/beauty-and-personal-care.png" alt="" aria-hidden="true"></span><h2>Beauty</h2><p>Personal care, skincare, haircare, and wellness.</p><span class="landing-card-link">Browse beauty <i class="fas fa-arrow-right"></i></span></a>
+        <a class="landing-card" href="/veeve/products.html?category=toys"><span class="landing-card-icon"><img src="/img/home-category/toys-and-games.png" alt="" aria-hidden="true"></span><h2>Toys &amp; Games</h2><p>Play, learning, creativity, and family entertainment.</p><span class="landing-card-link">Browse toys <i class="fas fa-arrow-right"></i></span></a>
+    </section></div></main>
+    <nav class="mobile-bottom-nav"><div class="bottom-nav-items"><a class="bottom-nav-item" href="/"><i class="fas fa-home"></i><span>Home</span></a><a class="bottom-nav-item active" href="/veeve/categories.html"><i class="fas fa-th-large"></i><span>Browse</span></a><button class="bottom-nav-item" id="bottomCartBtn"><i class="fas fa-shopping-cart"></i><span>Cart</span></button><button class="bottom-nav-item" id="bottomAccountBtn"><i class="fas fa-user"></i><span>Account</span></button></div></nav>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="../assets/js/services/region.js"></script><script src="../assets/js/config.js"></script><script src="../assets/js/services/publicSupabaseConfig.js"></script><script src="../assets/js/services/observability.js"></script>
+<script src="../assets/js/services/supabaseClient.js"></script><script src="../assets/js/components/focus-manager.js"></script>
+<script src="../assets/js/components/site-navigation.js"></script><script src="../assets/js/components/custom-select.js"></script><script src="../assets/js/components/smart-features.js"></script><script src="../assets/js/components/mobile-nav.js"></script><script src="page-shell.js"></script>
+</body>
+</html>
+<script src="../assets/js/services/api.js"></script>

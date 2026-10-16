@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /account/
+Disallow: /veeve/account.html
+Disallow: /veeve/auth.html
+Disallow: /veeve/cart.html
+Disallow: /veeve/checkout.html
+Disallow: /dashboards/
+Disallow: /seller-workspace/
+Disallow: /shop-owner/
+Sitemap: https://velverahub.com/sitemap.xml

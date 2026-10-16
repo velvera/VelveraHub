@@ -1,0 +1,28 @@
+{
+  "scripts": {
+    "start": "node server.js",
+    "smoke": "node scripts/smoke.mjs",
+    "audit:image-alt": "node scripts/image-alt-audit.mjs",
+    "test:product-meta": "node scripts/product-meta-function.test.mjs",
+    "test:messages-moderation": "node scripts/messages-moderation.test.mjs",
+    "test:domain-routing": "node scripts/domain-routing.test.mjs",
+    "auth:browser": "node scripts/authenticated-browser.mjs",
+    "auth:seller:acceptance": "node scripts/authenticated-browser.mjs --seller-acceptance",
+    "mobile:regression": "node scripts/mobile-regression.mjs",
+    "apps:check": "node scripts/check-generated-drift.mjs",
+    "apps:production:check": "node scripts/check-generated-drift.mjs --production",
+    "apps:generate": "node scripts/create-velverahub-apps.mjs --refresh",
+    "apps:sync": "node scripts/create-velverahub-apps.mjs --sync"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.23.0",
+    "playwright": "^1.62.1"
+  },
+  "overrides": {
+    "proxy-addr": "2.0.8"
+  }
+}

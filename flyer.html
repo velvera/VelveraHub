@@ -1,0 +1,1830 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>VelveraHub — Premium Flyer</title>
+
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap");
+
+      @page {
+        size: A5 portrait;
+        margin: 0;
+      }
+
+      :root {
+        --purple: #6d28d9;
+        --purple-dark: #32105f;
+        --purple-deep: #24103e;
+        --violet: #8b5cf6;
+        --gold: #f5b942;
+        --cream: #fcfaf7;
+        --ink: #18131f;
+        --muted: #6d6575;
+        --line: #e8e2ec;
+        --white: #fff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: #d8d4db;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+
+      html::-webkit-scrollbar,
+      body::-webkit-scrollbar {
+        width: 0;
+        height: 0;
+        display: none;
+      }
+
+      body {
+        color: var(--ink);
+        font-family: "DM Sans", Arial, sans-serif;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      /* ==================================================
+       FLYER
+       ================================================== */
+
+      .flyer {
+        position: relative;
+        width: 148mm;
+        height: 210mm;
+        margin: 0 auto;
+        overflow: hidden;
+
+        background:
+          radial-gradient(
+            circle at 110% 5%,
+            rgba(139, 92, 246, 0.18),
+            transparent 28%
+          ),
+          radial-gradient(
+            circle at -10% 78%,
+            rgba(245, 185, 66, 0.11),
+            transparent 26%
+          ),
+          var(--cream);
+      }
+
+      .flyer::before {
+        content: "";
+        position: absolute;
+        width: 42mm;
+        height: 42mm;
+        right: -25mm;
+        top: 34mm;
+        border: 7mm solid rgba(109, 40, 217, 0.045);
+        border-radius: 50%;
+        pointer-events: none;
+      }
+
+      .flyer::after {
+        content: "";
+        position: absolute;
+        width: 34mm;
+        height: 34mm;
+        left: -22mm;
+        bottom: 30mm;
+        border: 6mm solid rgba(245, 185, 66, 0.06);
+        border-radius: 50%;
+        pointer-events: none;
+      }
+
+      /* ==================================================
+       HEADER
+       ================================================== */
+
+      .header {
+        position: relative;
+        z-index: 2;
+        padding: 7mm 6.5mm 0;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .brand img {
+        width: 46mm;
+        height: auto;
+        display: block;
+      }
+
+      .location-pill {
+        display: flex;
+        align-items: center;
+        gap: 1.5mm;
+        padding: 1.7mm 2.5mm;
+        border: 1px solid #e2d8ee;
+        border-radius: 99px;
+        color: var(--purple);
+        background: #fff;
+        font-size: 5.8pt;
+        font-weight: 800;
+        letter-spacing: 0.03em;
+      }
+
+      .flag {
+        width: 4.5mm;
+        height: 3.3mm;
+        flex: 0 0 4.5mm;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        border-radius: 0.5mm;
+        background: #fff;
+      }
+
+      .flag img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      /* ==================================================
+       HERO
+       ================================================== */
+
+      .hero {
+        position: relative;
+        z-index: 2;
+        padding: 7mm 6.5mm 0;
+      }
+
+      .hero-main {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 64mm;
+        align-items: center;
+        gap: 3mm;
+      }
+
+      .hero-content {
+        min-width: 0;
+      }
+
+      .kicker {
+        display: inline-flex;
+        align-items: center;
+        margin-bottom: 1.5mm;
+        color: var(--purple);
+        font-size: 5.4pt;
+        line-height: 1;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .kicker::before {
+        content: "";
+        width: 5mm;
+        height: 0.8mm;
+        margin-right: 1.6mm;
+        border-radius: 99px;
+        background: var(--gold);
+      }
+
+      .hero h1 {
+        max-width: 58mm;
+        margin: 3.2mm 0 2.7mm;
+        font-family: "Manrope", Arial, sans-serif;
+        font-size: 21pt;
+        line-height: 0.98;
+        letter-spacing: -0.055em;
+        font-weight: 800;
+      }
+
+      .hero h1 span {
+        color: var(--purple);
+      }
+
+      .hero-copy {
+        max-width: 55mm;
+        margin: 0;
+        color: var(--muted);
+        font-size: 7pt;
+        line-height: 1.45;
+      }
+
+      /* ==================================================
+       PHONE SHOWCASE
+       ================================================== */
+
+      .phone-showcase {
+        position: relative;
+        width: 31mm;
+        height: 64mm;
+        flex: 0 0 31mm;
+        justify-self: end;
+        transform: rotate(-4deg);
+        transform-origin: 50% 88%;
+      }
+
+      .phone-pair {
+        display: flex;
+        align-items: flex-start;
+        justify-content: flex-end;
+        gap: 2mm;
+        width: 64mm;
+      }
+
+      .phone-pair .phone-showcase:first-child {
+        margin-top: 4mm;
+        transform: rotate(6deg);
+      }
+
+      .phone-pair .phone-showcase:last-child {
+        transform: rotate(-3deg);
+      }
+
+      .phone-showcase::before {
+        content: "";
+        position: absolute;
+        width: 24mm;
+        height: 24mm;
+        right: -7mm;
+        top: 12mm;
+        border-radius: 50%;
+        background: rgba(139, 92, 246, 0.12);
+        filter: blur(2mm);
+      }
+
+      .phone-showcase::after {
+        content: "";
+        position: absolute;
+        z-index: 1;
+        right: 1mm;
+        bottom: -1.4mm;
+        left: 4mm;
+        height: 5mm;
+        border-radius: 50%;
+        background: rgba(36, 16, 62, 0.28);
+        filter: blur(2.4mm);
+        transform: rotate(3deg);
+      }
+
+      .phone {
+        position: relative;
+        z-index: 2;
+        width: 100%;
+        height: 100%;
+        padding: 1.25mm;
+        border: 0.65mm solid #18151d;
+        border-radius: 6mm;
+        background: #17141b;
+        box-shadow:
+          0 1.2mm 1.3mm rgba(16, 10, 24, 0.34),
+          1.4mm 3.4mm 4.6mm rgba(36, 16, 62, 0.25),
+          -0.7mm 0.6mm 1.2mm rgba(255, 255, 255, 0.08),
+          inset 0 0 0 0.4mm #3c3544,
+          inset 0 0 0 0.9mm #0b090e;
+      }
+
+      .phone::before {
+        content: "";
+        position: absolute;
+        top: 1.8mm;
+        left: 50%;
+        z-index: 20;
+        width: 14mm;
+        height: 3.8mm;
+        transform: translateX(-50%);
+        border-radius: 99px;
+        background:
+          linear-gradient(90deg, #08070b 0%, #121016 66%, #26202f 100%);
+        box-shadow:
+          inset 0 0 0 0.25mm rgba(255, 255, 255, 0.08),
+          0 0 0 0.45mm rgba(91, 68, 119, 0.16),
+          0 0.5mm 1mm rgba(9, 6, 14, 0.36);
+      }
+
+      .phone::after {
+        content: "●  NEW SALE  +₦25k";
+        position: absolute;
+        top: 2.35mm;
+        left: 50%;
+        z-index: 21;
+        width: 12.5mm;
+        overflow: hidden;
+        transform: translateX(-50%);
+        color: #d7fbe9;
+        font-size: 2.05pt;
+        line-height: 1;
+        font-weight: 800;
+        letter-spacing: 0.01em;
+        text-align: center;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .checkout-phone .phone::after {
+        content: "●  SALE  +₦38.5k";
+        color: #f4e8ff;
+      }
+
+      .phone-screen {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        border-radius: 4.8mm;
+        background: #faf8fc;
+        font-family: "DM Sans", Arial, sans-serif;
+      }
+
+      /* ==================================================
+       MARKETPLACE HEADER
+       ================================================== */
+
+      .market-top {
+        padding: 5mm 2.3mm 2mm;
+        background: #fff;
+      }
+
+      .market-brand {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1.5mm;
+      }
+
+      .market-brand-logo {
+        display: block;
+        width: 18mm;
+        height: auto;
+        object-fit: contain;
+      }
+
+      .market-location {
+        display: flex;
+        align-items: center;
+        gap: 0.6mm;
+        color: #77707f;
+        font-size: 3.5pt;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .market-search {
+        display: flex;
+        align-items: center;
+        gap: 1.1mm;
+        width: 100%;
+        height: 5.7mm;
+        margin-top: 2mm;
+        padding: 0 1.8mm;
+        border: 1px solid #e7e1eb;
+        border-radius: 2mm;
+        color: #aaa3b1;
+        background: #faf9fb;
+        font-size: 3.4pt;
+        white-space: nowrap;
+      }
+
+      .market-search svg {
+        flex: 0 0 auto;
+        width: 2.5mm;
+        height: 2.5mm;
+        stroke: #81798c;
+        fill: none;
+        stroke-width: 1.8;
+      }
+
+      .market-home-title {
+        margin-top: 2.3mm;
+        color: #21182b;
+        font-family: "Manrope", Arial, sans-serif;
+        font-size: 6.8pt;
+        line-height: 1.05;
+        font-weight: 800;
+        letter-spacing: -0.035em;
+      }
+
+      .market-home-title span {
+        color: var(--purple);
+      }
+
+      .market-home-subtitle {
+        margin-top: 0.9mm;
+        color: #77707f;
+        font-size: 3.25pt;
+        line-height: 1.3;
+      }
+
+      .market-quick-actions {
+        display: flex;
+        gap: 1mm;
+        margin-top: 1.8mm;
+      }
+
+      .market-action {
+        flex: 1;
+        padding: 1.25mm 0.7mm;
+        border: 1px solid #ebe5ef;
+        border-radius: 1.7mm;
+        color: #554b60;
+        background: #fff;
+        text-align: center;
+        font-size: 2.8pt;
+        font-weight: 700;
+      }
+
+      .market-action.active {
+        border-color: rgba(109, 40, 217, 0.18);
+        color: var(--purple);
+        background: #f4efff;
+      }
+
+      /* ==================================================
+       MARKETPLACE PROMO
+       ================================================== */
+
+      .market-banner {
+        margin: 1.6mm 2.3mm 0;
+        padding: 2.4mm 2mm;
+        overflow: hidden;
+        border-radius: 2.5mm;
+        background:
+          radial-gradient(
+            circle at 100% 0%,
+            rgba(139, 92, 246, 0.75),
+            transparent 45%
+          ),
+          linear-gradient(135deg, #32105f, #6d28d9);
+        color: white;
+      }
+
+      .market-banner small {
+        display: block;
+        margin-bottom: 0.7mm;
+        color: #e9ddff;
+        font-size: 2.8pt;
+        font-weight: 700;
+      }
+
+      .market-banner strong {
+        display: block;
+        max-width: 24mm;
+        font-family: "Manrope", Arial, sans-serif;
+        font-size: 5.5pt;
+        line-height: 1.05;
+        letter-spacing: -0.03em;
+      }
+
+      .market-banner span {
+        display: inline-block;
+        margin-top: 1.4mm;
+        padding: 0.8mm 1.5mm;
+        border-radius: 99px;
+        color: #32105f;
+        background: #fcd982;
+        font-size: 2.7pt;
+        font-weight: 800;
+      }
+
+      /* ==================================================
+       MARKETPLACE SECTIONS
+       ================================================== */
+
+      .market-section {
+        padding: 2mm 2.3mm 0;
+      }
+
+      .market-section-title {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.4mm;
+      }
+
+      .market-section-title strong {
+        color: #241c2b;
+        font-family: "Manrope", Arial, sans-serif;
+        font-size: 4.6pt;
+        font-weight: 800;
+      }
+
+      .market-section-title span {
+        color: var(--purple);
+        font-size: 2.8pt;
+        font-weight: 700;
+      }
+
+      /* ==================================================
+       CATEGORIES
+       ================================================== */
+
+      .market-categories {
+        display: flex;
+        gap: 1mm;
+        overflow: hidden;
+      }
+
+      .market-category {
+        min-width: 7.4mm;
+        padding: 1.2mm 0.8mm;
+        border: 1px solid #ebe5ef;
+        border-radius: 1.8mm;
+        text-align: center;
+        background: white;
+      }
+
+      .category-circle {
+        width: 5mm;
+        height: 5mm;
+        margin: 0 auto 0.6mm;
+        border-radius: 50%;
+        background: #f1eaff;
+      }
+
+      .market-category:nth-child(2) .category-circle {
+        background: #fff0c9;
+      }
+
+      .market-category:nth-child(3) .category-circle {
+        background: #e8f7f0;
+      }
+
+      .market-category:nth-child(4) .category-circle {
+        background: #eee8ff;
+      }
+
+      .market-category small {
+        color: #6d6575;
+        font-size: 2.4pt;
+        font-weight: 700;
+      }
+
+      /* ==================================================
+       PRODUCTS
+       ================================================== */
+
+      .market-products {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5mm;
+      }
+
+      .market-product {
+        overflow: hidden;
+        border: 1px solid #ebe5ef;
+        border-radius: 2mm;
+        background: white;
+      }
+
+      .market-product-image {
+        position: relative;
+        height: 11.5mm;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        background: linear-gradient(
+          135deg,
+          #f0ebf6 0%,
+          #e5dcf0 50%,
+          #f9f7fb 100%
+        );
+      }
+
+      .market-product:nth-child(2) .market-product-image {
+        background: linear-gradient(
+          135deg,
+          #f8efd9 0%,
+          #f1dfae 50%,
+          #fffaf0 100%
+        );
+      }
+
+      .market-product-image::after {
+        content: "";
+        position: absolute;
+        width: 8mm;
+        height: 8mm;
+        border-radius: 50%;
+        background: rgba(109, 40, 217, 0.08);
+      }
+
+      .market-product:nth-child(2) .market-product-image::after {
+        background: rgba(245, 185, 66, 0.14);
+      }
+
+      .market-product-icon {
+        position: relative;
+        z-index: 1;
+        width: 6mm;
+        height: 6mm;
+        border-radius: 1.7mm;
+        background: linear-gradient(145deg, #ffffff, #e9e1f1);
+        box-shadow: 0 1mm 2mm rgba(36, 16, 62, 0.12);
+      }
+
+      .market-product:nth-child(2) .market-product-icon {
+        background: linear-gradient(145deg, #fffdf7, #f2dfb0);
+      }
+
+      .product-info {
+        padding: 1.15mm;
+      }
+
+      .product-name {
+        overflow: hidden;
+        color: #2a2230;
+        font-size: 3pt;
+        font-weight: 700;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .product-price {
+        margin-top: 0.55mm;
+        color: var(--purple);
+        font-size: 3.3pt;
+        font-weight: 800;
+      }
+
+      /* ==================================================
+       PHONE NAVIGATION
+       ================================================== */
+
+      .market-nav {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 10;
+        display: flex;
+        justify-content: space-around;
+        padding: 1.7mm 0.8mm 1.9mm;
+        border-top: 1px solid #e7e1eb;
+        background: rgba(255, 255, 255, 0.98);
+      }
+
+      .market-nav-item {
+        color: #91899a;
+        font-size: 2.5pt;
+        font-weight: 700;
+        text-align: center;
+      }
+
+      .market-nav-item.active {
+        color: var(--purple);
+      }
+
+      .market-nav-item svg {
+        display: block;
+        width: 3.1mm;
+        height: 3.1mm;
+        margin: 0 auto 0.4mm;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 1.7;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      /* ==================================================
+       CHECKOUT PHONE
+       ================================================== */
+
+      .checkout-page {
+        min-height: 100%;
+        padding: 4.2mm 2.2mm 9mm;
+        color: #21182b;
+        background: #f8f6fb;
+      }
+
+      .checkout-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1mm;
+        color: #6d28d9;
+        font-size: 3.2pt;
+        font-weight: 800;
+      }
+
+      .checkout-back {
+        color: #7d7485;
+        font-size: 5.5pt;
+        line-height: 1;
+      }
+
+      .checkout-secure {
+        color: #087a57;
+        font-size: 2.6pt;
+        font-weight: 700;
+      }
+
+      .checkout-progress {
+        display: flex;
+        gap: 0.7mm;
+        margin-top: 2.4mm;
+      }
+
+      .checkout-progress span {
+        height: 0.9mm;
+        flex: 1;
+        border-radius: 99px;
+        background: #ded5eb;
+      }
+
+      .checkout-progress span.active {
+        background: var(--purple);
+      }
+
+      .checkout-title {
+        margin-top: 2.5mm;
+        font-family: "Manrope", Arial, sans-serif;
+        font-size: 5.9pt;
+        line-height: 1.05;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+      }
+
+      .checkout-subtitle {
+        margin-top: 0.8mm;
+        color: #77707f;
+        font-size: 2.7pt;
+        line-height: 1.3;
+      }
+
+      .checkout-card {
+        margin-top: 2.2mm;
+        padding: 1.8mm;
+        border: 1px solid #e7e0ee;
+        border-radius: 1.8mm;
+        background: white;
+      }
+
+      .checkout-card-heading {
+        margin-bottom: 1.4mm;
+        color: #6d6575;
+        font-size: 2.7pt;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .checkout-item {
+        display: flex;
+        align-items: center;
+        gap: 1.3mm;
+        padding: 1mm 0;
+        border-bottom: 1px solid #f0ecf3;
+      }
+
+      .checkout-item:last-child {
+        border-bottom: 0;
+      }
+
+      .checkout-thumb {
+        width: 7mm;
+        height: 7mm;
+        flex: 0 0 7mm;
+        border-radius: 1.2mm;
+        background: linear-gradient(145deg, #efe7fb, #d9c8f0);
+      }
+
+      .checkout-item:nth-child(3) .checkout-thumb {
+        background: linear-gradient(145deg, #fff2c9, #efd99d);
+      }
+
+      .checkout-item-copy {
+        min-width: 0;
+        flex: 1;
+      }
+
+      .checkout-item-name {
+        overflow: hidden;
+        color: #2a2230;
+        font-size: 2.8pt;
+        font-weight: 700;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .checkout-item-meta {
+        margin-top: 0.45mm;
+        color: #8b8292;
+        font-size: 2.4pt;
+      }
+
+      .checkout-item-price {
+        color: var(--purple);
+        font-size: 2.8pt;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+
+      .checkout-field-label {
+        display: block;
+        margin-bottom: 0.7mm;
+        color: #6d6575;
+        font-size: 2.6pt;
+        font-weight: 700;
+      }
+
+      .checkout-field {
+        padding: 1.3mm 1.4mm;
+        border: 1px solid #e7e0ee;
+        border-radius: 1.2mm;
+        color: #4e4458;
+        background: #fbfafc;
+        font-size: 2.6pt;
+      }
+
+      .checkout-total {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 1.6mm;
+        padding-top: 1.5mm;
+        border-top: 1px solid #e7e0ee;
+        font-size: 3pt;
+        font-weight: 800;
+      }
+
+      .checkout-total strong {
+        color: var(--purple);
+        font-size: 3.6pt;
+      }
+
+      .checkout-button {
+        margin-top: 2mm;
+        padding: 1.8mm;
+        border-radius: 1.4mm;
+        color: white;
+        background: var(--purple);
+        text-align: center;
+        font-size: 2.8pt;
+        font-weight: 800;
+      }
+
+      /* ==================================================
+       DIVIDER
+       ================================================== */
+
+      .divider {
+        width: 16mm;
+        height: 1.1mm;
+        margin: 4mm 0 4.5mm;
+        border-radius: 99px;
+        background: var(--purple);
+      }
+
+      /* ==================================================
+       BENEFITS
+       ================================================== */
+
+      .benefits {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2mm;
+      }
+
+      .benefit {
+        min-height: 20.5mm;
+        padding: 2.8mm 2.5mm;
+        border: 1px solid var(--line);
+        border-radius: 3.2mm;
+        background: rgba(255, 255, 255, 0.88);
+      }
+
+      .icon-box {
+        width: 7mm;
+        height: 7mm;
+        margin-bottom: 2mm;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 2mm;
+        background: #f1eaff;
+        color: var(--purple);
+      }
+
+      .icon-box svg {
+        width: 4mm;
+        height: 4mm;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .benefit:nth-child(2) .icon-box {
+        background: #fff4d9;
+        color: #a56a00;
+      }
+
+      .benefit:nth-child(3) .icon-box {
+        background: #e9f8f2;
+        color: #087a57;
+      }
+
+      .benefit h2 {
+        margin: 0 0 1mm;
+        font-family: "Manrope", Arial, sans-serif;
+        font-size: 6.7pt;
+        line-height: 1.1;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+
+      .benefit p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 5.4pt;
+        line-height: 1.35;
+      }
+
+      /* ==================================================
+       CATEGORY PANEL
+       ================================================== */
+
+      .category-panel {
+        position: relative;
+        z-index: 2;
+        margin: 4.5mm 6.5mm 0;
+        padding: 4.2mm;
+        border-radius: 4mm;
+        color: white;
+
+        background:
+          radial-gradient(
+            circle at 95% 0%,
+            rgba(139, 92, 246, 0.6),
+            transparent 40%
+          ),
+          linear-gradient(135deg, var(--purple-deep), var(--purple-dark));
+
+        box-shadow: 0 3mm 8mm rgba(50, 16, 95, 0.16);
+      }
+
+      .category-panel::after {
+        content: "";
+        position: absolute;
+        width: 17mm;
+        height: 17mm;
+        right: -7mm;
+        bottom: -9mm;
+        border: 3mm solid rgba(255, 255, 255, 0.06);
+        border-radius: 50%;
+      }
+
+      .category-title {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 2.8mm;
+      }
+
+      .category-title h2 {
+        margin: 0;
+        font-family: "Manrope", Arial, sans-serif;
+        font-size: 9.8pt;
+        font-weight: 800;
+        letter-spacing: -0.035em;
+      }
+
+      .category-title span {
+        color: #fcd982;
+        font-size: 5.3pt;
+        font-weight: 700;
+      }
+
+      .categories {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.3mm;
+      }
+
+      .categories span {
+        padding: 1.15mm 1.9mm;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 99px;
+        color: rgba(255, 255, 255, 0.94);
+        background: rgba(255, 255, 255, 0.08);
+        font-size: 5.1pt;
+        font-weight: 600;
+      }
+
+      /* ==================================================
+         CTA
+         ================================================== */
+
+      .cta {
+        position: relative;
+        z-index: 2;
+        padding: 3.5mm 6.5mm 37mm;
+      }
+
+      .cta-label {
+        margin: 0 0 1.5mm;
+        color: var(--purple);
+        font-size: 5.6pt;
+        font-weight: 800;
+        letter-spacing: 0.11em;
+        text-transform: uppercase;
+      }
+
+      .cta h2 {
+        margin: 0;
+        font-family: "Manrope", Arial, sans-serif;
+        font-size: 12.5pt;
+        line-height: 1;
+        letter-spacing: -0.045em;
+        font-weight: 800;
+      }
+
+      .cta-copy {
+        margin: 1.8mm 0 3.8mm;
+        max-width: 59mm;
+        color: var(--muted);
+        font-size: 6.2pt;
+        line-height: 1.4;
+      }
+
+      /* ==================================================
+         WEBSITE BUTTONS
+         ================================================== */
+
+      .websites {
+        display: flex;
+        gap: 2mm;
+        position: relative;
+        z-index: 2;
+        margin-top: 2.4mm;
+        transform: none;
+      }
+
+      .website {
+        display: flex;
+        align-items: center;
+        gap: 1.5mm;
+        padding: 2mm 2.3mm;
+        border-radius: 2.2mm;
+        color: white;
+        background: var(--purple);
+        font-size: 5.8pt;
+        font-weight: 800;
+      }
+
+      .website.secondary {
+        color: var(--purple);
+        border: 1px solid #ddd0ef;
+        background: white;
+      }
+      /* ==================================================
+       CONTACT / FOOTER
+       ================================================== */
+
+      .contact-strip {
+        position: absolute;
+        z-index: 3;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        height: 28mm;
+        padding: 3.5mm 6.5mm 3.5mm;
+        color: white;
+        background: var(--purple-deep);
+      }
+
+      .contact-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 3mm;
+        margin-bottom: 2.5mm;
+      }
+
+      .contact-brand {
+        font-family: "Manrope", Arial, sans-serif;
+        font-size: 7.5pt;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+
+      .contact-tagline {
+        color: #cfc2dd;
+        font-size: 4.9pt;
+      }
+
+      .contact-items {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2mm;
+      }
+
+      .contact-item {
+        display: flex;
+        align-items: center;
+        gap: 1.8mm;
+        min-width: 0;
+      }
+
+      .contact-icon {
+        flex: 0 0 auto;
+        width: 5.2mm;
+        height: 5.2mm;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 1.6mm;
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .contact-icon svg {
+        width: 2.8mm;
+        height: 2.8mm;
+        stroke: #fcd982;
+        fill: none;
+        stroke-width: 1.7;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .contact-text {
+        min-width: 0;
+      }
+
+      .contact-text small {
+        display: block;
+        margin-bottom: 0.4mm;
+        color: #b9a9c9;
+        font-size: 4.1pt;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .contact-text strong {
+        display: block;
+        overflow: hidden;
+        color: white;
+        font-size: 5.1pt;
+        line-height: 1.15;
+        font-weight: 700;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      /* ==================================================
+       SOCIALS
+       ================================================== */
+
+      .social-row {
+        display: flex;
+        align-items: center;
+        gap: 2.2mm;
+        margin-top: 2.4mm;
+        padding-top: 2.3mm;
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+      }
+
+      .social-row-label {
+        color: #b9a9c9;
+        font-size: 4.6pt;
+        font-weight: 700;
+      }
+
+      .social {
+        display: flex;
+        align-items: center;
+        gap: 1mm;
+        color: white;
+        font-size: 4.9pt;
+        font-weight: 700;
+      }
+
+      .social svg {
+        width: 3.3mm;
+        height: 3.3mm;
+        fill: none;
+        stroke: #fcd982;
+        stroke-width: 1.7;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      /* ==================================================
+       SCREEN PREVIEW
+       ================================================== */
+
+      @media screen {
+        body {
+          padding: 20px;
+        }
+
+        .flyer {
+          box-shadow:
+            0 12px 40px rgba(20, 10, 30, 0.22),
+            0 2px 8px rgba(20, 10, 30, 0.12);
+        }
+      }
+
+      @media print {
+        html,
+        body {
+          background: white;
+        }
+
+        body {
+          padding: 0;
+        }
+
+        .flyer {
+          margin: 0;
+          box-shadow: none;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <main class="flyer">
+      <!-- ==================================================
+       HEADER
+       ================================================== -->
+
+      <header class="header">
+        <div class="brand">
+          <img src="velvera.png" alt="VelveraHub" />
+
+          <div class="location-pill">
+            <span class="flag">
+              <img src="https://flagcdn.io/flags/4x3/ng.svg" alt="Nigeria" />
+            </span>
+
+            NG ·
+
+            <span class="flag">
+              <img
+                src="https://flagcdn.io/flags/4x3/gb.svg"
+                alt="United Kingdom"
+              />
+            </span>
+
+            GB
+          </div>
+        </div>
+      </header>
+
+      <!-- ==================================================
+       HERO
+       ================================================== -->
+
+      <section class="hero">
+        <div class="hero-main">
+          <!-- HERO COPY -->
+
+          <div class="hero-content">
+            <div class="kicker">Shop · Sell · Connect</div>
+
+            <h1>
+              Your world.<br />
+              <span>One marketplace.</span>
+            </h1>
+
+            <p class="hero-copy">
+              Discover products, services and opportunities from sellers around
+              you — all in one smarter marketplace.
+            </p>
+          </div>
+
+          <!-- ==================================================
+           MARKETPLACE PHONE
+           ================================================== -->
+
+          <div class="phone-pair">
+            <!-- CART CHECKOUT PHONE -->
+            <div class="phone-showcase checkout-phone">
+              <div class="phone">
+                <div class="phone-screen">
+                  <div class="checkout-page">
+                    <div class="checkout-top">
+                      <span class="checkout-back">‹</span>
+                      <strong>Cart / Checkout</strong>
+                      <span class="checkout-secure">SECURE</span>
+                    </div>
+
+                    <div class="checkout-progress" aria-hidden="true">
+                      <span class="active"></span>
+                      <span class="active"></span>
+                      <span></span>
+                    </div>
+
+                    <div class="checkout-title">Complete your order</div>
+                    <div class="checkout-subtitle">
+                      Review your items and delivery details.
+                    </div>
+
+                    <div class="checkout-card">
+                      <div class="checkout-card-heading">Order summary</div>
+
+                      <div class="checkout-item">
+                        <div class="checkout-thumb"></div>
+
+                        <div class="checkout-item-copy">
+                          <div class="checkout-item-name">Wireless Earbuds</div>
+                          <div class="checkout-item-meta">Qty 1 · Velvera Store</div>
+                        </div>
+
+                        <div class="checkout-item-price">₦25,000</div>
+                      </div>
+
+                      <div class="checkout-item">
+                        <div class="checkout-thumb"></div>
+
+                        <div class="checkout-item-copy">
+                          <div class="checkout-item-name">Casual Sneakers</div>
+                          <div class="checkout-item-meta">Qty 1 · Lagos Seller</div>
+                        </div>
+
+                        <div class="checkout-item-price">₦38,500</div>
+                      </div>
+
+                      <div style="margin-top: 1.8mm">
+                        <span class="checkout-field-label">Delivery address</span>
+                        <div class="checkout-field">Lagos, Nigeria · Edit</div>
+                      </div>
+
+                      <div class="checkout-total">
+                        <span>Total to pay</span>
+                        <strong>₦63,500</strong>
+                      </div>
+
+                      <div class="checkout-button">Continue to payment</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- MARKETPLACE HOME PHONE -->
+            <div class="phone-showcase">
+              <div class="phone">
+                <div class="phone-screen">
+                <!-- MARKETPLACE HEADER -->
+
+                <div class="market-top">
+                  <div class="market-brand">
+                    <img
+                      src="velvera.png"
+                      alt="VelveraHub"
+                      class="market-brand-logo"
+                    />
+
+                    <div class="market-location">NG · Lagos</div>
+                  </div>
+
+                  <!-- SEARCH -->
+
+                  <div class="market-search">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <circle cx="11" cy="11" r="6.5"></circle>
+
+                      <path d="M16 16l5 5"></path>
+                    </svg>
+
+                    <span> Search products, services... </span>
+                  </div>
+
+                  <!-- HOMEPAGE TITLE -->
+
+                  <div class="market-home-title">
+                    Your world.<br />
+                    <span>One marketplace.</span>
+                  </div>
+
+                  <div class="market-home-subtitle">
+                    Discover products, services and opportunities around you.
+                  </div>
+
+                  <!-- QUICK ACTIONS -->
+
+                  <div class="market-quick-actions">
+                    <div class="market-action active">Shop</div>
+
+                    <div class="market-action">Sell</div>
+
+                    <div class="market-action">Services</div>
+                  </div>
+                </div>
+
+                <!-- ==================================================
+                 PROMOTIONAL BANNER
+                 ================================================== -->
+
+                <div class="market-banner">
+                  <small> WELCOME TO VELVERAHUB </small>
+
+                  <strong> Everything you need. In one place. </strong>
+
+                  <span> EXPLORE NOW </span>
+                </div>
+
+                <!-- ==================================================
+                 CATEGORIES
+                 ================================================== -->
+
+                <div class="market-section">
+                  <div class="market-section-title">
+                    <strong> Popular categories </strong>
+
+                    <span> See all </span>
+                  </div>
+
+                  <div class="market-categories">
+                    <div class="market-category">
+                      <div class="category-circle"></div>
+
+                      <small> Phones </small>
+                    </div>
+
+                    <div class="market-category">
+                      <div class="category-circle"></div>
+
+                      <small> Fashion </small>
+                    </div>
+
+                    <div class="market-category">
+                      <div class="category-circle"></div>
+
+                      <small> Home </small>
+                    </div>
+
+                    <div class="market-category">
+                      <div class="category-circle"></div>
+
+                      <small> Beauty </small>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- ==================================================
+                 PRODUCTS
+                 ================================================== -->
+
+                <div class="market-section">
+                  <div class="market-section-title">
+                    <strong> Recommended for you </strong>
+
+                    <span> View all </span>
+                  </div>
+
+                  <div class="market-products">
+                    <!-- PRODUCT 1 -->
+
+                    <div class="market-product">
+                      <div class="market-product-image">
+                        <div class="market-product-icon"></div>
+                      </div>
+
+                      <div class="product-info">
+                        <div class="product-name">Premium Wireless Earbuds</div>
+
+                        <div class="product-price">₦25,000</div>
+                      </div>
+                    </div>
+
+                    <!-- PRODUCT 2 -->
+
+                    <div class="market-product">
+                      <div class="market-product-image">
+                        <div class="market-product-icon"></div>
+                      </div>
+
+                      <div class="product-info">
+                        <div class="product-name">Smart Casual Sneakers</div>
+
+                        <div class="product-price">₦38,500</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- ==================================================
+                 MOBILE NAVIGATION
+                 ================================================== -->
+
+                <div class="market-nav">
+                  <!-- HOME -->
+
+                  <div class="market-nav-item active">
+                    <svg viewBox="0 0 24 24">
+                      <path d="M3 10.5L12 3l9 7.5"></path>
+
+                      <path d="M5 9.5V21h14V9.5"></path>
+                    </svg>
+
+                    Home
+                  </div>
+
+                  <!-- SEARCH -->
+
+                  <div class="market-nav-item">
+                    <svg viewBox="0 0 24 24">
+                      <circle cx="11" cy="11" r="6.5"></circle>
+
+                      <path d="M16 16l5 5"></path>
+                    </svg>
+
+                    Search
+                  </div>
+
+                  <!-- ORDERS -->
+
+                  <div class="market-nav-item">
+                    <svg viewBox="0 0 24 24">
+                      <path d="M4 5h16v14H4z"></path>
+
+                      <path d="M8 9h8"></path>
+
+                      <path d="M8 13h5"></path>
+                    </svg>
+
+                    Orders
+                  </div>
+
+                  <!-- ACCOUNT -->
+
+                  <div class="market-nav-item">
+                    <svg viewBox="0 0 24 24">
+                      <circle cx="12" cy="8" r="4"></circle>
+
+                      <path d="M4 21c1.5-4 4.2-6 8-6s6.5 2 8 6"></path>
+                    </svg>
+
+                    Account
+                  </div>
+                </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================================================
+         DIVIDER
+         ================================================== -->
+
+        <div class="divider"></div>
+
+        <!-- ==================================================
+         BENEFITS
+         ================================================== -->
+
+        <div class="benefits">
+          <!-- DISCOVER -->
+
+          <article class="benefit">
+            <div class="icon-box">
+              <svg viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="6.5" />
+
+                <path d="M16 16l5 5" />
+              </svg>
+            </div>
+
+            <h2>Discover</h2>
+
+            <p>Find what you need faster.</p>
+          </article>
+
+          <!-- SELL -->
+
+          <article class="benefit">
+            <div class="icon-box">
+              <svg viewBox="0 0 24 24">
+                <path d="M4 10v10h16V10" />
+
+                <path d="M3 10l2-6h14l2 6" />
+
+                <path
+                  d="M3 10c0 2 1.5 3 3 3s3-1 3-3c0 2 1.5 3 3 3s3-1 3-3c0 2 1.5 3 3 3s3-1 3-3"
+                />
+
+                <path d="M9 20v-5h6v5" />
+              </svg>
+            </div>
+
+            <h2>Sell</h2>
+
+            <p>Reach more ready buyers.</p>
+          </article>
+
+          <!-- SHOP SMARTER -->
+
+          <article class="benefit">
+            <div class="icon-box">
+              <svg viewBox="0 0 24 24">
+                <path d="M20 6L9 17l-5-5" />
+              </svg>
+            </div>
+
+            <h2>Shop smarter</h2>
+
+            <p>Compare. Choose. Buy better.</p>
+          </article>
+        </div>
+      </section>
+
+      <!-- ==================================================
+       CATEGORY PANEL
+       ================================================== -->
+
+      <section class="category-panel">
+        <div class="category-title">
+          <h2>Explore the marketplace</h2>
+
+          <span> AND MORE </span>
+        </div>
+
+        <div class="categories">
+          <span>Electronics</span>
+          <span>Fashion</span>
+          <span>Phones</span>
+          <span>Home</span>
+          <span>Beauty</span>
+          <span>Services</span>
+          <span>Jobs</span>
+          <span>Food</span>
+          <span>Kids</span>
+          <span>Pets</span>
+        </div>
+      </section>
+
+      <!-- ==================================================
+       CTA
+       ================================================== -->
+
+      <section class="cta">
+        <p class="cta-label">Start exploring</p>
+
+        <h2>Find it. Sell it. Grow with it.</h2>
+
+        <p class="cta-copy">
+          Join VelveraHub and discover a better way to buy, sell and connect.
+        </p>
+
+        <div class="websites">
+          <!-- NIGERIA -->
+
+          <div class="website">
+            <span class="flag">
+              <img src="https://flagcdn.io/flags/4x3/ng.svg" alt="Nigeria" />
+            </span>
+
+            velverahub.com
+          </div>
+
+          <!-- UNITED KINGDOM -->
+
+          <div class="website secondary">
+            <span class="flag">
+              <img
+                src="https://flagcdn.io/flags/4x3/gb.svg"
+                alt="United Kingdom"
+              />
+            </span>
+
+            velverahub.co.uk
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================================================
+       CONTACT / SOCIAL FOOTER
+       ================================================== -->
+
+      <footer class="contact-strip">
+        <div class="contact-top">
+          <div class="contact-brand">VelveraHub</div>
+
+          <div class="contact-tagline">Buy better · Sell further</div>
+        </div>
+
+        <!-- CONTACT ITEMS -->
+
+        <div class="contact-items">
+          <!-- PHONE -->
+
+          <div class="contact-item">
+            <div class="contact-icon">
+              <svg viewBox="0 0 24 24">
+                <path
+                  d="M22 16.9v3a2 2 0 0 1-2.2 2
+              19.8 19.8 0 0 1-8.6-3.1
+              19.5 19.5 0 0 1-6-6
+              19.8 19.8 0 0 1-3.1-8.6
+              A2 2 0 0 1 4.1 2h3
+              a2 2 0 0 1 2 1.7
+              c.1 1 .4 2 .7 2.9
+              a2 2 0 0 1-.5 2.1L8 9.9
+              a16 16 0 0 0 6 6l1.2-1.3
+              a2 2 0 0 1 2.1-.5
+              c.9.3 1.9.6 2.9.7
+              A2 2 0 0 1 22 16.9z"
+                />
+              </svg>
+            </div>
+
+            <div class="contact-text">
+              <small> Phone </small>
+
+              <strong> 0911 481 0757 </strong>
+            </div>
+          </div>
+
+          <!-- EMAIL -->
+
+          <div class="contact-item">
+            <div class="contact-icon">
+              <svg viewBox="0 0 24 24">
+                <rect x="3" y="5" width="18" height="14" rx="2" />
+
+                <path d="M3 7l9 6 9-6" />
+              </svg>
+            </div>
+
+            <div class="contact-text">
+              <small> Email </small>
+
+              <strong> trucare@velverahub.com </strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================================================
+         SOCIALS
+         ================================================== -->
+
+        <div class="social-row">
+          <span class="social-row-label"> FOLLOW </span>
+
+          <!-- INSTAGRAM -->
+
+          <div class="social">
+            <svg viewBox="0 0 24 24">
+              <rect x="3" y="3" width="18" height="18" rx="5" />
+
+              <circle cx="12" cy="12" r="4" />
+
+              <circle cx="17.5" cy="6.5" r="1" />
+            </svg>
+
+            @velverahub
+          </div>
+
+          <!-- FACEBOOK -->
+
+          <div class="social">
+            <svg viewBox="0 0 24 24">
+              <path
+                d="M14 8h3V4h-3
+            c-3 0-5 2-5 5v3H6v4h3v4h4v-4h3l1-4h-4V9c0-.7.3-1 1-1z"
+              />
+            </svg>
+
+            VelveraHub
+          </div>
+
+          <!-- TIKTOK -->
+
+          <div class="social">
+            <svg viewBox="0 0 24 24">
+              <path d="M15 4v10.2a4 4 0 1 1-3-3.9" />
+
+              <path d="M15 4c1.1 2.3 2.7 3.6 5 3.8" />
+            </svg>
+
+            @velverahub
+          </div>
+        </div>
+      </footer>
+    </main>
+  </body>
+</html>

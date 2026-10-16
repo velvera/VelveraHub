@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="/img/favicon.ico">
+    <title>Products - VelveraHub</title>
+    <meta name="description" content="Search and compare active VelveraHub marketplace products from shops and independent sellers.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../assets/css/base.css">
+    <link rel="stylesheet" href="../assets/css/components/navbar.css">
+    <link rel="stylesheet" href="../assets/css/components/products.css">
+    <link rel="stylesheet" href="../assets/css/components/footer.css">
+    <link rel="stylesheet" href="../assets/css/components/custom-select.css">
+    <link rel="stylesheet" href="../assets/css/components/smart-features.css">
+    <link rel="stylesheet" href="pages.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="catalogue-page">
+    <div id="app">
+        <nav class="navbar" id="navbar">
+            <div class="nav-container">
+                <div class="nav-left">
+                    <a href="/" class="logo">
+                        <span class="logo-icon" aria-hidden="true"></span>
+                        <span class="logo-text">Velvera<span class="accent">Hub</span></span>
+                    </a>
+                </div>
+                <div class="nav-center">
+                    <div class="search-container">
+                        <select id="searchCategory" class="category-select">
+                            <option value="all">All Categories</option>
+                            <option value="electronics">Electronics</option>
+                            <option value="fashion">Fashion</option>
+                            <option value="home">Home &amp; Garden</option>
+                            <option value="sports">Sports</option>
+                            <option value="beauty">Beauty</option>
+                            <option value="toys">Toys &amp; Games</option>
+                        </select>
+                        <input id="searchInput" class="search-input" type="search" placeholder="Search live products">
+                        <button id="searchBtn" class="search-btn" type="button" aria-label="Search"><i class="fas fa-search"></i></button>
+                    </div>
+                </div>
+                <div class="nav-right">
+                    <div class="nav-icons">
+                        <a class="nav-icon-item" href="/"><i class="fas fa-home"></i><span class="icon-label">Home</span></a>
+                        <a class="nav-icon-item active" href="/pages/browse.html"><i class="fas fa-compass"></i><span class="icon-label">Browse</span></a>
+                        <a class="nav-icon-item" href="/pages/account.html"><i class="fas fa-user"></i><span class="icon-label">Account</span></a>
+                        <a class="nav-icon-item" href="/pages/cart.html"><i class="fas fa-shopping-cart"></i><span class="icon-label">Cart</span></a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+        <main class="catalogue-main">
+            <div class="section-container">
+            <header class="catalogue-hero">
+                <p class="eyebrow">Veeve</p>
+                <h1>Veeve Live Catalogue</h1>
+                <p>Discover current listings from verified shops, with delivery-aware discovery for your location.</p>
+            </header>
+            <section class="products-toolbar" aria-label="Product filters">
+                <div class="products-toolbar-heading">
+                    <span class="products-toolbar-label">Refine your search</span>
+                    <span class="products-toolbar-hint">Live inventory only</span>
+                </div>
+                <div class="products-toolbar-controls">
+                    <label>
+                        <span class="sr-only">Filter by category</span>
+                        <select id="categoryFilter" aria-label="Filter by category">
+                            <option value="all">All categories</option>
+                            <option value="electronics">Electronics</option>
+                            <option value="fashion">Fashion</option>
+                            <option value="home">Home &amp; Garden</option>
+                            <option value="sports">Sports</option>
+                            <option value="beauty">Beauty</option>
+                            <option value="toys">Toys &amp; Games</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span class="sr-only">Sort products</span>
+                        <select id="sortFilter" aria-label="Sort products">
+                            <option value="newest">Newest</option>
+                            <option value="rating">Top rated</option>
+                            <option value="sales">Best selling</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span class="sr-only">Filter by delivery location</span>
+                        <select id="locationSelect" data-location-select aria-label="Filter by delivery location">
+                            <option value="all">All States</option>
+                        </select>
+                    </label>
+                </div>
+            </section>
+            <section class="catalogue-results-meta" aria-label="Active filters and result count">
+                <p id="resultCount" class="result-count" aria-live="polite"></p>
+                <div id="activeFilters" class="active-filter-chips" aria-label="Active filters"></div>
+            </section>
+            <section id="productsGrid" class="products-grid" aria-live="polite">
+                <div class="location-empty-state"><i class="fas fa-spinner fa-spin"></i><strong>Loading live products</strong><span>Connecting to the catalogue.</span></div>
+            </section>
+            </div>
+        </main>
+        <footer class="footer shared-footer" data-collapsible-footer data-shared-footer-placeholder aria-label="VelveraHub site footer"></footer>
+        <nav class="mobile-bottom-nav">
+            <div class="bottom-nav-items">
+                <a class="bottom-nav-item" href="/"><i class="fas fa-home"></i><span>Home</span></a>
+                <a class="bottom-nav-item active" href="/pages/browse.html"><i class="fas fa-compass"></i><span>Browse</span></a>
+                <button class="bottom-nav-item" id="bottomCartBtn" type="button"><i class="fas fa-shopping-cart"></i><span>Cart</span></button>
+                <button class="bottom-nav-item" id="bottomAccountBtn" type="button"><i class="fas fa-user"></i><span>Account</span></button>
+            </div>
+        </nav>
+    </div>
+    <script src="../assets/js/services/region.js"></script>
+    <script src="../assets/js/config.js"></script>
+    <script src="../assets/js/services/api.js"></script>
+    <script src="../assets/js/services/publicSupabaseConfig.js"></script>
+    <script src="../assets/js/services/campuses.js"></script>
+    <script src="../assets/js/services/supabaseClient.js"></script>
+    <script src="../assets/js/services/products.js"></script>
+    <script src="../assets/js/services/observability.js"></script>
+    <script src="../assets/js/services/cart.js"></script>
+    <script src="../assets/js/state/store.js"></script>
+    <script src="../assets/js/components/async-feedback.js"></script>
+    <script src="../assets/js/components/ui.js"></script>
+    <script src="../assets/js/components/site-navigation.js"></script>
+    <script src="../assets/js/components/custom-select.js"></script>
+    <script src="../assets/js/services/categories.js"></script>
+    <script src="../assets/js/components/cart-navigation.js"></script>
+    <script src="../assets/js/components/interaction-feedback.js"></script>
+    <script src="../assets/js/components/smart-features.js"></script>
+    <script src="../assets/js/components/mobile-nav.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const grid = document.getElementById('productsGrid');
+            const params = new URLSearchParams(location.search);
+            const category = params.get('category') || 'all';
+            const search = params.get('search') || '';
+            document.getElementById('categoryFilter').value = category;
+            document.getElementById('searchInput').value = search;
+            await window.SupabaseClient?.loadConfig?.();
+            await window.RegionService?.loadAvailableLocations?.();
+            window.RegionService?.syncLocationSelect(document.getElementById('locationSelect'));
+            if (params.get('location')) {
+                document.getElementById('locationSelect').value = params.get('location');
+            }
+
+            let requestId = 0;
+            let searchTimer;
+            const resultCount = document.getElementById('resultCount');
+            const activeFilters = document.getElementById('activeFilters');
+            const labels = {
+                category: { name: 'Category', all: 'All categories' },
+                location: { name: 'Location', all: 'All States' },
+                search: { name: 'Search' }
+            };
+            const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[char]));
+            function renderFilters() {
+                const values = [
+                    ['category', document.getElementById('categoryFilter').value],
+                    ['location', document.getElementById('locationSelect').value],
+                    ['search', document.getElementById('searchInput').value.trim()]
+                ].filter(([, value]) => value && value !== 'all');
+                activeFilters.innerHTML = values.map(([type, value]) => `
+                    <button type="button" class="filter-chip" data-remove-filter="${type}"
+                        aria-label="Remove ${escape(labels[type].name)} filter ${escape(value)}">
+                        <span>${escape(labels[type].name)}: ${escape(value)}</span>
+                        <i class="fas fa-xmark" aria-hidden="true"></i>
+                    </button>`).join('');
+            }
+            function updateCount(total, loading = false) {
+                resultCount.textContent = loading ? 'Loading results…' :
+                    `${Number(total || 0).toLocaleString()} ${Number(total || 0) === 1 ? 'result' : 'results'}`;
+            }
+            async function load() {
+                const currentRequest = ++requestId;
+                AsyncFeedback.render(grid, 'loading', {
+                    loadingTitle: 'Loading live products',
+                    loadingMessage: 'Connecting to the catalogue.'
+                });
+                updateCount(0, true);
+                renderFilters();
+                const requestKey = AsyncFeedback.createRequestId('catalogue');
+                try {
+                    const result = await ProductsService.getProducts({
+                        category: document.getElementById('categoryFilter').value,
+                        search: document.getElementById('searchInput').value.trim(),
+                        sort: document.getElementById('sortFilter').value,
+                        location: document.getElementById('locationSelect').value,
+                        limit: 48
+                    });
+                    if (currentRequest !== requestId) return;
+                    if (result.error) throw result.error;
+                    updateCount(result.total ?? result.data?.length ?? 0);
+                    if (result.data?.length) {
+                        grid.innerHTML = result.data.map(product => UI.renderProductCard(product)).join('');
+                    } else {
+                        AsyncFeedback.render(grid, 'empty', {
+                            emptyTitle: 'No live products found',
+                            emptyMessage: 'Try another spelling, category, or delivery location.'
+                        });
+                    }
+                } catch (error) {
+                    if (currentRequest !== requestId) return;
+                    AsyncFeedback.log('catalogue', requestKey, error, {
+                        search: document.getElementById('searchInput').value.trim(),
+                        category: document.getElementById('categoryFilter').value
+                    });
+                    updateCount(0);
+                    AsyncFeedback.render(grid, 'error', {
+                        errorTitle: 'Live products are temporarily unavailable',
+                        errorMessage: 'Check your connection and try again.',
+                        onRetry: load
+                    });
+                }
+            }
+            ['categoryFilter', 'sortFilter', 'locationSelect'].forEach(id => document.getElementById(id)?.addEventListener('change', load));
+            document.getElementById('searchBtn')?.addEventListener('click', () => {
+                clearTimeout(searchTimer);
+                load();
+            });
+            document.getElementById('searchInput')?.addEventListener('input', () => {
+                clearTimeout(searchTimer);
+                searchTimer = setTimeout(load, 300);
+            });
+            document.getElementById('searchInput')?.addEventListener('keydown', event => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    clearTimeout(searchTimer);
+                    load();
+                }
+            });
+            activeFilters.addEventListener('click', event => {
+                const chip = event.target.closest('[data-remove-filter]');
+                if (!chip) return;
+                const type = chip.dataset.removeFilter;
+                if (type === 'category') document.getElementById('categoryFilter').value = 'all';
+                if (type === 'location') document.getElementById('locationSelect').value = 'all';
+                if (type === 'search') document.getElementById('searchInput').value = '';
+                load();
+            });
+            window.addEventListener('velveraLocationChange', () => {
+                window.RegionService?.syncLocationSelect(document.getElementById('locationSelect'));
+                load();
+            });
+            await load();
+        });
+    </script>
+</body>
+</html>

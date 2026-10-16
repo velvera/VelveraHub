@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Cart - VelveraHub</title>
+    <meta name="description" content="Review products saved in your VelveraHub cart before checkout.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="../assets/css/base.css" rel="stylesheet">
+    <link href="../assets/css/components/navbar.css" rel="stylesheet">
+    <link href="../assets/css/components/products.css" rel="stylesheet">
+    <link href="../assets/css/components/cart.css" rel="stylesheet">
+    <link href="../assets/css/components/custom-select.css" rel="stylesheet">
+    <link href="../assets/css/components/smart-features.css" rel="stylesheet">
+    <link href="pages.css" rel="stylesheet">
+    <style>
+        .cart-page { padding: 2rem 0 5rem; }
+        .cart-page-header { display:flex; align-items:end; justify-content:space-between; gap:1rem; margin-bottom:1.5rem; }
+        .cart-page-header h1 { font-family:var(--font-display); font-size:clamp(1.7rem, 3vw, 2.4rem); color:var(--gray-900); }
+        .cart-page-header p { margin-top:.35rem; color:var(--gray-500); }
+        .cart-page-layout { display:grid; grid-template-columns:minmax(0, 1fr) 360px; gap:1.5rem; align-items:start; }
+        .cart-page-card, .cart-page-summary { background:var(--white); border:1px solid var(--gray-200); border-radius:var(--radius-xl); box-shadow:var(--shadow); }
+        .cart-page-card { padding:1rem; }
+        .cart-page-summary { padding:1.5rem; position:sticky; top:1rem; }
+        .cart-page-summary h2 { font-family:var(--font-display); font-size:1.2rem; margin-bottom:1.25rem; }
+        .cart-page-summary .summary-row { display:flex; justify-content:space-between; gap:1rem; margin:.75rem 0; color:var(--gray-600); }
+        .cart-page-summary .summary-row.total { padding-top:1rem; border-top:1px solid var(--gray-200); color:var(--gray-900); font-size:1.05rem; font-weight:700; }
+        .cart-page-summary .summary-row.total span:last-child { color:var(--primary); font-size:1.25rem; }
+        .cart-page-summary .btn { margin-top:1rem; }
+        .cart-page-items { display:grid; gap:.75rem; }
+        .cart-page-item { display:grid; grid-template-columns:84px minmax(0,1fr) auto; align-items:center; gap:1rem; padding:1rem; border:1px solid var(--gray-200); border-radius:var(--radius-lg); }
+        .cart-page-item-image { width:84px; height:84px; border-radius:var(--radius); overflow:hidden; background:var(--gray-100); }
+        .cart-page-item-image img { width:100%; height:100%; object-fit:cover; }
+        .cart-page-item h3 { font-size:1rem; color:var(--gray-900); margin-bottom:.25rem; }
+        .cart-page-item-shop { color:var(--gray-500); font-size:.8rem; }
+        .cart-page-item-price { color:var(--primary); font-weight:700; margin-top:.45rem; }
+        .cart-page-item-actions { display:flex; align-items:center; gap:.65rem; }
+        .cart-page-qty { display:flex; align-items:center; border:1px solid var(--gray-200); border-radius:var(--radius-full); overflow:hidden; }
+        .cart-page-qty button { width:30px; height:30px; color:var(--gray-600); }
+        .cart-page-qty button:hover { background:var(--primary-50); color:var(--primary); }
+        .cart-page-qty span { min-width:28px; text-align:center; font-weight:600; }
+        .cart-page-remove { color:var(--gray-400); padding:.4rem; }
+        .cart-page-remove:hover { color:var(--error); }
+        .cart-page-empty { text-align:center; padding:4rem 1.5rem; color:var(--gray-500); }
+        .cart-page-empty p { margin:0 0 .8rem; }
+        .cart-page .btn:disabled { opacity:.5; cursor:not-allowed; box-shadow:none; }
+        .cart-page-empty i { font-size:3.5rem; color:var(--primary-light); opacity:.55; margin-bottom:1rem; }
+        .cart-page-empty h2 { color:var(--gray-900); font-family:var(--font-display); margin-bottom:.4rem; }
+        @media (max-width: 820px) {
+            .cart-page-layout { grid-template-columns:1fr; }
+            .cart-page-summary { position:static; }
+        }
+        @media (max-width: 560px) {
+            .cart-page-header { align-items:flex-start; flex-direction:column; }
+            .cart-page-item { grid-template-columns:64px minmax(0,1fr); gap:.75rem; }
+            .cart-page-item-image { width:64px; height:64px; }
+            .cart-page-item-actions { grid-column:2; justify-content:space-between; }
+        }
+    </style>
+<link href="../assets/css/components/footer.css" rel="stylesheet">
+    <link rel="icon" href="../img/favicon.ico">
+</head>
+<body>
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <div class="nav-left">
+                <a href="/" class="logo"><span class="logo-icon" aria-hidden="true"></span><span class="logo-text">Velvera<span class="accent">Hub</span></span></a>
+            </div>
+            <div class="nav-center">
+                <div class="search-container">
+                    <select class="category-select" id="searchCategory">
+                        <option value="all">All Categories</option><option value="electronics">Electronics</option><option value="fashion">Fashion</option><option value="home">Home &amp; Garden</option><option value="sports">Sports</option><option value="beauty">Beauty</option><option value="toys">Toys &amp; Games</option>
+                    </select>
+                    <input class="search-input" id="searchInput" placeholder="Search for products..." aria-label="Search for products">
+                    <button class="search-btn" id="searchBtn" aria-label="Search"><i class="fas fa-search"></i></button>
+                </div>
+            </div>
+            <div class="nav-right"><div class="nav-icons">
+                <a class="nav-icon-item" href="/"><i class="fas fa-home"></i><span class="icon-label">Home</span></a>
+                <a class="nav-icon-item" href="/pages/browse.html"><i class="fas fa-compass"></i><span class="icon-label">Browse</span></a>
+                <a class="nav-icon-item active" href="/pages/cart.html"><i class="fas fa-shopping-cart"></i><span class="cart-count" id="cartCount">0</span><span class="icon-label">Cart</span></a>
+            </div></div>
+        </div>
+    </nav>
+
+    <main class="page-main">
+        <div class="breadcrumb"><div class="section-container"><a href="/">Home</a><i class="fas fa-chevron-right"></i><span>Your Cart</span></div></div>
+        <section class="cart-page"><div class="section-container">
+            <header class="cart-page-header">
+                <div><h1>Your shopping cart</h1><p id="cartItemCount">Review your items before checkout.</p></div>
+                <a class="btn btn-secondary" href="/pages/products.html"><i class="fas fa-arrow-left"></i> Continue shopping</a>
+            </header>
+            <div class="cart-page-layout">
+                <section class="cart-page-card"><div class="cart-page-items" id="cartPageItems"></div></section>
+                <aside class="cart-page-summary">
+                    <h2>Cart summary</h2>
+                    <div class="summary-row"><span>Subtotal</span><strong id="cartPageSubtotal">$0.00</strong></div>
+                    <div class="summary-row"><span>Shipping</span><strong id="cartPageShipping">Free</strong></div>
+                    <div class="summary-row total"><span>Total</span><strong id="cartPageTotal">$0.00</strong></div>
+                    <button class="btn btn-primary btn-full" id="cartPageCheckout" disabled><i class="fas fa-lock"></i> Proceed to checkout</button>
+                </aside>
+            </div>
+        </div></section>
+    </main>
+
+    <nav class="mobile-bottom-nav"><div class="bottom-nav-items">
+        <a class="bottom-nav-item" href="/"><i class="fas fa-home"></i><span>Home</span></a>
+        <a class="bottom-nav-item" href="/pages/browse.html"><i class="fas fa-compass"></i><span>Browse</span></a>
+        <a class="bottom-nav-item active" href="/pages/cart.html"><i class="fas fa-shopping-cart"></i><span>Cart</span></a>
+        <a class="bottom-nav-item" href="/pages/account.html"><i class="fas fa-user"></i><span>Account</span></a>
+    </div></nav>
+
+    <script src="../assets/js/services/region.js"></script>
+    <script src="../assets/js/services/cart.js"></script>
+    <script src="../assets/js/services/observability.js"></script>
+    <script src="../assets/js/components/async-feedback.js"></script>
+    <script src="../assets/js/components/site-navigation.js"></script>
+    <script src="../assets/js/components/custom-select.js"></script>
+    <script src="../assets/js/components/smart-features.js"></script>
+    <script src="../assets/js/components/mobile-nav.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            CartService.init();
+            const itemsEl = document.getElementById('cartPageItems');
+            const fmt = (value) => window.RegionService ? window.RegionService.formatPrice(value) : `$${Number(value).toFixed(2)}`;
+            const readCart = () => CartService.getCart();
+            function render() {
+                const cart = readCart();
+                const count = CartService.getItemCount();
+                document.getElementById('cartItemCount').textContent = `${count} item${count === 1 ? '' : 's'} in your cart`;
+                document.getElementById('cartPageSubtotal').textContent = fmt(CartService.getSubtotal());
+                document.getElementById('cartPageShipping').textContent = CartService.getShipping() === 0 ? 'Free' : fmt(CartService.getShipping());
+                document.getElementById('cartPageTotal').textContent = fmt(CartService.getTotal());
+                document.getElementById('cartPageCheckout').disabled = !cart.length;
+                if (!cart.length) {
+                    itemsEl.innerHTML = '<div class="cart-page-empty"><i class="fas fa-shopping-cart"></i><h2>Your cart is empty</h2><p>Add something you love and it will appear here.</p><a class="btn btn-primary" href="/pages/products.html">Start shopping</a></div>';
+                    return;
+                }
+                itemsEl.innerHTML = cart.map((item) => {
+                    const product = item.product || item;
+                    const image = product.product_images?.[0]?.url || product.image || '/img/basket.png';
+                    return `<article class="cart-page-item">
+                        <div class="cart-page-item-image"><img src="${image}" alt="${product.title || 'Product'}" loading="lazy" decoding="async"></div>
+                        <div><h3>${product.title || 'Product'}</h3><p class="cart-page-item-shop">${product.shops?.name || 'VelveraHub Store'}</p><p class="cart-page-item-price">${fmt(Number(product.price || 0) * item.quantity)}</p></div>
+                        <div class="cart-page-item-actions"><div class="cart-page-qty"><button data-cart-action="decrease" data-product-id="${product.id}" aria-label="Decrease quantity"><i class="fas fa-minus"></i></button><span>${item.quantity}</span><button data-cart-action="increase" data-product-id="${product.id}" aria-label="Increase quantity"><i class="fas fa-plus"></i></button></div><button class="cart-page-remove" data-cart-action="remove" data-product-id="${product.id}" aria-label="Remove item"><i class="fas fa-trash"></i></button></div>
+                    </article>`;
+                }).join('');
+            }
+            itemsEl.addEventListener('click', (event) => {
+                const button = event.target.closest('[data-cart-action]');
+                if (!button) return;
+                const id = button.dataset.productId;
+                const item = readCart().find((entry) => (entry.product || entry).id === id);
+                if (!item) return;
+                if (button.dataset.cartAction === 'increase') CartService.updateQuantity(id, item.quantity + 1);
+                if (button.dataset.cartAction === 'decrease') CartService.updateQuantity(id, item.quantity - 1);
+                if (button.dataset.cartAction === 'remove') CartService.removeItem(id);
+                render();
+            });
+            document.getElementById('cartPageCheckout').addEventListener('click', () => {
+                if (!CartService.isEmpty()) window.location.assign('/pages/checkout.html');
+            });
+            document.getElementById('searchBtn')?.addEventListener('click', () => {
+                const query = document.getElementById('searchInput').value.trim();
+                if (query) window.location.assign(`/pages/products.html?search=${encodeURIComponent(query)}`);
+            });
+            document.getElementById('searchInput')?.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') document.getElementById('searchBtn').click();
+            });
+            window.addEventListener('cartUpdate', render);
+            window.addEventListener('velveraCartChange', render);
+            render();
+        });
+    </script>
+</body>
+</html>
+<script src="../assets/js/services/api.js"></script>

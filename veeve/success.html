@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Confirmation from VelveraHub after your account, order, or marketplace action.">
+    <link rel="icon" href="../img/favicon.ico">
+    <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
+    <link rel="manifest" href="../manifest.webmanifest">
+    <title>Action complete - VelveraHub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="../assets/css/base.css" rel="stylesheet">
+    <link href="../assets/css/components/navbar.css" rel="stylesheet">
+    <link href="../assets/css/components/landing-pages.css" rel="stylesheet">
+    <link href="../assets/css/components/footer.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="logo" aria-label="VelveraHub home">
+                <span class="logo-icon" aria-hidden="true"></span>
+                <span class="logo-text">Velvera<span class="accent">Hub</span></span>
+            </a>
+        </div>
+    </nav>
+    <main class="landing-main">
+        <section class="section-container landing-hero" aria-labelledby="successTitle">
+            <span class="landing-eyebrow"><i class="fas fa-circle-check" aria-hidden="true"></i> VelveraHub confirmation</span>
+            <h1 id="successTitle">You’re all set</h1>
+            <p id="successMessage">Your action was completed successfully.</p>
+            <p id="successDetail" class="success-detail" hidden></p>
+            <div class="landing-actions">
+                <a class="btn btn-primary" id="successNext" href="/pages/account.html">Continue</a>
+                <a class="btn btn-secondary" href="/pages/products.html">Keep shopping</a>
+            </div>
+        </section>
+    </main>
+    <footer class="footer shared-footer" data-collapsible-footer data-shared-footer-placeholder aria-label="VelveraHub site footer"></footer>
+    <script src="../assets/js/components/site-navigation.js"></script>
+    <script>
+        (() => {
+            const params = new URLSearchParams(window.location.search);
+            const type = params.get('type') || 'general';
+            const pending = params.get('pending') === '1';
+            const order = params.get('order');
+            const copy = {
+                registration: {
+                    title: pending ? 'Check your email to finish signing up' : 'Your account is ready',
+                    message: pending
+                        ? 'We created your VelveraHub account. Confirm your email, then sign in to continue.'
+                        : 'Your VelveraHub account was created successfully.',
+                    next: 'Go to account',
+                    href: '/pages/account.html'
+                },
+                order: {
+                    title: 'Order received',
+                    message: 'Your order was created and is pending payment confirmation.',
+                    next: 'View your account',
+                    href: '/pages/account.html'
+                },
+                listing: {
+                    title: 'Listing submitted',
+                    message: 'Your marketplace listing was published successfully.',
+                    next: 'Manage your listing',
+                    href: '/pages/sell.html'
+                },
+                general: {
+                    title: 'You’re all set',
+                    message: 'Your VelveraHub action was completed successfully.',
+                    next: 'Continue',
+                    href: '/pages/account.html'
+                }
+            };
+            const selected = copy[type] || copy.general;
+            document.title = `${selected.title} - VelveraHub`;
+            document.getElementById('successTitle').textContent = selected.title;
+            document.getElementById('successMessage').textContent = selected.message;
+            const detail = document.getElementById('successDetail');
+            if (order && /^[A-Za-z0-9_-]{1,80}$/.test(order)) {
+                detail.textContent = `Order reference: ${order}`;
+                detail.hidden = false;
+            }
+            const next = document.getElementById('successNext');
+            const requestedNext = params.get('next');
+            next.textContent = selected.next;
+            next.href = requestedNext && requestedNext.startsWith('/') && !requestedNext.startsWith('//')
+                ? requestedNext
+                : selected.href;
+        })();
+    </script>
+</body>
+</html>

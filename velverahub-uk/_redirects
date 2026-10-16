@@ -1,0 +1,2 @@
+/pages/* /veeve/:splat 301
+/pages /veeve/ 301

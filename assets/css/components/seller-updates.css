@@ -1,0 +1,188 @@
+.seller-update-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    align-items: start;
+}
+
+.seller-live-page--updates {
+    overflow: visible;
+    background: transparent;
+    box-shadow: none;
+}
+
+.seller-update-card {
+    min-width: 0;
+    border: 1px solid var(--gray-200);
+    box-shadow: var(--shadow-sm);
+}
+
+.seller-update-card--summary {
+    grid-column: 1 / -1;
+}
+
+.seller-update-card .card-header {
+    align-items: flex-start;
+    gap: .75rem;
+    padding: 1.1rem 1.25rem;
+}
+
+.seller-update-card .card-header h2 {
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+    margin: 0;
+    min-width: 0;
+    font-size: 1rem;
+    line-height: 1.4;
+}
+
+.seller-update-link {
+    color: var(--primary);
+    font-size: .82rem;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.seller-update-link:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 3px;
+}
+
+.seller-update-message {
+    margin: 0;
+    padding: .85rem 1.25rem;
+    color: var(--gray-600);
+    font-size: .82rem;
+    line-height: 1.5;
+}
+
+.seller-update-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: .6rem;
+    padding: 0 1.25rem 1.25rem;
+}
+
+.seller-update-stat {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+    min-width: 0;
+    padding: .7rem .8rem;
+    border: 1px solid var(--gray-200);
+    border-radius: .7rem;
+    background: var(--gray-50);
+}
+
+.seller-update-stat span {
+    color: var(--gray-600);
+    font-size: .8rem;
+}
+
+.seller-update-stat strong {
+    color: var(--primary);
+    font-size: 1rem;
+}
+
+.seller-update-row {
+    align-items: flex-start;
+}
+
+.seller-update-card > .ops-table {
+    display: grid;
+    gap: .65rem;
+    padding: 0 1.25rem 1.25rem;
+}
+
+.seller-moderation-list {
+    display: grid;
+    gap: .65rem;
+    padding: 0 1.25rem 1.25rem;
+}
+
+.seller-moderation-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: .65rem .8rem;
+    padding: .85rem;
+    border-color: var(--gray-200);
+    background: var(--gray-50);
+}
+
+.seller-moderation-row > div {
+    min-width: 0;
+}
+
+.seller-moderation-row strong {
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.seller-moderation-row small {
+    line-height: 1.45;
+}
+
+.seller-moderation-row .status-badge {
+    white-space: nowrap;
+}
+
+.seller-update-note {
+    max-width: 36rem;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 768px) {
+    .seller-update-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .seller-update-card--summary {
+        grid-column: auto;
+    }
+}
+
+@media (max-width: 520px) {
+    .seller-update-card .card-header {
+        flex-wrap: wrap;
+        padding: 1rem;
+    }
+
+    .seller-update-card .card-header h2 {
+        font-size: .95rem;
+    }
+
+    .seller-update-link {
+        margin-left: 1.65rem;
+        white-space: normal;
+    }
+
+    .seller-update-message,
+    .seller-update-stats,
+    .seller-update-card > .ops-table,
+    .seller-moderation-list {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .seller-update-stats {
+        padding-bottom: 1rem;
+    }
+
+    .seller-update-card > .ops-table,
+    .seller-moderation-list {
+        padding-bottom: 1rem;
+    }
+
+    .seller-moderation-row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .seller-moderation-row .status-badge,
+    .seller-moderation-row .btn {
+        justify-self: start;
+    }
+}

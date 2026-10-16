@@ -1,0 +1,1338 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta
+            http-equiv="Cache-Control"
+            content="no-cache, no-store, must-revalidate"
+        />
+        <meta name="theme-color" content="#1a0533" />
+        <meta
+            name="description"
+            content="VelveraHub is a trusted marketplace for discovering products from verified shops across Nigeria and the United Kingdom."
+        />
+        <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <title>VelveraHub — Smart marketplace for everyday shopping</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap"
+            rel="stylesheet"
+        />
+        <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+        />
+        <link href="assets/css/base.css" rel="stylesheet" />
+        <link href="assets/css/components/navbar.css" rel="stylesheet" />
+        <link href="assets/css/components/hero.css" rel="stylesheet" />
+        <link href="assets/css/components/products.css" rel="stylesheet" />
+        <link href="assets/css/components/categories.css" rel="stylesheet" />
+        <link href="assets/css/components/footer.css" rel="stylesheet" />
+        <link href="assets/css/components/modal.css" rel="stylesheet" />
+        <link href="assets/css/components/cart.css" rel="stylesheet" />
+        <link href="assets/css/components/home-sections.css" rel="stylesheet" />
+        <link href="assets/css/components/intelligence.css" rel="stylesheet" />
+        <link href="assets/css/components/custom-select.css" rel="stylesheet" />
+        <link
+            href="assets/css/components/smart-features.css"
+            rel="stylesheet"
+        />
+        <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+        <script src="assets/js/services/region.js"></script>
+        <script src="assets/js/services/publicSupabaseConfig.js"></script>
+        <script src="assets/js/config.js"></script>
+        <script src="assets/js/config.js"></script>
+        <script src="assets/js/services/supabaseClient.js"></script>
+        <script src="assets/js/services/api.js"></script>
+        <link rel="canonical" href="https://velverahub.com">
+    <meta name="robots" content="index,follow">
+    <meta property="og:url" content="https://velverahub.com">
+    <meta property="og:site_name" content="VelveraHub">
+</head>
+    <body>
+        <div id="app">
+            <!-- Top Banner -->
+            <div class="top-banner">
+                <div class="banner-content">
+                    <span
+                        ><i class="fas fa-truck"></i>
+                        <span class="banner-shipping"
+                            >Free shipping on qualifying orders</span
+                        ></span
+                    >
+                    <span
+                        ><i class="fas fa-location-dot"></i> Delivery coverage by location</span
+                    >
+                    <span
+                        ><i class="fas fa-receipt"></i> Clear order records</span
+                    >
+                    <span
+                        ><i class="fas fa-store"></i> Live seller listings</span
+                    >
+                    <span><i class="fas fa-circle-check"></i> Review details before ordering</span>
+                    <span
+                        ><i class="fas fa-truck"></i>
+                        <span class="banner-shipping"
+                            >Free shipping on qualifying orders</span
+                        ></span
+                    >
+                    <span
+                        ><i class="fas fa-location-dot"></i> Delivery coverage by location</span
+                    >
+                    <span
+                        ><i class="fas fa-receipt"></i> Clear order records</span
+                    >
+                    <span
+                        ><i class="fas fa-store"></i> Live seller listings</span
+                    >
+                    <span><i class="fas fa-circle-check"></i> Review details before ordering</span>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="navbar" id="navbar">
+                <div class="nav-container">
+                    <div class="nav-left">
+                        <button class="mobile-menu-btn" id="mobileMenuBtn">
+                            <i class="fas fa-bars"></i>
+                        </button>
+                        <a href="/" class="logo" data-page="home">
+                            <span class="logo-icon" aria-hidden="true"></span>
+                            <img src="img/velverahub.png" alt="VelveraHub" class="logo-wordmark" />
+                        </a>
+                        <button
+                            class="region-badge"
+                            id="regionBadgeBtn"
+                            title="Change region"
+                        >
+                            <span id="regionFlag">🇳🇬</span>
+                            <span id="regionName">Nigeria</span>
+                        </button>
+                    </div>
+
+                    <div class="nav-center">
+                        <div class="search-container">
+                            <select class="category-select" id="searchCategory">
+                                <option value="all">All Categories</option>
+                                <option value="electronics">Electronics</option>
+                                <option value="fashion">Fashion</option>
+                                <option value="home">Home & Garden</option>
+                                <option value="sports">Sports</option>
+                                <option value="beauty">Beauty</option>
+                                <option value="toys">Toys & Games</option>
+                            </select>
+                            <input
+                                type="text"
+                                class="search-input"
+                                id="searchInput"
+                                placeholder="Search for products, brands, and more..."
+                                autocomplete="off"
+                                enterkeyhint="search"
+                            />
+                            <button class="search-btn" id="searchBtn">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="nav-right">
+                        <label
+                            class="header-location-select"
+                            title="Choose your Nigerian state"
+                        >
+                            <i class="fas fa-location-dot"></i>
+                            <select
+                                id="headerLocationSelect"
+                                data-location-select
+                                aria-label="Choose your state"
+                            ></select>
+                        </label>
+                        <div class="nav-icons">
+                            <div class="nav-icon-item" id="accountBtn">
+                                <i class="fas fa-user"></i>
+                                <span class="icon-label">Account</span>
+                            </div>
+                            <div class="nav-icon-item" id="wishlistBtn">
+                                <i class="fas fa-heart"></i>
+                                <span class="wishlist-count" id="wishlistCount"
+                                    >0</span
+                                >
+                                <span class="icon-label">Wishlist</span>
+                            </div>
+                            <div class="nav-icon-item" id="cartBtn">
+                                <i class="fas fa-shopping-cart"></i>
+                                <span class="cart-count" id="cartCount">0</span>
+                                <span class="icon-label">Cart</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Category Navigation -->
+                <div class="category-nav">
+                    <div class="category-nav-container">
+                        <a
+                            href="/veeve/categories.html"
+                            class="category-link"
+                            data-category="all"
+                            ><i class="fas fa-th"></i> All</a
+                        >
+                        <a
+                            href="/veeve/products.html?filter=deals"
+                            class="category-link"
+                            data-category="deals"
+                            ><i class="fas fa-fire"></i> Today's Deals</a
+                        >
+                        <a
+                            href="/veeve/products.html?category=electronics"
+                            class="category-link"
+                            data-category="electronics"
+                            ><img src="/img/home-category/electronics.png" alt="" aria-hidden="true" /> Electronics</a
+                        >
+                        <a
+                            href="/veeve/products.html?category=fashion"
+                            class="category-link"
+                            data-category="fashion"
+                            ><img src="/img/home-category/fashion.png" alt="" aria-hidden="true" /> Fashion</a
+                        >
+                        <a
+                            href="/veeve/products.html?category=home"
+                            class="category-link"
+                            data-category="home"
+                            ><img src="/img/home-category/home-furniture-and-appliances.png" alt="" aria-hidden="true" /> Home & Garden</a
+                        >
+                        <a
+                            href="/veeve/products.html?category=sports"
+                            class="category-link"
+                            data-category="sports"
+                            ><img src="/img/home-category/sports.png" alt="" aria-hidden="true" /> Sports</a
+                        >
+                        <a
+                            href="/veeve/products.html?category=beauty"
+                            class="category-link"
+                            data-category="beauty"
+                            ><img src="/img/home-category/beauty-and-personal-care.png" alt="" aria-hidden="true" /> Beauty</a
+                        >
+                        <a
+                            href="/veeve/products.html?category=toys"
+                            class="category-link"
+                            data-category="toys"
+                            ><img src="/img/home-category/toys-and-games.png" alt="" aria-hidden="true" /> Toys</a
+                        >
+                        <a
+                            href="/veeve/sell.html"
+                            class="category-link seller-link"
+                            data-page="seller"
+                            ><i class="fas fa-store"></i> Sell on VelveraHub</a
+                        >
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Mobile Menu -->
+            <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
+            <div class="mobile-menu" id="mobileMenu">
+                <div class="mobile-menu-header">
+                    <span class="mobile-user-greeting">Hello, Sign in</span>
+                    <button class="mobile-menu-close" id="mobileMenuClose">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="mobile-menu-content">
+                    <div class="mobile-menu-section">
+                        <h3>Shop By Category</h3>
+                        <a
+                            href="/veeve/products.html?category=electronics"
+                            data-category="electronics"
+                            ><img src="/img/home-category/electronics.png" alt="" aria-hidden="true" /> Electronics</a
+                        >
+                        <a
+                            href="/veeve/products.html?category=fashion"
+                            data-category="fashion"
+                            ><img src="/img/home-category/fashion.png" alt="" aria-hidden="true" /> Fashion</a
+                        >
+                        <a
+                            href="/veeve/products.html?category=home"
+                            data-category="home"
+                            ><img src="/img/home-category/home-furniture-and-appliances.png" alt="" aria-hidden="true" /> Home & Garden</a
+                        >
+                        <a
+                            href="/veeve/products.html?category=sports"
+                            data-category="sports"
+                            ><img src="/img/home-category/sports.png" alt="" aria-hidden="true" /> Sports</a
+                        >
+                        <a
+                            href="/veeve/products.html?category=beauty"
+                            data-category="beauty"
+                            ><img src="/img/home-category/beauty-and-personal-care.png" alt="" aria-hidden="true" /> Beauty</a
+                        >
+                        <a
+                            href="/veeve/products.html?category=toys"
+                            data-category="toys"
+                            ><img src="/img/home-category/toys-and-games.png" alt="" aria-hidden="true" /> Toys & Games</a
+                        >
+                    </div>
+                    <div class="mobile-menu-section">
+                        <h3>Account</h3>
+                        <a href="#" id="mobileLoginBtn"
+                            ><i class="fas fa-sign-in-alt"></i> Sign In</a
+                        >
+                        <a href="#" id="mobileRegisterBtn"
+                            ><i class="fas fa-user-plus"></i> Create Account</a
+                        >
+                        <a href="/veeve/sell.html" data-page="seller"
+                            ><i class="fas fa-store"></i> Sell on VelveraHub</a
+                        >
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content Area -->
+            <main id="mainContent">
+                <!-- Hero Section (compact banner) -->
+                <section class="hero-section">
+                    <div class="hero-slider" id="heroSlider">
+                        <div
+                            class="hero-slide active"
+                            style="
+                                background: linear-gradient(
+                                    135deg,
+                                    #667eea 0%,
+                                    #764ba2 100%
+                                );
+                            "
+                        >
+                            <div class="hero-content">
+                                <span class="hero-tag">New Arrivals</span>
+                                <h1>Discover the Latest Tech</h1>
+                                <p>
+                                    Explore current live listings from shops serving your location.
+                                </p>
+                                <div class="hero-buttons">
+                                    <a
+                                        href="/veeve/products.html?category=electronics"
+                                        class="btn btn-primary"
+                                        data-category="electronics"
+                                        >Shop Now</a
+                                    >
+                                    <a href="/veeve/secured-trading.html#payments" class="btn btn-outline"
+                                        >Learn More</a
+                                    >
+                                </div>
+                            </div>
+                            <div class="hero-image">
+                                <img
+                                    src="https://images.unsplash.com/photo-1498049794561-7780e7231661?w=600"
+                                    alt="Electronics"
+                                />
+                            </div>
+                        </div>
+                        <div
+                            class="hero-slide"
+                            style="
+                                background: linear-gradient(
+                                    135deg,
+                                    #f093fb 0%,
+                                    #f5576c 100%
+                                );
+                            "
+                        >
+                            <div class="hero-content">
+                                <span class="hero-tag">Fashion</span>
+                                <h1>Find your next look</h1>
+                                <p>
+                                    Browse current fashion listings from local sellers.
+                                </p>
+                                <div class="hero-buttons">
+                                    <a
+                                        href="/veeve/products.html?category=fashion"
+                                        class="btn btn-primary"
+                                        data-category="fashion"
+                                        >Explore Collection</a
+                                    >
+                                    <a href="/veeve/products.html?category=fashion" class="btn btn-outline"
+                                        >View Trends</a
+                                    >
+                                </div>
+                            </div>
+                            <div class="hero-image">
+                                <img
+                                    src="https://images.unsplash.com/photo-1483985988355-763728e1935b?w=600"
+                                    alt="Fashion"
+                                />
+                            </div>
+                        </div>
+                        <div
+                            class="hero-slide"
+                            style="
+                                background: linear-gradient(
+                                    135deg,
+                                    #4facfe 0%,
+                                    #00f2fe 100%
+                                );
+                            "
+                        >
+                            <div class="hero-content">
+                                <span class="hero-tag">Home &amp; lifestyle</span>
+                                <h1>Make space for what matters</h1>
+                                <p>
+                                    Browse live home and lifestyle listings for every room.
+                                </p>
+                                <div class="hero-buttons">
+                                    <a
+                                        href="/veeve/products.html?category=home"
+                                        class="btn btn-primary"
+                                        data-category="home"
+                                        >Shop Home</a
+                                    >
+                                    <a href="/veeve/products.html?category=home" class="btn btn-outline"
+                                        >Get Inspired</a
+                                    >
+                                </div>
+                            </div>
+                            <div class="hero-image">
+                                <img
+                                    src="https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?w=600"
+                                    alt="Home"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="hero-controls">
+                        <button class="hero-prev">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <div class="hero-dots" id="heroDots"></div>
+                        <button class="hero-next">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Quick Links Row -->
+                <section class="quick-links-section">
+                    <div class="quick-links-row">
+                        <a
+                            href="/veeve/categories.html"
+                            class="quick-link-item"
+                        >
+                            <div class="quick-link-icon">
+                                <img src="/img/quick-links/all-categories.png" alt="" aria-hidden="true" />
+                            </div>
+                            <span>All Categories</span>
+                        </a>
+                        <a href="/veeve/shops.html" class="quick-link-item">
+                            <div class="quick-link-icon">
+                                <img src="/img/quick-links/top-shops.png" alt="" aria-hidden="true" />
+                            </div>
+                            <span>Top Shops</span>
+                        </a>
+                        <a
+                            href="/veeve/secured-trading.html"
+                            class="quick-link-item"
+                        >
+                            <div class="quick-link-icon">
+                                <img src="/img/quick-links/secured-trading.png" alt="" aria-hidden="true" />
+                            </div>
+                            <span>Secured Trading</span>
+                        </a>
+                        <a
+                            href="/veeve/video-channel.html"
+                            class="quick-link-item"
+                        >
+                            <div class="quick-link-icon">
+                                <img src="/img/quick-links/video-channel.png" alt="" aria-hidden="true" />
+                            </div>
+                            <span>Video Channel</span>
+                        </a>
+                        <a href="/veeve/new-users.html" class="quick-link-item">
+                            <div class="quick-link-icon">
+                                <img src="/img/quick-links/new-users-benefits.png" alt="" aria-hidden="true" />
+                            </div>
+                            <span>New Users Benefits</span>
+                        </a>
+                    </div>
+                </section>
+
+                <!-- Homepage category directory -->
+                <section
+                    class="home-category-section"
+                    aria-labelledby="home-category-title"
+                >
+                    <div class="section-container">
+                        <div class="home-category-heading">
+                            <div>
+                                <span class="home-category-kicker"
+                                    >Explore VelveraHub</span
+                                >
+                                <h2 id="home-category-title">
+                                    Shop by category
+                                </h2>
+                            </div>
+                            <a
+                                href="/veeve/categories.html"
+                                class="home-category-all"
+                                >View all <i class="fas fa-arrow-right"></i
+                            ></a>
+                        </div>
+                        <div class="home-category-grid">
+                            <a
+                                class="home-category-card is-primary"
+                                href="/veeve/sell.html"
+                                ><span class="home-category-icon"
+                                    ><i class="fas fa-plus"></i></span
+                                ><span>Post ad</span></a
+                            >
+                            <a
+                                class="home-category-card"
+                                href="/veeve/products.html?filter=trending"
+                                ><span class="home-category-icon"
+                                    ><img src="/img/home-category/trending.png" alt="" aria-hidden="true" /></span
+                                ><span>🔥 Trending</span></a
+                            >
+                            <a
+                                class="home-category-card"
+                                href="/veeve/products.html?category=electronics"
+                                ><span class="home-category-icon"
+                                    ><img src="/img/home-category/electronics.png" alt="" aria-hidden="true" /></span
+                                ><span>Electronics</span></a
+                            >
+                            <a
+                                class="home-category-card"
+                                href="/veeve/products.html?category=fashion"
+                                ><span class="home-category-icon"
+                                    ><img src="/img/home-category/fashion.png" alt="" aria-hidden="true" /></span
+                                ><span>Fashion</span></a
+                            >
+                            <a
+                                class="home-category-card"
+                                href="/veeve/products.html?category=home"
+                                ><span class="home-category-icon"
+                                    ><img src="/img/home-category/home-furniture-and-appliances.png" alt="" aria-hidden="true" /></span
+                                ><span>Home Furniture &amp; Appliances</span></a
+                            >
+                            <a
+                                class="home-category-card"
+                                href="/veeve/products.html?category=beauty"
+                                ><span class="home-category-icon"
+                                    ><img src="/img/home-category/beauty-and-personal-care.png" alt="" aria-hidden="true" /></span
+                                ><span>Beauty &amp; Personal Care</span></a
+                            >
+                            <a
+                                class="home-category-card"
+                                href="/veeve/products.html?category=sports"
+                                ><span class="home-category-icon"
+                                    ><img src="/img/home-category/sports.png" alt="" aria-hidden="true" /></span
+                                ><span>Sports</span></a
+                            >
+                            <a
+                                class="home-category-card"
+                                href="/veeve/products.html?category=toys"
+                                ><span class="home-category-icon"
+                                    ><img src="/img/home-category/toys-and-games.png" alt="" aria-hidden="true" /></span
+                                ><span>Toys &amp; Games</span></a
+                            >
+                            <a
+                                class="home-category-card"
+                                href="/veeve/products.html?category=electronics"
+                                ><span class="home-category-icon"
+                                    ><img src="/img/home-category/phones-and-tablets.png" alt="" aria-hidden="true" /></span
+                                ><span>Phones &amp; Tablets</span></a
+                            >
+                            <a
+                                class="home-category-card"
+                                href="/veeve/products.html?category=all&amp;search=services"
+                                ><span class="home-category-icon"
+                                    ><img src="/img/home-category/services.png" alt="" aria-hidden="true" /></span
+                                ><span>Services</span></a
+                            >
+                            <a
+                                class="home-category-card"
+                                href="/veeve/products.html?category=all&amp;search=repair"
+                                ><span class="home-category-icon"
+                                    ><img src="/img/home-category/repair-and-construction.png" alt="" aria-hidden="true" /></span
+                                ><span>Repair &amp; Construction</span></a
+                            >
+                            <a
+                                class="home-category-card"
+                                href="/veeve/products.html?category=all&amp;search=equipment"
+                                ><span class="home-category-icon"
+                                    ><img src="/img/home-category/commercial-equipment-and-tools.png" alt="" aria-hidden="true" /></span
+                                ><span
+                                    >Commercial Equipment &amp; Tools</span
+                                ></a
+                            >
+                            <a
+                                class="home-category-card"
+                                href="/veeve/products.html?category=toys"
+                                ><span class="home-category-icon"
+                                    ><img src="/img/home-category/babies-and-kids.png" alt="" aria-hidden="true" /></span
+                                ><span>Babies &amp; Kids</span></a
+                            >
+                            <a
+                                class="home-category-card"
+                                href="/veeve/products.html?category=all&amp;search=food"
+                                ><span class="home-category-icon"
+                                    ><img src="/img/home-category/food-agriculture-and-farming.png" alt="" aria-hidden="true" /></span
+                                ><span>Food, Agriculture &amp; Farming</span></a
+                            >
+                            <a
+                                class="home-category-card"
+                                href="/veeve/products.html?category=all&amp;search=pets"
+                                ><span class="home-category-icon"
+                                    ><img src="/img/home-category/animals-and-pets.png" alt="" aria-hidden="true" /></span
+                                ><span>Animals &amp; Pets</span></a
+                            >
+                            <a
+                                class="home-category-card"
+                                href="/veeve/products.html?category=all&amp;search=jobs"
+                                ><span class="home-category-icon"
+                                    ><img src="/img/home-category/jobs.png" alt="" aria-hidden="true" /></span
+                                ><span>Jobs</span></a
+                            >
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Popular in Region -->
+                <section class="popular-section">
+                    <div class="section-container">
+                        <div class="popular-header" id="popularHeader">
+                            <span id="popularFlag">🇳🇬</span>
+                            <strong id="popularTitle"
+                                >Popular in Nigeria</strong
+                            >
+                        </div>
+                        <div class="popular-grid" id="popularProducts">
+                            <!-- Loaded dynamically -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- You May Like -->
+                <section class="you-may-like-section">
+                    <div class="section-container">
+                        <div class="yml-heading">
+                            <div>
+                                <h2 class="yml-title">You may like</h2>
+                                <p class="yml-subtitle">
+                                    Personalized for your browsing and delivery
+                                    preferences
+                                </p>
+                            </div>
+                            <div
+                                class="personalization-consent"
+                                id="personalizationConsent"
+                                hidden
+                            >
+                                <span
+                                    ><i class="fas fa-wand-magic-sparkles"></i>
+                                    Improve recommendations?</span
+                                >
+                                <button
+                                    type="button"
+                                    class="consent-allow"
+                                    data-consent="grant"
+                                >
+                                    Allow
+                                </button>
+                                <button
+                                    type="button"
+                                    class="consent-deny"
+                                    data-consent="deny"
+                                >
+                                    Not now
+                                </button>
+                            </div>
+                        </div>
+                        <div class="yml-grid" id="youMayLike">
+                            <!-- Loaded dynamically -->
+                        </div>
+                        <div
+                            class="yml-spinner"
+                            id="ymlSpinner"
+                            style="display: none"
+                        >
+                            <div class="spinner-ring"></div>
+                        </div>
+                        <div class="yml-end" id="ymlEnd" style="display: none">
+                            No more products
+                        </div>
+                        <div id="ymlSentinel" style="height: 1px"></div>
+                    </div>
+                </section>
+            </main>
+
+            <!-- Cart Sidebar -->
+            <div class="cart-sidebar" id="cartSidebar">
+                <div class="cart-header">
+                    <h3><i class="fas fa-shopping-cart"></i> Your Cart</h3>
+                    <button class="cart-close" id="cartClose">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="cart-items" id="cartItems">
+                    <!-- Cart items will be loaded dynamically -->
+                </div>
+                <div class="cart-footer">
+                    <div class="cart-summary">
+                        <div class="summary-row">
+                            <span>Subtotal</span>
+                            <span id="cartSubtotal">$0.00</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Shipping</span>
+                            <span id="cartShipping">Free</span>
+                        </div>
+                        <div class="summary-row total">
+                            <span>Total</span>
+                            <span id="cartTotal">$0.00</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary btn-full" id="checkoutBtn">
+                        Proceed to Checkout
+                    </button>
+                    <button
+                        class="btn btn-secondary btn-full"
+                        id="continueShoppingBtn"
+                    >
+                        Continue Shopping
+                    </button>
+                </div>
+            </div>
+            <div class="cart-overlay" id="cartOverlay"></div>
+
+            <!-- Footer -->
+            <footer class="footer">
+                <!-- Footer Links -->
+                <div class="footer-links">
+                    <div class="footer-container">
+                        <div class="footer-intro">
+                            <p>Discover trusted products and shops with delivery-aware shopping.</p>
+                        </div>
+                        <div class="footer-col">
+                            <h4>Buy on VelveraHub</h4>
+                            <ul>
+                                <li>
+                                    <a href="/veeve/categories.html"
+                                        >All Categories</a
+                                    >
+                                </li>
+                                <li>
+                                    <a href="/veeve/products.html?filter=deals"
+                                        >Today's Deals</a
+                                    >
+                                </li>
+                                <li>
+                                    <a href="/veeve/products.html?filter=new"
+                                        >New Arrivals</a
+                                    >
+                                </li>
+                                <li>
+                                    <a
+                                        href="/veeve/products.html?sort=bestseller"
+                                        >Best Sellers</a
+                                    >
+                                </li>
+                                <li>
+                                    <a href="/veeve/shops.html"
+                                        >Top Verified Shops</a
+                                    >
+                                </li>
+                                <li>
+                                    <a href="/veeve/new-users.html"
+                                        >New User Benefits</a
+                                    >
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="footer-col">
+                            <h4>Sell on VelveraHub</h4>
+                            <ul>
+                                <li>
+                                    <a href="/veeve/sell.html">Start Selling</a>
+                                </li>
+                                <li>
+                                    <a href="/veeve/seller.html"
+                                        >Seller Dashboard</a
+                                    >
+                                </li>
+                                <li>
+                                    <a href="/veeve/secured-trading.html"
+                                        >Seller Policies</a
+                                    >
+                                </li>
+                                <li>
+                                    <a href="/veeve/sell.html#support"
+                                        >Seller Support</a
+                                    >
+                                </li>
+                                    <li><a href="/veeve/sell.html">Nigeria Sellers</a></li>
+                                    <li><a href="/veeve/sell.html">UK Sellers</a></li>
+                            </ul>
+                        </div>
+                        <div class="footer-col">
+                            <h4>VelveraHub Services</h4>
+                            <ul>
+                                <li>
+                                    <a href="/veeve/secured-trading.html"
+                                        >Buyer Protection</a
+                                    >
+                                </li>
+                                <li>
+                                    <a
+                                        href="/veeve/secured-trading.html#payments"
+                                        >Secure Payments</a
+                                    >
+                                </li>
+                                <li>
+                                    <a href="/veeve/secured-trading.html#escrow"
+                                        >Escrow Service</a
+                                    >
+                                </li>
+                                <li><a href="/veeve/secured-trading.html#escrow">Trade Insurance</a></li>
+                                <li><a href="/veeve/secured-trading.html#help">Logistics</a></li>
+                            </ul>
+                        </div>
+                        <div class="footer-col">
+                            <h4>Customer Service</h4>
+                            <ul>
+                                <li>
+                                    <a href="/veeve/secured-trading.html#help"
+                                        >Help Center</a
+                                    >
+                                </li>
+                                <li><a href="/veeve/account.html">Track Your Order</a></li>
+                                <li><a href="/veeve/secured-trading.html#help">Returns & Refunds</a></li>
+                                <li><a href="/veeve/secured-trading.html#help">Report a Product</a></li>
+                                <li>
+                                    <a href="/veeve/account.html#contact"
+                                        >Contact Us</a
+                                    >
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="footer-col">
+                            <h4>About VelveraHub</h4>
+                            <ul>
+                                <li><a href="/veeve/account.html#contact">About Us</a></li>
+                                <li><a href="/veeve/account.html#contact">Careers</a></li>
+                                <li><a href="/veeve/account.html#contact">Press & Media</a></li>
+                                <li>
+                                    <a
+                                        href="/veeve/secured-trading.html#privacy"
+                                        >Privacy Policy</a
+                                    >
+                                </li>
+                                <li>
+                                    <a href="/veeve/secured-trading.html#terms"
+                                        >Terms of Service</a
+                                    >
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer Bottom -->
+                <div class="footer-bottom">
+                    <div class="footer-container">
+                        <div class="footer-bottom-left">
+                            <p>
+                                &copy; 2026 VelveraHub Ltd. All rights reserved.
+                                &nbsp;|&nbsp;
+                                <a href="/veeve/secured-trading.html#privacy"
+                                    >Privacy</a
+                                >
+                                &nbsp;|&nbsp;
+                                <a href="/veeve/secured-trading.html#terms"
+                                    >Terms</a
+                                >
+                            </p>
+                        </div>
+                        <div class="footer-bottom-right">
+                            <div class="footer-social" aria-label="Social links">
+                                <span class="footer-social-item" aria-label="Facebook"><img src="/img/footer-social/facebook.png" alt="" /></span>
+                                <span class="footer-social-item" aria-label="Instagram"><img src="/img/footer-social/instagram.png" alt="" /></span>
+                                <span class="footer-social-item" aria-label="Twitter"><img src="/img/footer-social/twitter.png" alt="" /></span>
+                                <a class="footer-social-item" aria-label="TikTok" href="https://www.tiktok.com/@velverahub?_r=1&_t=ZS-99pXmDumPFi" target="_blank" rel="noopener noreferrer"><img src="/img/footer-social/tiktok.png" alt="TikTok" /></a>
+                                <span class="footer-social-item" aria-label="YouTube"><img src="/img/footer-social/youtube.png" alt="" /></span>
+                                <span class="footer-social-item" aria-label="Email"><img src="/img/footer-social/mail.png" alt="" /></span>
+                            </div>
+                            <a class="footer-support-link" href="/veeve/secured-trading.html#help">Support &amp; safety</a>
+                        </div>
+                    </div>
+                </div>
+            </footer>
+
+            <!-- Auth Modal -->
+            <div class="modal" id="authModal">
+                <div class="modal-overlay"></div>
+                <div class="modal-container auth-modal-container">
+                    <div class="auth-modal-header">
+                        <div class="auth-tabs">
+                            <button class="auth-tab active" data-tab="login">
+                                Sign In
+                            </button>
+                            <button class="auth-tab" data-tab="register">
+                                Create Account
+                            </button>
+                        </div>
+                        <button
+                            class="modal-close"
+                            id="authModalClose"
+                            type="button"
+                        >
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="modal-content auth-modal-content">
+                        <!-- Login Form -->
+                        <form
+                            class="auth-form active"
+                            id="loginForm"
+                            data-form="login"
+                        >
+                            <h2>Welcome Back!</h2>
+                            <p>Sign in to access your account</p>
+                            <div class="form-group">
+                                <label for="loginEmail">Email Address</label>
+                                <input
+                                    type="email"
+                                    id="loginEmail"
+                                    placeholder="Enter your email"
+                                    autocomplete="username"
+                                    required
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label for="loginPassword">Password</label>
+                                <div class="password-input">
+                                    <input
+                                        type="password"
+                                        id="loginPassword"
+                                        placeholder="Enter your password"
+                                        autocomplete="current-password"
+                                        required
+                                    />
+                                    <button
+                                        type="button"
+                                        class="toggle-password"
+                                    >
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="rememberMe" />
+                                    <span>Remember me</span>
+                                </label>
+                                <a href="#" class="forgot-link"
+                                    >Forgot password?</a
+                                >
+                            </div>
+                            <button
+                                type="submit"
+                                class="btn btn-primary btn-full"
+                            >
+                                Sign In
+                            </button>
+                            <div class="auth-divider">
+                                <span>or continue with</span>
+                            </div>
+                            <div class="social-auth">
+                                <button
+                                    type="button"
+                                    class="social-btn google"
+                                    aria-label="Continue with Google"
+                                    title="Continue with Google"
+                                >
+                                    <svg
+                                        class="social-svg google-svg"
+                                        viewBox="0 0 24 24"
+                                        aria-hidden="true"
+                                    >
+                                        <path
+                                            fill="#4285F4"
+                                            d="M21.35 12.27c0-.78-.07-1.54-.22-2.27H12v4.3h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.14c1.84-1.7 2.91-4.2 2.91-7.42Z"
+                                        />
+                                        <path
+                                            fill="#34A853"
+                                            d="M12 21.7c2.63 0 4.84-.87 6.45-2.36l-3.14-2.45c-.87.58-1.98.92-3.31.92-2.54 0-4.69-1.72-5.46-4.03H3.3v2.53A9.74 9.74 0 0 0 12 21.7Z"
+                                        />
+                                        <path
+                                            fill="#FBBC05"
+                                            d="M6.54 13.78a5.85 5.85 0 0 1 0-3.56V7.69H3.3a9.74 9.74 0 0 0 0 8.62l3.24-2.53Z"
+                                        />
+                                        <path
+                                            fill="#EA4335"
+                                            d="M12 6.19c1.43 0 2.72.49 3.73 1.46l2.8-2.8C16.84 3.26 14.63 2.3 12 2.3a9.74 9.74 0 0 0-8.7 5.39l3.24 2.53C7.31 7.91 9.46 6.19 12 6.19Z"
+                                        />
+                                    </svg>
+                                </button>
+                                <button
+                                    type="button"
+                                    class="social-btn facebook"
+                                    aria-label="Continue with Facebook"
+                                    title="Continue with Facebook"
+                                >
+                                    <svg
+                                        class="social-svg facebook-svg"
+                                        viewBox="0 0 24 24"
+                                        aria-hidden="true"
+                                    >
+                                        <path
+                                            fill="#1877F2"
+                                            d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07c0 6.02 4.39 11.02 10.13 11.93v-8.43H7.08v-3.5h3.05V9.41c0-3.03 1.79-4.72 4.56-4.72 1.32 0 2.7.24 2.7.24v2.98h-1.52c-1.5 0-1.97.94-1.97 1.9v2.26h3.35l-.54 3.5H13.9V24C19.61 23.08 24 18.08 24 12.07Z"
+                                        />
+                                    </svg>
+                                </button>
+                            </div>
+                        </form>
+
+                        <!-- Register Form -->
+                        <form
+                            class="auth-form"
+                            id="registerForm"
+                            data-form="register"
+                        >
+                            <h2>Create Account</h2>
+                            <p>Join VelveraHub today</p>
+
+                            <div class="form-group">
+                                <label>I want to</label>
+                                <div class="account-type-selector">
+                                    <label class="account-type-option">
+                                        <input
+                                            type="radio"
+                                            name="accountType"
+                                            value="customer"
+                                            checked
+                                        />
+                                        <div class="account-type-card">
+                                            <div
+                                                class="account-type-icon customer-icon"
+                                            >
+                                                <i
+                                                    class="fas fa-shopping-bag"
+                                                ></i>
+                                            </div>
+                                            <div class="account-type-info">
+                                                <span class="account-type-title"
+                                                    >Shop & Buy</span
+                                                >
+                                                <span class="account-type-desc"
+                                                    >Browse products and make
+                                                    purchases</span
+                                                >
+                                            </div>
+                                            <div class="account-type-check">
+                                                <i
+                                                    class="fas fa-check-circle"
+                                                ></i>
+                                            </div>
+                                        </div>
+                                    </label>
+                                    <label class="account-type-option">
+                                        <input
+                                            type="radio"
+                                            name="accountType"
+                                            value="seller"
+                                        />
+                                        <div class="account-type-card">
+                                            <div
+                                                class="account-type-icon seller-icon"
+                                            >
+                                                <i class="fas fa-store"></i>
+                                            </div>
+                                            <div class="account-type-info">
+                                                <span class="account-type-title"
+                                                    >Open a New Store</span
+                                                >
+                                                <span class="account-type-desc"
+                                                    >Create your store and start
+                                                    selling</span
+                                                >
+                                            </div>
+                                            <div class="account-type-check">
+                                                <i
+                                                    class="fas fa-check-circle"
+                                                ></i>
+                                            </div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="seller-details" id="sellerDetails">
+                                <p>
+                                    Start with the essentials. You can complete
+                                    your store profile later from the seller
+                                    workspace.
+                                </p>
+                                <div class="form-group">
+                                    <label for="businessName"
+                                        >Business name</label
+                                    >
+                                    <input
+                                        type="text"
+                                        id="businessName"
+                                        placeholder="e.g. Northstar Goods"
+                                        autocomplete="organization"
+                                    />
+                                </div>
+                                <div class="form-row-2 seller-contact-row">
+                                    <div class="form-group">
+                                        <label for="businessState"
+                                            >Business state</label
+                                        >
+                                        <select
+                                            id="businessState"
+                                            data-location-select
+                                            aria-label="Choose your business state"
+                                        >
+                                            <option value="">
+                                                Select state
+                                            </option>
+                                        </select>
+                                    </div>
+                                    <div
+                                        class="form-group"
+                                        style="margin-bottom: 0"
+                                    >
+                                        <label for="businessPhone"
+                                            >Business phone
+                                            <span
+                                                style="
+                                                    font-weight: 400;
+                                                    color: var(--gray-400);
+                                                "
+                                                >(optional)</span
+                                            ></label
+                                        >
+                                        <input
+                                            type="tel"
+                                            id="businessPhone"
+                                            placeholder="A number customers can reach"
+                                            autocomplete="tel"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="regEmail">Email Address</label>
+                                <input
+                                    type="email"
+                                    id="regEmail"
+                                    placeholder="Enter your email"
+                                    autocomplete="email"
+                                    required
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label for="regPassword">Password</label>
+                                <div class="password-input">
+                                    <input
+                                        type="password"
+                                        id="regPassword"
+                                        placeholder="Create a password (min 8 characters)"
+                                        autocomplete="new-password"
+                                        required
+                                        minlength="8"
+                                    />
+                                    <button
+                                        type="button"
+                                        class="toggle-password"
+                                    >
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                                <div
+                                    class="password-strength"
+                                    id="passwordStrength"
+                                ></div>
+                            </div>
+                            <label class="checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    id="agreeTerms"
+                                    required
+                                />
+                                <span
+                                    >I agree to the
+                                    <a href="/veeve/legal.html#terms">Terms of Service</a> and
+                                    <a href="/veeve/legal.html#privacy">Privacy Policy</a></span
+                                >
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="ageConfirmed" required />
+                                <span>I confirm that I am 18 years or older and will not use VelveraHub to collect, target, or solicit children's personal data.</span>
+                            </label>
+                            <button
+                                type="submit"
+                                class="btn btn-primary btn-full btn-gradient"
+                            >
+                                Create Account
+                            </button>
+                            <div class="auth-divider">
+                                <span>or sign up with</span>
+                            </div>
+                            <div class="social-auth">
+                                <button
+                                    type="button"
+                                    class="social-btn google"
+                                    aria-label="Continue with Google"
+                                    title="Continue with Google"
+                                >
+                                    <svg
+                                        class="social-svg google-svg"
+                                        viewBox="0 0 24 24"
+                                        aria-hidden="true"
+                                    >
+                                        <path
+                                            fill="#4285F4"
+                                            d="M21.35 12.27c0-.78-.07-1.54-.22-2.27H12v4.3h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.14c1.84-1.7 2.91-4.2 2.91-7.42Z"
+                                        />
+                                        <path
+                                            fill="#34A853"
+                                            d="M12 21.7c2.63 0 4.84-.87 6.45-2.36l-3.14-2.45c-.87.58-1.98.92-3.31.92-2.54 0-4.69-1.72-5.46-4.03H3.3v2.53A9.74 9.74 0 0 0 12 21.7Z"
+                                        />
+                                        <path
+                                            fill="#FBBC05"
+                                            d="M6.54 13.78a5.85 5.85 0 0 1 0-3.56V7.69H3.3a9.74 9.74 0 0 0 0 8.62l3.24-2.53Z"
+                                        />
+                                        <path
+                                            fill="#EA4335"
+                                            d="M12 6.19c1.43 0 2.72.49 3.73 1.46l2.8-2.8C16.84 3.26 14.63 2.3 12 2.3a9.74 9.74 0 0 0-8.7 5.39l3.24 2.53C7.31 7.91 9.46 6.19 12 6.19Z"
+                                        />
+                                    </svg>
+                                </button>
+                                <button
+                                    type="button"
+                                    class="social-btn facebook"
+                                    aria-label="Continue with Facebook"
+                                    title="Continue with Facebook"
+                                >
+                                    <svg
+                                        class="social-svg facebook-svg"
+                                        viewBox="0 0 24 24"
+                                        aria-hidden="true"
+                                    >
+                                        <path
+                                            fill="#1877F2"
+                                            d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07c0 6.02 4.39 11.02 10.13 11.93v-8.43H7.08v-3.5h3.05V9.41c0-3.03 1.79-4.72 4.56-4.72 1.32 0 2.7.24 2.7.24v2.98h-1.52c-1.5 0-1.97.94-1.97 1.9v2.26h3.35l-.54 3.5H13.9V24C19.61 23.08 24 18.08 24 12.07Z"
+                                        />
+                                    </svg>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick View Modal -->
+            <div class="modal" id="quickViewModal">
+                <div class="modal-overlay"></div>
+                <div class="modal-container modal-lg">
+                    <button class="modal-close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <div class="modal-content" id="quickViewContent">
+                        <!-- Quick view content will be loaded dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Toast Notifications -->
+            <div class="toast-container" id="toastContainer"></div>
+
+            <!-- Mobile Bottom Navigation -->
+            <nav class="mobile-bottom-nav" id="mobileBottomNav">
+                <div class="bottom-nav-items">
+                    <button
+                        class="bottom-nav-item active"
+                        data-page="home"
+                        data-nav-path="/"
+                        type="button"
+                        onclick="window.scrollTo({top:0,behavior:'smooth'})"
+                    >
+                        <i class="fas fa-home"></i>
+                        <span>Home</span>
+                    </button>
+                    <a class="bottom-nav-item" href="/veeve/browse.html">
+                        <i class="fas fa-th-large"></i>
+                        <span>Browse</span>
+                    </a>
+                    <button class="bottom-nav-item" id="bottomCartBtn">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span
+                            class="bottom-cart-badge"
+                            id="bottomCartBadge"
+                            style="display: none"
+                            >0</span
+                        >
+                        <span>Cart</span>
+                    </button>
+                    <button class="bottom-nav-item" id="bottomAccountBtn">
+                        <i class="fas fa-user"></i>
+                        <span>Account</span>
+                    </button>
+                </div>
+            </nav>
+
+            <!-- Region Switcher Modal -->
+            <div class="region-modal" id="regionModal">
+                <div class="region-modal-content">
+                    <p>
+                        Select your country to see prices and sellers near you.
+                    </p>
+                    <div class="region-options">
+                        <button
+                            class="region-option"
+                            id="regionNG"
+                            onclick="RegionService.setRegion('ng')"
+                        >
+                            <span class="flag">🇳🇬</span>
+                            <span class="country">Nigeria</span>
+                            <span class="currency">₦ Nigerian Naira</span>
+                        </button>
+                        <button
+                            class="region-option"
+                            id="regionUK"
+                            onclick="RegionService.setRegion('uk')"
+                        >
+                            <span class="flag">🇬🇧</span>
+                            <span class="country">United Kingdom</span>
+                            <span class="currency">£ British Pound</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script src="assets/js/services/auth.js"></script>
+        <script src="assets/js/services/observability.js"></script>
+        <script src="assets/js/components/async-feedback.js"></script>
+        <script src="assets/js/services/campuses.js"></script>
+        <script src="assets/js/services/trust.js"></script>
+        <script src="assets/js/services/marketplace-intelligence.js"></script>
+        <script src="assets/js/services/products.js"></script>
+        <script src="assets/js/services/cart.js"></script>
+        <script src="assets/js/state/store.js"></script>
+        <script src="assets/js/components/ui.js"></script>
+        <script src="assets/js/components/focus-manager.js"></script>
+        <script src="assets/js/components/site-navigation.js"></script>
+        <script src="assets/js/components/custom-select.js"></script>
+        <script src="assets/js/components/smart-features.js"></script>
+        <script src="assets/js/components/mobile-nav.js"></script>
+        <script src="assets/js/app.js"></script>
+        <script src="assets/js/components/cart-navigation.js"></script>
+        <script src="assets/js/components/password-visibility.js"></script>
+        <script src="assets/js/components/interaction-feedback.js"></script>
+    </body>
+</html>

@@ -1,0 +1,6 @@
+- i literally said (let every dropdown content list in the admin panel be styled with custom css to match the projects UI perfectly) youre supposed to customize every dropdown list too and not rely on the browser default
+- - Properly fix the location selector dropdown button pill across all pages header; right now it doesn't display the selected dropdown option text in the pill in mobile screen size view, I can only see the location icon and also the dropdown is not functional at all so fix this issues accurately and intelligently
+
+
+
+is the scripts/ folder in root important to the velverahub-uk/ and velverahub-ng and velverahub-seller/ folders? if yes then it should be well represented please dont confuse me or yourself

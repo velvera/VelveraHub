@@ -1,0 +1,45 @@
+## Supabase migration order
+
+Apply the numbered migrations in order for a new database and for an existing
+database that is being brought up to the current application schema. The first
+five files establish the core tables, seller/admin role helpers, base RLS, and
+security hardening. The dashboard migration installs the private messaging and
+listing-review policies and RPCs used by the storefront, seller workspace, and
+admin workspace.
+
+1. database/schema.sql — core tables, listing moderation fields, and private product conversation tables
+2. database/seller.sql
+3. database/admin.sql
+4. database/supabase-rls.sql
+5. database/security-hardening.sql
+6. database/cloudflare-dashboard.sql — participant-only messaging RLS/RPCs, listing moderation triggers, and the guarded admin listing review queue
+7. database/cloudflare-supabase-direct.sql
+8. database/production-hardening.sql
+9. database/shop-owner-payments.sql
+10. database/shop-verification-compliance.sql
+11. database/seller-contact-safety.sql
+12. database/product-delivery-options.sql
+13. database/client-error-logging.sql — adds sanitized client-error diagnostics and locks event-log reads to the admin API
+
+Apply these separately only when the stated condition applies:
+
+- database/account-deletion.sql — legacy databases that predate the deletion-request objects in schema.sql; apply after schema.sql and before cloudflare-supabase-direct.sql
+- database/fix-product-media-delete-ambiguity.sql — existing databases affected by PostgreSQL error 42702 in product-media cleanup; apply after supabase-rls.sql
+
+After all applicable migrations, run database/safety-verification.sql — read-only checks; it does not change data.
+
+## Operator role promotion
+
+After all migrations are applied, run the following in the trusted Supabase SQL
+Editor, replacing the address with the already-registered user's email:
+
+BEGIN;
+SELECT set_config('request.jwt.claim.role', 'service_role', true);
+SELECT * FROM public.assign_admin_role('registered-email@example.com');
+COMMIT;
+
+`database/promote-admin.sql` contains this same trusted-operator example; replace
+the placeholder email before running it. It is not a migration and must never
+be run from a browser. The claim is transaction-local and is cleared by COMMIT.
+Never expose role-promotion functions to anon/authenticated users. For a seller
+repair, use assign_seller_role in the same transaction pattern.

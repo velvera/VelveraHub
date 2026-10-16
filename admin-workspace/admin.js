@@ -1,0 +1,726 @@
+(function () {
+    const state = {
+        supabase: null,
+        applications: [],
+        loading: false,
+        deletionRequests: [],
+        deletionLoading: false,
+        productListings: [],
+        productReviewLoading: false,
+        systemErrors: [],
+        systemErrorsLoading: false,
+        activeView: 'verification'
+    };
+
+    const byId = (id) => document.getElementById(id);
+
+    function setGlobalMessage(text, isError = false) {
+        const node = byId('adminGlobalMessage');
+        if (!node) return;
+        node.textContent = text || '';
+        node.classList.toggle('is-error', isError);
+        node.hidden = !text;
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (character) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        })[character]);
+    }
+
+    function formatDate(value) {
+        if (!value) return 'Not available';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return 'Not available';
+        return new Intl.DateTimeFormat(undefined, {
+            dateStyle: 'medium',
+            timeStyle: 'short'
+        }).format(date);
+    }
+
+    function safeImageUrl(value) {
+        if (!value) return '';
+        try {
+            const url = new URL(String(value), window.location.origin);
+            return ['https:', 'http:'].includes(url.protocol) ? url.href : '';
+        } catch (_) {
+            return '';
+        }
+    }
+
+    function statusLabel(status) {
+        return ({
+            pending: 'Awaiting review',
+            resubmission_required: 'Changes requested',
+            approved: 'Approved',
+            rejected: 'Rejected'
+        })[status] || status || 'Unknown';
+    }
+
+    function deletionStatusLabel(status) {
+        return ({
+            received: 'Awaiting review',
+            in_review: 'In review',
+            completed: 'Completed',
+            rejected: 'Rejected'
+        })[status] || status || 'Unknown';
+    }
+
+    function showPanel(panelId) {
+        for (const id of ['adminAuthPanel', 'adminDeniedPanel', 'adminWorkspace']) {
+            byId(id).hidden = id !== panelId;
+        }
+    }
+
+    async function checkAdminAccess() {
+        const { data: { user }, error: userError } = await state.supabase.auth.getUser();
+        if (userError) throw userError;
+        if (!user) {
+            showPanel('adminAuthPanel');
+            return false;
+        }
+
+        const { data: role, error } = await state.supabase.rpc('current_profile_role');
+        if (error) throw error;
+        if (role !== 'admin') {
+            showPanel('adminDeniedPanel');
+            return false;
+        }
+        showPanel('adminWorkspace');
+        return true;
+    }
+
+    function renderQueue() {
+        const list = byId('verificationList');
+        const summary = byId('queueSummary');
+        list.replaceChildren();
+        summary.textContent = `${state.applications.length} application${state.applications.length === 1 ? '' : 's'}`;
+
+        if (!state.applications.length) {
+            const empty = document.createElement('section');
+            empty.className = 'queue-empty';
+            empty.innerHTML = '<h2>No applications in this view</h2><p>New applications appear after a seller uploads the required documents.</p>';
+            list.append(empty);
+            return;
+        }
+
+        for (const application of state.applications) {
+            list.append(renderApplication(application));
+        }
+    }
+
+    function renderDeletionQueue() {
+        const list = byId('deletionList');
+        const summary = byId('deletionSummary');
+        list.replaceChildren();
+        summary.textContent = `${state.deletionRequests.length} request${state.deletionRequests.length === 1 ? '' : 's'}`;
+
+        if (!state.deletionRequests.length) {
+            const empty = document.createElement('section');
+            empty.className = 'queue-empty';
+            empty.innerHTML = '<h2>No requests in this view</h2><p>New account deletion requests will appear here after a user submits one.</p>';
+            list.append(empty);
+            return;
+        }
+
+        for (const request of state.deletionRequests) {
+            const card = document.createElement('article');
+            card.className = 'application-card';
+            const canReview = request.status === 'received' || request.status === 'in_review';
+            const actions = request.status === 'received'
+                ? '<button class="review-action request" type="button" data-deletion-status="in_review">Start review</button>'
+                : request.status === 'in_review'
+                    ? '<button class="review-action approve" type="button" data-deletion-status="completed">Mark complete</button>'
+                    : '';
+            card.innerHTML = `
+                <header class="application-header">
+                    <div>
+                        <h2>Request ${escapeHtml(request.request_id)}</h2>
+                        <p class="application-handle">Submitted ${escapeHtml(formatDate(request.created_at))}</p>
+                    </div>
+                    <span class="status-pill ${request.status === 'completed' ? 'approved' : request.status === 'rejected' ? 'rejected' : ''}">${escapeHtml(deletionStatusLabel(request.status))}</span>
+                </header>
+                <div class="application-details">
+                    <div><span class="detail-label">Account email</span><span class="detail-value">${escapeHtml(request.email_at_request || 'Unavailable')}</span></div>
+                    <div><span class="detail-label">Request reference</span><span class="detail-value">${escapeHtml(request.request_id)}</span></div>
+                </div>
+                ${canReview ? `
+                    <div class="review-actions">
+                        <p class="review-action-message" role="alert" hidden></p>
+                        <div class="review-action-buttons">
+                            ${actions}
+                            <button class="review-action reject" type="button" data-deletion-status="rejected">Reject request</button>
+                        </div>
+                    </div>` : ''}
+            `;
+            card.querySelectorAll('[data-deletion-status]').forEach((button) => {
+                button.addEventListener('click', () => updateDeletionRequest(card, request, button.dataset.deletionStatus));
+            });
+            list.append(card);
+        }
+    }
+
+    function renderProductReviewQueue() {
+        const list = byId('listingReviewList');
+        const summary = byId('listingReviewSummary');
+        list.replaceChildren();
+        summary.textContent = `${state.productListings.length} listing${state.productListings.length === 1 ? '' : 's'}`;
+
+        if (!state.productListings.length) {
+            const empty = document.createElement('section');
+            empty.className = 'queue-empty';
+            empty.innerHTML = '<h2>No product listings in this view</h2><p>New and resubmitted listings appear here while awaiting review.</p>';
+            list.append(empty);
+            return;
+        }
+        state.productListings.forEach((listing) => list.append(renderProductListing(listing)));
+    }
+
+    function renderProductListing(listing) {
+        const card = document.createElement('article');
+        card.className = 'application-card listing-review-card';
+        const status = String(listing.moderation_status || 'pending').toLowerCase();
+        const imageUrl = safeImageUrl(listing.image_url);
+        const canReview = status === 'pending';
+        const noteId = `listingReviewNote-${String(listing.id).replace(/[^a-zA-Z0-9_-]/g, '')}`;
+        card.innerHTML = `
+            <header class="application-header">
+                <div>
+                    <h2>${escapeHtml(listing.title || 'Untitled listing')}</h2>
+                    <p class="application-handle">${escapeHtml(listing.seller_name || 'Marketplace seller')} · Submitted ${escapeHtml(formatDate(listing.created_at))}</p>
+                </div>
+                <span class="status-pill ${status === 'approved' ? 'approved' : status === 'rejected' ? 'rejected' : ''}">${escapeHtml(statusLabel(status))}</span>
+            </header>
+            <div class="listing-review-content">
+                ${imageUrl ? `<img class="listing-review-image" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(listing.title || 'Product')} listing photo" loading="lazy">` : ''}
+                <div class="listing-review-description">
+                    <p>${escapeHtml(listing.description || 'No description provided.')}</p>
+                    <div class="application-details">
+                        <div><span class="detail-label">Price</span><span class="detail-value">${escapeHtml(String(listing.price ?? 'Not provided'))}</span></div>
+                        <div><span class="detail-label">Category</span><span class="detail-value">${escapeHtml(listing.category || 'Not provided')}</span></div>
+                        <div><span class="detail-label">Location</span><span class="detail-value">${escapeHtml([listing.location, listing.school_name].filter(Boolean).join(' · ') || 'Not provided')}</span></div>
+                    </div>
+                </div>
+            </div>
+            ${status === 'rejected' && listing.moderation_note ? `<p class="listing-review-reason"><strong>Decline reason:</strong> ${escapeHtml(listing.moderation_note)}</p>` : ''}
+            ${canReview ? `
+                <div class="review-actions">
+                    <label for="${escapeHtml(noteId)}">Review note <span>(required to decline; max 500 characters)</span></label>
+                    <textarea class="review-note" id="${escapeHtml(noteId)}" maxlength="500" data-listing-review-note placeholder="Explain the correction the seller needs to make."></textarea>
+                    <p class="review-action-message" role="alert" hidden></p>
+                    <div class="review-action-buttons">
+                        <button class="review-action approve" type="button" data-listing-decision="approved">Approve listing</button>
+                        <button class="review-action reject" type="button" data-listing-decision="rejected">Decline with reason</button>
+                    </div>
+                </div>` : ''}
+        `;
+        card.querySelectorAll('[data-listing-decision]').forEach((button) => {
+            button.addEventListener('click', () => reviewProductListing(card, listing, button.dataset.listingDecision));
+        });
+        return card;
+    }
+
+    function renderApplication(application) {
+        const card = document.createElement('article');
+        card.className = 'application-card';
+        const badgeClass = application.verification_status === 'approved'
+            ? 'approved'
+            : application.verification_status === 'rejected' ? 'rejected' : '';
+        const history = Array.isArray(application.review_history) ? application.review_history : [];
+        const historyHtml = history.length
+            ? `<div class="review-history" aria-label="Previous review history">${history.map((entry) => `
+                <div class="history-entry">
+                    <strong>${escapeHtml(statusLabel(entry.decision))}</strong>
+                    · ${escapeHtml(formatDate(entry.created_at))}
+                    ${entry.reviewer_email ? ` · ${escapeHtml(entry.reviewer_email)}` : ''}
+                    ${entry.note ? `<br>${escapeHtml(entry.note)}` : ''}
+                </div>`).join('')}</div>`
+            : '<p class="application-submitted">No prior review actions.</p>';
+        const details = [
+            ['Owner account', application.owner_email || 'Not available'],
+            ['Legal owner / business', application.legal_name],
+            ['Trading name', application.business_name],
+            ['Registration number', application.registration_number || 'Not provided'],
+            ['Business type', application.business_type],
+            ['Location', [application.city, application.country].filter(Boolean).join(', ') || 'Not provided']
+        ];
+        const canReview = application.verification_status === 'pending';
+
+        card.innerHTML = `
+            <header class="application-header">
+                <div>
+                    <h2>${escapeHtml(application.shop_name)}</h2>
+                    <p class="application-handle">/${escapeHtml(application.shop_slug)} · Submitted ${escapeHtml(formatDate(application.submitted_at))}</p>
+                </div>
+                <span class="status-pill ${badgeClass}">${escapeHtml(statusLabel(application.verification_status))}</span>
+            </header>
+            <div class="application-details">
+                ${details.map(([label, value]) => `<div><span class="detail-label">${escapeHtml(label)}</span><span class="detail-value">${escapeHtml(value)}</span></div>`).join('')}
+            </div>
+            <section aria-label="Verification documents">
+                <span class="detail-label">Private verification documents</span>
+                <div class="document-list"></div>
+            </section>
+            <section aria-label="Review history">
+                <span class="detail-label">Review history</span>
+                ${historyHtml}
+            </section>
+            ${canReview ? `
+                <form class="review-actions" data-submission-id="${escapeHtml(application.submission_id)}">
+                    <label for="review-note-${escapeHtml(application.submission_id)}">Review note <span>(required for changes or rejection)</span></label>
+                    <textarea class="review-note" id="review-note-${escapeHtml(application.submission_id)}" maxlength="2000" placeholder="Explain what is missing or why the application cannot be approved."></textarea>
+                    <p class="review-action-message" role="alert" hidden></p>
+                    <div class="review-action-buttons">
+                        <button class="review-action approve" type="button" data-review-decision="approve">Approve shop</button>
+                        <button class="review-action request" type="button" data-review-decision="request_resubmission">Request updated documents</button>
+                        <button class="review-action reject" type="button" data-review-decision="reject">Reject application</button>
+                    </div>
+                </form>` : ''}
+        `;
+
+        const documentList = card.querySelector('.document-list');
+        const paths = Array.isArray(application.document_paths) ? application.document_paths : [];
+        if (!paths.length) {
+            documentList.textContent = 'No documents were attached.';
+        } else {
+            paths.forEach((documentPath, index) => {
+                const button = document.createElement('button');
+                const fileName = String(documentPath).split('/').pop() || `Document ${index + 1}`;
+                button.className = 'document-button';
+                button.type = 'button';
+                button.textContent = `Open ${fileName}`;
+                button.addEventListener('click', () => openPrivateDocument(documentPath));
+                documentList.append(button);
+            });
+        }
+
+        card.querySelectorAll('[data-review-decision]').forEach((button) => {
+            button.addEventListener('click', () => reviewApplication(card, application, button.dataset.reviewDecision));
+        });
+        return card;
+    }
+
+    if (new URLSearchParams(window.location.search).has('mobile-test')) {
+        window.__VelveraAdminMobileTest = { renderApplication };
+    }
+
+    async function openPrivateDocument(path) {
+        const popup = window.open('about:blank', '_blank');
+        if (!popup) {
+            setGlobalMessage('Allow pop-ups for this site to open a verification document.', true);
+            return;
+        }
+        popup.opener = null;
+        setGlobalMessage('Preparing a private document link…');
+        const { data, error } = await state.supabase
+            .storage.from('shop-verification-private')
+            .createSignedUrl(path, 120);
+        if (error || !data?.signedUrl) {
+            popup.close();
+            window.AsyncFeedback?.log('admin-document-open', window.AsyncFeedback?.createRequestId('admin-document-open'), error);
+            setGlobalMessage('The document could not be opened. Please try again.', true);
+            return;
+        }
+        popup.location.replace(data.signedUrl);
+        setGlobalMessage('The private document link expires after two minutes.');
+    }
+
+    async function reviewApplication(card, application, decision) {
+        const form = card.querySelector('.review-actions');
+        const note = form.querySelector('.review-note').value.trim();
+        const error = form.querySelector('.review-action-message');
+        const buttons = [...form.querySelectorAll('button')];
+        if (decision !== 'approve' && note.length < 3) {
+            error.textContent = 'Enter a note explaining this decision.';
+            error.hidden = false;
+            return;
+        }
+        if (decision === 'approve' && !window.confirm(`Approve ${application.shop_name} and enable its shop listings?`)) {
+            return;
+        }
+        error.hidden = true;
+        buttons.forEach((button) => { button.disabled = true; });
+        try {
+            const { error: reviewError } = await state.supabase.rpc('admin_review_shop_verification', {
+                p_submission_id: application.submission_id,
+                p_decision: decision,
+                p_note: note || null
+            });
+            if (reviewError) throw reviewError;
+            await loadQueue();
+            setGlobalMessage(`Review saved: ${statusLabel(decision === 'approve' ? 'approved' : decision === 'reject' ? 'rejected' : 'resubmission_required')}.`);
+        } catch (reviewError) {
+            const requestId = window.AsyncFeedback?.createRequestId('admin-review') || `admin-review-${Date.now()}`;
+            window.AsyncFeedback?.log('admin-review', requestId, reviewError, {
+                submission_id: application.submission_id,
+                decision
+            });
+            window.Observability?.track('seller_publish_error', { action: 'admin_review' });
+            error.textContent = window.AsyncFeedback?.errorMessage(
+                reviewError,
+                'The review could not be saved. Please try again.',
+                'admin-review'
+            ) || 'The review could not be saved. Please try again.';
+            error.hidden = false;
+            buttons.forEach((button) => { button.disabled = false; });
+        }
+    }
+
+    async function loadQueue() {
+        if (state.loading) return;
+        state.loading = true;
+        byId('refreshQueue').disabled = true;
+        byId('queueStatus').disabled = true;
+        const requestId = window.AsyncFeedback?.createRequestId('admin-queue') || `admin-queue-${Date.now()}`;
+        byId('queueSummary').textContent = 'Loading applications…';
+        window.AsyncFeedback?.render(byId('verificationList'), 'loading', {
+            loadingTitle: 'Loading applications',
+            loadingMessage: 'Checking the latest seller verification queue.'
+        });
+        try {
+            const { data, error } = await state.supabase.rpc('admin_list_shop_verification_requests', {
+                p_status: byId('queueStatus').value
+            });
+            if (error) throw error;
+            state.applications = Array.isArray(data) ? data : [];
+            renderQueue();
+            setGlobalMessage('');
+        } catch (error) {
+            state.applications = [];
+            byId('queueSummary').textContent = 'Applications unavailable';
+            window.AsyncFeedback?.log('admin-queue', requestId, error);
+            window.AsyncFeedback?.render(byId('verificationList'), 'error', {
+                errorTitle: 'Verification queue unavailable',
+                errorMessage: 'We could not load the latest applications. Try again.',
+                onRetry: loadQueue
+            });
+            setGlobalMessage('We could not load shop applications. Please try again.', true);
+        } finally {
+            state.loading = false;
+            byId('refreshQueue').disabled = false;
+            byId('queueStatus').disabled = false;
+        }
+    }
+
+    async function updateDeletionRequest(card, request, status) {
+        if (status === 'completed' && !window.confirm(
+            'Have you verified this request, deleted the exact user through Supabase Auth, and completed eligible data cleanup? This only records the queue status. If any step is incomplete, cancel and leave the request in review.'
+        )) return;
+
+        const buttons = [...card.querySelectorAll('[data-deletion-status]')];
+        const message = card.querySelector('.review-action-message');
+        buttons.forEach((button) => { button.disabled = true; });
+        if (message) message.hidden = true;
+        try {
+            const { error } = await state.supabase.rpc('admin_update_account_deletion_request', {
+                p_request_id: request.id,
+                p_status: status
+            });
+            if (error) throw error;
+            await loadDeletionQueue();
+            setGlobalMessage(`Account deletion request ${request.request_id} updated to ${deletionStatusLabel(status).toLowerCase()}.`);
+        } catch (error) {
+            if (message) {
+                window.AsyncFeedback?.log('admin-deletion-review', window.AsyncFeedback?.createRequestId('admin-deletion-review'), error);
+                message.textContent = window.AsyncFeedback?.errorMessage(
+                    error,
+                    'The request could not be updated. Please try again.',
+                    'admin-deletion-review'
+                ) || 'The request could not be updated. Please try again.';
+                message.hidden = false;
+            }
+            buttons.forEach((button) => { button.disabled = false; });
+        }
+    }
+
+    async function loadDeletionQueue() {
+        if (state.deletionLoading) return;
+        state.deletionLoading = true;
+        byId('deletionStatus').disabled = true;
+        byId('refreshQueue').disabled = true;
+        byId('deletionSummary').textContent = 'Loading requests…';
+        window.AsyncFeedback?.render(byId('deletionList'), 'loading', {
+            loadingTitle: 'Loading account deletion requests',
+            loadingMessage: 'Checking the latest privacy requests.'
+        });
+        try {
+            const { data, error } = await state.supabase.rpc('admin_list_account_deletion_requests', {
+                p_status: byId('deletionStatus').value
+            });
+            if (error) throw error;
+            state.deletionRequests = Array.isArray(data) ? data : [];
+            renderDeletionQueue();
+            setGlobalMessage('');
+        } catch (error) {
+            state.deletionRequests = [];
+            byId('deletionSummary').textContent = 'Requests unavailable';
+            window.AsyncFeedback?.log('admin-deletion-queue', window.AsyncFeedback?.createRequestId('admin-deletion-queue'), error);
+            window.AsyncFeedback?.render(byId('deletionList'), 'error', {
+                errorTitle: 'Account deletion queue unavailable',
+                errorMessage: 'We could not load the latest requests. Try again.',
+                onRetry: loadDeletionQueue
+            });
+            setGlobalMessage('We could not load account deletion requests. Please try again.', true);
+        } finally {
+            state.deletionLoading = false;
+            byId('deletionStatus').disabled = false;
+            byId('refreshQueue').disabled = false;
+        }
+    }
+
+    async function loadProductReviewQueue() {
+        if (state.productReviewLoading) return;
+        state.productReviewLoading = true;
+        byId('listingReviewStatus').disabled = true;
+        byId('refreshQueue').disabled = true;
+        byId('listingReviewSummary').textContent = 'Loading listings…';
+        window.AsyncFeedback?.render(byId('listingReviewList'), 'loading', {
+            loadingTitle: 'Loading product reviews',
+            loadingMessage: 'Checking the latest listing moderation queue.'
+        });
+        try {
+            const { data, error } = await state.supabase.rpc('admin_list_product_reviews', {
+                p_status: byId('listingReviewStatus').value
+            });
+            if (error) throw error;
+            state.productListings = Array.isArray(data) ? data : [];
+            renderProductReviewQueue();
+            setGlobalMessage('');
+        } catch (error) {
+            state.productListings = [];
+            byId('listingReviewSummary').textContent = 'Listings unavailable';
+            window.AsyncFeedback?.log('admin-listing-queue', window.AsyncFeedback?.createRequestId('admin-listing-queue'), error);
+            window.AsyncFeedback?.render(byId('listingReviewList'), 'error', {
+                errorTitle: 'Listing review queue unavailable',
+                errorMessage: 'We could not load the latest listings. Try again.',
+                onRetry: loadProductReviewQueue
+            });
+            setGlobalMessage('We could not load product listings. Please try again.', true);
+        } finally {
+            state.productReviewLoading = false;
+            byId('listingReviewStatus').disabled = false;
+            byId('refreshQueue').disabled = false;
+        }
+    }
+
+    async function reviewProductListing(card, listing, decision) {
+        const note = card.querySelector('[data-listing-review-note]')?.value.trim() || '';
+        const message = card.querySelector('.review-action-message');
+        if (decision === 'rejected' && !note) {
+            message.textContent = 'Enter a clear correction reason before declining this listing.';
+            message.hidden = false;
+            card.querySelector('[data-listing-review-note]')?.focus();
+            return;
+        }
+        const buttons = [...card.querySelectorAll('[data-listing-decision]')];
+        buttons.forEach((button) => { button.disabled = true; });
+        message.hidden = true;
+        try {
+            const { error } = await state.supabase.rpc('admin_review_product_listing', {
+                p_product_id: listing.id,
+                p_status: decision,
+                p_review_note: note
+            });
+            if (error) throw error;
+            await loadProductReviewQueue();
+            setGlobalMessage(decision === 'approved'
+                ? 'Listing approved. It is now eligible to appear in the marketplace.'
+                : 'Listing declined. The seller can see the reason and resubmit it after editing.');
+        } catch (error) {
+            window.AsyncFeedback?.log('admin-listing-review', window.AsyncFeedback?.createRequestId('admin-listing-review'), error);
+            message.textContent = window.AsyncFeedback?.errorMessage(
+                error,
+                'The listing review could not be saved. Please try again.',
+                'admin-listing-review'
+            ) || 'The listing review could not be saved. Please try again.';
+            message.hidden = false;
+            buttons.forEach((button) => { button.disabled = false; });
+        }
+    }
+
+    function switchAdminView(view) {
+        const views = {
+            verification: ['verificationPanel', 'verificationTab'],
+            deletion: ['deletionPanel', 'deletionTab'],
+            listingReviews: ['listingReviewPanel', 'listingReviewTab'],
+            systemErrors: ['systemErrorsPanel', 'systemErrorsTab']
+        };
+        if (!views[view]) return;
+        state.activeView = view;
+        Object.entries(views).forEach(([name, [panelId, tabId]]) => {
+            byId(panelId).hidden = name !== view;
+            byId(tabId).classList.toggle('is-active', name === view);
+            byId(tabId).setAttribute('aria-pressed', String(name === view));
+        });
+        if (view === 'deletion') loadDeletionQueue();
+        else if (view === 'listingReviews') loadProductReviewQueue();
+        else if (view === 'systemErrors') loadSystemErrors();
+        else loadQueue();
+    }
+
+    function renderSystemErrors() {
+        const list = byId('systemErrorList');
+        const summary = byId('systemErrorSummary');
+        list.replaceChildren();
+        summary.textContent = `${state.systemErrors.length} recent issue${state.systemErrors.length === 1 ? '' : 's'}`;
+        if (!state.systemErrors.length) {
+            const empty = document.createElement('div');
+            empty.className = 'queue-empty';
+            empty.innerHTML = '<h2>No recent system errors</h2><p>New technical issues will appear here for administrators.</p>';
+            list.append(empty);
+            return;
+        }
+
+        state.systemErrors.forEach((entry) => {
+            const properties = entry.properties && typeof entry.properties === 'object' ? entry.properties : {};
+            const card = document.createElement('article');
+            card.className = 'system-error-entry';
+            const header = document.createElement('div');
+            header.className = 'system-error-header';
+            const title = document.createElement('strong');
+            title.textContent = properties.scope || properties.source || 'Application error';
+            const timestamp = document.createElement('time');
+            timestamp.dateTime = entry.occurred_at || '';
+            timestamp.textContent = formatDate(entry.occurred_at);
+            header.append(title, timestamp);
+
+            const metadata = document.createElement('p');
+            metadata.className = 'system-error-meta';
+            const parts = [
+                entry.route || 'Unknown page',
+                properties.errorName || '',
+                properties.errorCode ? `Code ${properties.errorCode}` : '',
+                entry.request_id ? `Request ${entry.request_id}` : ''
+            ].filter(Boolean);
+            metadata.textContent = parts.join(' · ');
+
+            const details = document.createElement('details');
+            const summaryNode = document.createElement('summary');
+            summaryNode.textContent = 'Technical details';
+            const diagnostic = document.createElement('pre');
+            diagnostic.textContent = properties.diagnostic || 'No technical detail was recorded.';
+            details.append(summaryNode, diagnostic);
+            card.append(header, metadata, details);
+            list.append(card);
+        });
+    }
+
+    async function loadSystemErrors() {
+        if (state.systemErrorsLoading) return;
+        state.systemErrorsLoading = true;
+        byId('refreshSystemErrors').disabled = true;
+        byId('systemErrorSummary').textContent = 'Loading system errors…';
+        window.AsyncFeedback?.render(byId('systemErrorList'), 'loading', {
+            loadingTitle: 'Loading system errors',
+            loadingMessage: 'Checking recent operational diagnostics.'
+        });
+        try {
+            const { data: { session } = {}, error: sessionError } = await state.supabase.auth.getSession();
+            if (sessionError) throw sessionError;
+            if (!session?.access_token) throw new Error('Admin session unavailable');
+            const apiFetch = window.VelveraAPI?.fetch || fetch;
+            const response = await apiFetch('/api/admin/observability/errors?limit=100', {
+                headers: { Authorization: `Bearer ${session.access_token}` }
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(payload.error || 'The system error log is unavailable.');
+            state.systemErrors = Array.isArray(payload.errors) ? payload.errors : [];
+            renderSystemErrors();
+        } catch (error) {
+            state.systemErrors = [];
+            byId('systemErrorSummary').textContent = 'System errors unavailable';
+            window.AsyncFeedback?.log('admin-system-errors', window.AsyncFeedback?.createRequestId('admin-system-errors'), error);
+            window.AsyncFeedback?.render(byId('systemErrorList'), 'error', {
+                errorTitle: 'System error log unavailable',
+                errorMessage: 'We could not load recent issues. Try again.',
+                onRetry: loadSystemErrors
+            });
+        } finally {
+            state.systemErrorsLoading = false;
+            byId('refreshSystemErrors').disabled = false;
+        }
+    }
+
+    async function signOut() {
+        const { error } = await state.supabase.auth.signOut();
+        if (error) {
+            window.AsyncFeedback?.log('admin-sign-out', window.AsyncFeedback?.createRequestId('admin-sign-out'), error);
+            setGlobalMessage('We could not sign out. Please try again.', true);
+            return;
+        }
+        showPanel('adminAuthPanel');
+    }
+
+    async function initialize() {
+        const form = byId('adminLoginForm');
+        const loginError = byId('adminLoginError');
+
+        try {
+            if (window.supabaseConfigReady) await window.supabaseConfigReady;
+            state.supabase = window.SupabaseClient?.get();
+            if (!state.supabase || !window.SupabaseClient.isConfigured()) {
+                throw new Error('Supabase is not configured. Add the public Supabase URL and anon key to this app before deployment.');
+            }
+            if (window.AuthService) await window.AuthService.init();
+            if (await checkAdminAccess()) await loadQueue();
+        } catch (error) {
+            showPanel('adminAuthPanel');
+            loginError.textContent = window.AsyncFeedback?.errorMessage(
+                error,
+                'The admin workspace could not start. Please try again.',
+                'admin-initialize'
+            ) || 'The admin workspace could not start. Please try again.';
+            loginError.hidden = false;
+        }
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            if (!form.reportValidity()) return;
+            const button = form.querySelector('button[type="submit"]');
+            button.disabled = true;
+            loginError.hidden = true;
+            try {
+                const { error } = await window.AuthService.signIn(
+                    form.elements.email.value.trim(),
+                    form.elements.password.value
+                );
+                if (error) throw error;
+                if (await checkAdminAccess()) await loadQueue();
+            } catch (error) {
+                loginError.textContent = window.AsyncFeedback?.errorMessage(
+                    error,
+                    'Sign-in could not be completed. Check your details and try again.',
+                    'admin-sign-in'
+                ) || 'Sign-in could not be completed. Check your details and try again.';
+                loginError.hidden = false;
+            } finally {
+                button.disabled = false;
+            }
+        });
+
+        byId('adminDeniedSignOut').addEventListener('click', signOut);
+        byId('adminSignOut').addEventListener('click', signOut);
+        byId('refreshQueue').addEventListener('click', () => {
+            if (state.activeView === 'deletion') loadDeletionQueue();
+            else if (state.activeView === 'listingReviews') loadProductReviewQueue();
+            else if (state.activeView === 'systemErrors') loadSystemErrors();
+            else loadQueue();
+        });
+        byId('refreshSystemErrors').addEventListener('click', loadSystemErrors);
+        byId('queueStatus').addEventListener('change', loadQueue);
+        byId('deletionStatus').addEventListener('change', loadDeletionQueue);
+        byId('listingReviewStatus').addEventListener('change', loadProductReviewQueue);
+        document.querySelectorAll('[data-admin-view]').forEach((tab) => {
+            tab.addEventListener('click', () => switchAdminView(tab.dataset.adminView));
+        });
+        window.setInterval(() => {
+            if (state.activeView === 'systemErrors') loadSystemErrors();
+        }, 30000);
+    }
+
+    document.addEventListener('DOMContentLoaded', initialize);
+})();

@@ -1,0 +1,22 @@
+{
+  "name": "VelveraHub",
+  "short_name": "VelveraHub",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f3ff",
+  "theme_color": "#6d28d9",
+  "icons": [
+    {
+      "src": "/img/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/img/android-web-app-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

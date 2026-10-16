@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My listings - VelveraHub</title>
+    <meta name="description" content="Keep your VelveraHub campus listings clear, current, and ready for your local community.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="../assets/css/base.css" rel="stylesheet">
+    <link href="../assets/css/components/navbar.css" rel="stylesheet">
+    <link href="assets/css/pages/my-listings.css" rel="stylesheet">
+    <link rel="icon" href="../img/favicon.ico">
+    <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
+    <link rel="manifest" href="../manifest.webmanifest">
+</head>
+<body>
+    <nav class="navbar" aria-label="Main navigation">
+        <div class="nav-container">
+            <div class="nav-left">
+                <a href="/" class="logo" aria-label="VelveraHub home">
+                    <span class="logo-icon"><img src="../img/logo.png" alt=""></span>
+                    <span class="logo-text">Velvera<span class="accent">Hub</span></span>
+                </a>
+            </div>
+            <div class="nav-right">
+                <div class="nav-icons">
+                    <a class="nav-icon-item" href="/veeve/products.html"><i class="fas fa-compass" aria-hidden="true"></i><span class="icon-label">Browse</span></a>
+                    <a class="nav-icon-item active" href="/veeve/account.html" aria-current="page"><i class="fas fa-user" aria-hidden="true"></i><span class="icon-label">Account</span></a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="my-listings-page ml-page">
+        <div class="ml-shell">
+            <nav class="ml-breadcrumbs" aria-label="Breadcrumb">
+                <a href="/veeve/account.html">Account</a>
+                <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                <span class="ml-crumb-current" aria-current="page">My listings</span>
+            </nav>
+
+            <header class="ml-hero">
+                <div class="ml-hero-copy">
+                    <p class="ml-eyebrow"><i class="fas fa-location-dot" aria-hidden="true"></i> Your local marketplace</p>
+                    <h1>My listings</h1>
+                    <p>Keep the details buyers rely on up to date. Pause a listing when it is no longer available.</p>
+                </div>
+                <div class="ml-hero-actions">
+                    <a class="ml-button ml-button-primary" href="/veeve/sell.html"><i class="fas fa-plus" aria-hidden="true"></i> Create a listing</a>
+                    <a class="ml-button ml-button-quiet" href="/veeve/account.html"><i class="fas fa-arrow-left" aria-hidden="true"></i> Account</a>
+                </div>
+            </header>
+
+            <section class="ml-overview" aria-label="Listing summary">
+                <div class="ml-overview-item">
+                    <span class="ml-overview-mark" aria-hidden="true"><i class="fas fa-layer-group"></i></span>
+                    <span class="ml-overview-copy"><strong id="mlCountAll">—</strong><span>All listings</span></span>
+                </div>
+                <div class="ml-overview-item">
+                    <span class="ml-overview-mark" aria-hidden="true"><i class="fas fa-circle-check"></i></span>
+                    <span class="ml-overview-copy"><strong id="mlCountActive">—</strong><span>Live now</span></span>
+                </div>
+                <div class="ml-overview-item">
+                    <span class="ml-overview-mark" aria-hidden="true"><i class="fas fa-pen-to-square"></i></span>
+                    <span class="ml-overview-copy"><strong id="mlCountDraft">—</strong><span>In progress</span></span>
+                </div>
+            </section>
+
+            <section class="ml-workspace" aria-labelledby="mlWorkspaceHeading">
+                <div class="ml-toolbar">
+                    <div class="ml-toolbar-heading">
+                        <h2 id="mlWorkspaceHeading">Your campus listings</h2>
+                        <p>Items and direct ads you have created for your community.</p>
+                    </div>
+                    <label class="ml-search-wrap" for="mlSearch">
+                        <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+                        <input class="ml-search" id="mlSearch" type="search" placeholder="Search your listings" autocomplete="off" aria-label="Search your listings">
+                    </label>
+                </div>
+
+                <div class="ml-filters" id="mlFilters" role="group" aria-label="Filter listings by status">
+                    <button class="ml-filter" type="button" data-status-filter="all" aria-pressed="true">All listings <span class="ml-filter-count" data-filter-count="all">0</span></button>
+                    <button class="ml-filter" type="button" data-status-filter="active" aria-pressed="false">Live <span class="ml-filter-count" data-filter-count="active">0</span></button>
+                    <button class="ml-filter" type="button" data-status-filter="draft" aria-pressed="false">Draft <span class="ml-filter-count" data-filter-count="draft">0</span></button>
+                    <button class="ml-filter" type="button" data-status-filter="inactive" aria-pressed="false">Paused <span class="ml-filter-count" data-filter-count="inactive">0</span></button>
+                    <button class="ml-filter" type="button" data-status-filter="out_of_stock" aria-pressed="false">Out of stock <span class="ml-filter-count" data-filter-count="out_of_stock">0</span></button>
+                </div>
+
+                <div id="mlResultSummary" class="ml-result-summary" aria-live="polite">Loading your listings…</div>
+
+                <div class="ml-list" id="mlLoading" aria-label="Loading listings" aria-busy="true">
+                    <div class="ml-skeleton" aria-hidden="true"><span class="ml-skeleton-line ml-skeleton-thumb"></span><span class="ml-skeleton-copy"><i class="ml-skeleton-line"></i><i class="ml-skeleton-line"></i></span><i class="ml-skeleton-line ml-skeleton-status"></i><i class="ml-skeleton-line ml-skeleton-actions"></i></div>
+                    <div class="ml-skeleton" aria-hidden="true"><span class="ml-skeleton-line ml-skeleton-thumb"></span><span class="ml-skeleton-copy"><i class="ml-skeleton-line"></i><i class="ml-skeleton-line"></i></span><i class="ml-skeleton-line ml-skeleton-status"></i><i class="ml-skeleton-line ml-skeleton-actions"></i></div>
+                    <div class="ml-skeleton" aria-hidden="true"><span class="ml-skeleton-line ml-skeleton-thumb"></span><span class="ml-skeleton-copy"><i class="ml-skeleton-line"></i><i class="ml-skeleton-line"></i></span><i class="ml-skeleton-line ml-skeleton-status"></i><i class="ml-skeleton-line ml-skeleton-actions"></i></div>
+                </div>
+
+                <section class="ml-state-panel ml-signin" id="mlSignIn" hidden aria-labelledby="mlSignInHeading">
+                    <span class="ml-state-icon" aria-hidden="true"><i class="fas fa-lock"></i></span>
+                    <h3 id="mlSignInHeading">Sign in to see your listings</h3>
+                    <p>Your campus listings are only visible to the account that created them.</p>
+                    <a class="ml-button ml-button-primary" href="/veeve/auth.html?mode=login">Sign in</a>
+                    <a class="ml-button ml-button-quiet" href="/veeve/account.html">Back to Account</a>
+                </section>
+
+                <section class="ml-state-panel ml-error" id="mlError" hidden aria-labelledby="mlErrorHeading">
+                    <span class="ml-state-icon" aria-hidden="true"><i class="fas fa-triangle-exclamation"></i></span>
+                    <h3 id="mlErrorHeading">Your listings did not load</h3>
+                    <p id="mlErrorMessage">Check your connection and try again.</p>
+                    <button class="ml-button ml-button-primary" type="button" id="mlRetry"><i class="fas fa-rotate-right" aria-hidden="true"></i> Try again</button>
+                </section>
+
+                <section class="ml-state-panel" id="mlEmpty" hidden aria-labelledby="mlEmptyHeading">
+                    <span class="ml-state-icon" aria-hidden="true"><i class="fas fa-box-open"></i></span>
+                    <h3 id="mlEmptyHeading">Nothing listed yet</h3>
+                    <p>Start with one useful item or service for people around your campus.</p>
+                    <a class="ml-button ml-button-primary" href="/veeve/sell.html"><i class="fas fa-plus" aria-hidden="true"></i> Create your first listing</a>
+                </section>
+
+                <section class="ml-state-panel" id="mlNoMatches" hidden aria-labelledby="mlNoMatchesHeading">
+                    <span class="ml-state-icon" aria-hidden="true"><i class="fas fa-magnifying-glass"></i></span>
+                    <h3 id="mlNoMatchesHeading">No matching listings</h3>
+                    <p>Try another search or choose a different status.</p>
+                    <button class="ml-button ml-button-quiet" type="button" id="mlClearSearch">Clear search and filters</button>
+                </section>
+
+                <div class="ml-list" id="mlListingList" aria-live="polite" aria-label="Your listings" hidden></div>
+            </section>
+        </div>
+    </main>
+
+    <nav class="mobile-bottom-nav" aria-label="Mobile navigation">
+        <div class="bottom-nav-items">
+            <a class="bottom-nav-item" href="/"><i class="fas fa-house" aria-hidden="true"></i><span>Home</span></a>
+            <a class="bottom-nav-item" href="/veeve/products.html"><i class="fas fa-compass" aria-hidden="true"></i><span>Browse</span></a>
+            <a class="bottom-nav-item active" data-nav-key="account" href="/veeve/account.html" aria-current="page"><i class="fas fa-user" aria-hidden="true"></i><span>Account</span></a>
+            <a class="bottom-nav-item" href="/veeve/sell.html"><i class="fas fa-plus" aria-hidden="true"></i><span>Sell</span></a>
+        </div>
+    </nav>
+    <div class="ml-feedback" id="mlFeedback" role="status" aria-live="polite" hidden></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../assets/js/services/region.js"></script>
+    <script src="../assets/js/config.js"></script>
+    <script src="../assets/js/services/api.js"></script>
+    <script src="../assets/js/services/publicSupabaseConfig.js"></script>
+    <script src="../assets/js/services/supabaseClient.js"></script>
+    <script src="../assets/js/services/auth.js"></script>
+    <script src="../assets/js/services/observability.js"></script>
+    <script src="../assets/js/components/async-feedback.js"></script>
+    <script src="../assets/js/components/focus-manager.js"></script>
+<script src="../assets/js/components/site-navigation.js"></script>
+    <script src="../assets/js/components/mobile-nav.js"></script>
+    <script src="assets/js/pages/my-listings.js"></script>
+</body>
+</html>

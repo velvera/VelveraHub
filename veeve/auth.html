@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="../img/favicon.ico">
+    <title>Sign in or create an account - VelveraHub</title>
+    <meta name="description" content="Sign in to VelveraHub or create an account to shop, save products, and manage marketplace activity.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="../assets/css/base.css" rel="stylesheet">
+    <link href="../assets/css/components/navbar.css" rel="stylesheet">
+    <link href="../assets/css/components/custom-select.css" rel="stylesheet">
+    <link href="../assets/css/components/footer.css" rel="stylesheet">
+    <link href="../assets/css/components/landing-pages.css" rel="stylesheet">
+    <link href="../assets/css/components/modal.css" rel="stylesheet">
+    <link href="../assets/css/pages-auth.css" rel="stylesheet">
+</head>
+<body class="auth-page">
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-left">
+                <a href="/" class="logo" aria-label="VelveraHub home">
+                    <span class="logo-icon" aria-hidden="true"></span>
+                    <span class="logo-text">Velvera<span class="accent">Hub</span></span>
+                </a>
+            </div>
+            <div class="nav-right"></div>
+        </div>
+    </nav>
+
+    <main class="auth-main">
+        <section class="auth-card" aria-labelledby="authTitle">
+            <div class="auth-card-intro">
+                <img class="auth-brand-logo" src="../img/logo.png" alt="VelveraHub">
+                <h1 id="authTitle">Welcome back</h1>
+                <p id="authSubtitle">Sign in to manage orders, saved products, and your marketplace activity.</p>
+            </div>
+
+            <div class="auth-page-tabs" role="tablist" aria-label="Account access">
+                <button class="auth-page-tab active" type="button" role="tab" aria-selected="true" data-auth-mode="login">Sign in</button>
+                <button class="auth-page-tab" type="button" role="tab" aria-selected="false" data-auth-mode="register">Create account</button>
+            </div>
+
+            <div class="auth-page-feedback" id="authFeedback" role="status" aria-live="polite" hidden></div>
+
+            <form id="authLoginForm" class="auth-page-form" novalidate>
+                <div class="form-group">
+                    <label for="authLoginEmail">Email address</label>
+                    <input id="authLoginEmail" name="email" type="email" autocomplete="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="authLoginPassword">Password</label>
+                    <input id="authLoginPassword" name="password" type="password" autocomplete="current-password" required>
+                </div>
+                <button class="btn btn-primary btn-full" type="submit">Sign in</button>
+            </form>
+
+            <form id="authRegisterForm" class="auth-page-form" hidden novalidate>
+                <div class="form-row-2 auth-name-row">
+                    <div class="form-group">
+                        <label for="authFirstName">First name</label>
+                        <input id="authFirstName" name="firstName" type="text" autocomplete="given-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="authLastName">Last name</label>
+                        <input id="authLastName" name="lastName" type="text" autocomplete="family-name" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="authRegisterEmail">Email address</label>
+                    <input id="authRegisterEmail" name="email" type="email" autocomplete="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="authRegisterPassword">Password</label>
+                    <input id="authRegisterPassword" name="password" type="password" autocomplete="new-password" minlength="8" required>
+                    <small class="form-help">Use at least 8 characters.</small>
+                </div>
+                <div class="form-group auth-account-type">
+                    <span class="form-label">I want to</span>
+                    <div class="auth-account-type-options" id="authAccountType" role="radiogroup" aria-label="Account type">
+                        <label class="auth-account-type-option">
+                            <input type="radio" name="accountType" value="customer" checked>
+                            <span>Shop on VelveraHub</span>
+                        </label>
+                        <label class="auth-account-type-option">
+                            <input type="radio" name="accountType" value="seller">
+                            <span>Shop and sell on VelveraHub</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="auth-seller-fields" id="authSellerFields" hidden>
+                    <div class="form-row-2 auth-business-row">
+                        <div class="form-group">
+                            <label for="authBusinessName">Business name</label>
+                            <input id="authBusinessName" name="businessName" type="text" autocomplete="organization">
+                        </div>
+                        <div class="form-group">
+                            <label for="authBusinessPhone">Phone number</label>
+                            <input id="authBusinessPhone" name="businessPhone" type="tel" autocomplete="tel">
+                        </div>
+                    </div>
+                    <div class="form-row-2 auth-business-location-row">
+                        <div class="form-group">
+                            <label for="authBusinessState">Business location</label>
+                            <select id="authBusinessState" name="businessState" aria-label="Choose your business location">
+                                <option value="">Select location</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="authBusinessInstitution">Institution <span class="form-label-optional">(optional)</span></label>
+                            <select id="authBusinessInstitution" name="businessInstitution" aria-label="Choose your institution" data-placeholder="No institution">
+                                <option value="">No institution</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <label class="checkbox-label">
+                    <input type="checkbox" name="ageConfirmed" required>
+                    <span>I confirm that I am 18 years or older and will not use VelveraHub to collect, target, or solicit children's personal data.</span>
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" name="terms" required>
+                    <span>I agree to the <a href="/veeve/legal.html#terms">Terms of Service</a> and <a href="/veeve/legal.html#privacy">Privacy Policy</a>.</span>
+                </label>
+                <button class="btn btn-primary btn-full" type="submit">Create account</button>
+            </form>
+
+            <p class="auth-card-links"><a href="/pages/account.html">Back to account</a><span>·</span><a href="/">Continue shopping</a></p>
+        </section>
+    </main>
+
+    <footer class="footer shared-footer" data-collapsible-footer data-shared-footer-placeholder aria-label="VelveraHub site footer"></footer>
+
+    <nav class="mobile-bottom-nav" aria-label="Mobile navigation">
+        <div class="bottom-nav-items">
+            <a class="bottom-nav-item" href="/"><i class="fas fa-home"></i><span>Home</span></a>
+            <a class="bottom-nav-item" href="/pages/browse.html"><i class="fas fa-compass"></i><span>Browse</span></a>
+            <button class="bottom-nav-item" id="bottomCartBtn" type="button"><i class="fas fa-shopping-cart"></i><span>Cart</span></button>
+            <a class="bottom-nav-item" href="/pages/sell.html"><i class="fas fa-store"></i><span>Sell</span></a>
+            <button class="bottom-nav-item active" id="bottomAccountBtn" type="button"><i class="fas fa-user"></i><span>Account</span></button>
+        </div>
+    </nav>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../assets/js/services/region.js"></script>
+    <script src="../assets/js/services/campuses.js"></script>
+    <script src="../assets/js/config.js"></script>
+    <script src="../assets/js/services/api.js"></script>
+    <script src="../assets/js/services/publicSupabaseConfig.js"></script>
+    <script src="../assets/js/services/supabaseClient.js"></script>
+    <script src="../assets/js/services/auth.js"></script>
+    <script src="../assets/js/services/observability.js"></script>
+    <script src="../assets/js/components/async-feedback.js"></script>
+    <script src="../assets/js/components/site-navigation.js"></script>
+    <script src="../assets/js/components/custom-select.js"></script>
+    <script src="../assets/js/components/mobile-nav.js"></script>
+    <script src="../assets/js/components/password-visibility.js"></script>
+    <script src="../assets/js/components/interaction-feedback.js"></script>
+    <script src="../assets/js/pages/auth-page.js"></script>
+</body>
+</html>

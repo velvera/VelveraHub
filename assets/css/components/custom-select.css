@@ -1,0 +1,1219 @@
+/* =========================================================
+   Global Custom Dropdown (Glassy Light Theme)
+   Replaces every native <select> across the project.
+   ========================================================= */
+
+.cs-select {
+    position: relative;
+    box-sizing: border-box;
+    z-index: 20;
+    min-width: 0;
+}
+
+.cs-select.is-open {
+    z-index: 1300;
+}
+
+.cs-native {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+    pointer-events: none;
+}
+
+.cs-trigger {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
+    border: 1.5px solid rgba(109, 40, 217, 0.14);
+    color: var(--gray-800);
+    opacity: 1;
+    -webkit-text-fill-color: currentColor;
+    font-family: var(--font-sans);
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    border-radius: var(--radius-md);
+    padding: 0.65rem 0.9rem;
+    min-height: 2.55rem;
+    transition: var(--transition-fast);
+    box-shadow: 0 1px 2px rgba(26, 5, 51, 0.04);
+}
+
+.cs-trigger:hover {
+    border-color: rgba(109, 40, 217, 0.35);
+    background: rgba(255, 255, 255, 0.75);
+}
+
+.cs-select.is-open .cs-trigger {
+    border-color: var(--primary);
+    background: rgba(255, 255, 255, 0.85);
+    box-shadow: 0 0 0 3px var(--primary-100);
+}
+
+.cs-trigger:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.cs-trigger-label {
+    display: block;
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: inherit;
+    opacity: 1;
+    -webkit-text-fill-color: currentColor;
+}
+
+.cs-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary);
+    flex-shrink: 0;
+    transition: transform 0.25s var(--ease-out-expo);
+}
+
+.cs-select.is-open .cs-arrow {
+    transform: rotate(180deg);
+}
+
+.cs-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: auto;
+    min-width: 0;
+    width: max-content;
+    max-width: min(320px, calc(100vw - 1rem));
+    max-height: min(280px, calc(100vh - 1.5rem));
+    z-index: 1200;
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(109, 40, 217, 0.16);
+    border-radius: var(--radius-md);
+    box-shadow: 0 12px 32px rgba(26, 5, 51, 0.16), 0 2px 8px rgba(26, 5, 51, 0.08);
+    padding: 0.4rem;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-6px) scale(0.98);
+    transform-origin: top center;
+    transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s;
+    pointer-events: none;
+}
+
+/* Select panels are portaled to body. Keep a panel opened from a modal above
+   the modal surface instead of allowing the modal to intercept its options. */
+.cs-panel--modal {
+    z-index: 10002;
+}
+
+/* Panels are portaled to body so their geometry is independent of page
+   overflow, sticky headers, transformed cards, and mobile scrollers. */
+.cs-location-panel {
+    min-width: 0;
+    /*
+     * Keep location panels in viewport coordinates on desktop as well as
+     * mobile so the trigger rectangle cannot be offset by a page ancestor.
+     */
+    position: fixed;
+}
+
+.cs-location-panel .cs-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 2.35rem;
+    padding: 0.55rem 0.75rem;
+    line-height: 1.25;
+    white-space: nowrap;
+}
+
+.cs-location-panel .cs-option-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cs-panel--searchable .cs-generic-mobile-header {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.35rem 0.4rem 0.65rem;
+    border-bottom: 1px solid rgba(109, 40, 217, 0.12);
+}
+
+.cs-panel--searchable .cs-mobile-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex: 0 0 auto;
+    padding: 0.25rem;
+    border: 0;
+    background: transparent;
+    color: var(--gray-600);
+    cursor: pointer;
+}
+
+.cs-panel--searchable .cs-mobile-back-label {
+    font: 500 0.8rem/1.2 var(--font-sans);
+}
+
+.cs-panel--searchable .cs-mobile-panel-title {
+    flex: 0 0 auto;
+    color: var(--gray-700);
+    font-size: 0.88rem;
+}
+
+.cs-panel--searchable .cs-category-search {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-width: 0;
+    padding: 0.55rem 0.7rem;
+    border: 1px solid rgba(109, 40, 217, 0.2);
+    border-radius: var(--radius-sm);
+    background: #fff;
+    color: var(--gray-500);
+}
+
+.cs-panel--searchable .cs-category-search input {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--gray-800);
+    font: 400 0.88rem/1.3 var(--font-sans);
+}
+
+.cs-panel--searchable .cs-category-search input::placeholder {
+    color: var(--gray-500);
+    opacity: 1;
+}
+
+.cs-panel--searchable .cs-list {
+    max-height: 300px;
+}
+
+.cs-panel--searchable .cs-location-empty {
+    padding: 0.8rem;
+    color: var(--gray-500);
+    font-size: 0.84rem;
+    text-align: center;
+}
+
+.cs-location-panel .cs-option-chevron {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 1rem;
+    width: 1rem;
+    height: 1rem;
+    margin-left: 0.75rem;
+    color: var(--gray-500);
+}
+
+.cs-location-panel .cs-option-chevron svg {
+    display: block;
+    width: 1rem;
+    height: 1rem;
+    max-width: none;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.cs-location-inline-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--primary);
+    font: 600 0.78rem/1 var(--font-sans);
+    cursor: pointer;
+}
+
+.cs-location-inline-back span:first-child {
+    font-size: 1.2rem;
+    line-height: 0.75;
+}
+
+.cs-location-summary-title {
+    margin-left: auto;
+    overflow: hidden;
+    color: var(--gray-700);
+    font-size: 0.8rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Keep selector search available on desktop as well as the full-screen mobile
+   treatment, so location and category filters behave consistently by device. */
+.cs-panel--searchable:not(.cs-location-panel) .cs-generic-mobile-header {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.45rem;
+    border-bottom: 1px solid rgba(109, 40, 217, 0.12);
+}
+
+.cs-generic-header-row {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    width: 100%;
+    min-width: 0;
+}
+
+.cs-panel--searchable:not(.cs-location-panel) .cs-mobile-back,
+.cs-panel--searchable:not(.cs-location-panel) .cs-mobile-panel-title {
+    display: none;
+}
+
+.cs-panel--searchable:not(.cs-location-panel) .cs-category-search {
+    flex: 1 1 auto;
+}
+
+.cs-school-option .cs-option-name {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+}
+
+.cs-school-option .cs-option-name strong {
+    overflow: hidden;
+    color: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+}
+
+.cs-school-option .cs-option-name small {
+    overflow: hidden;
+    color: var(--gray-500);
+    font-size: 0.7rem;
+    text-overflow: ellipsis;
+}
+
+@media (min-width: 769px) {
+    .cs-location-panel .cs-location-section {
+        display: none;
+    }
+}
+
+/* Native controls remain accessible as a progressive-enhancement fallback,
+   but never expose the browser arrow or default visual chrome. */
+select:not(.cs-native) {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, var(--primary) 50%),
+        linear-gradient(135deg, var(--primary) 50%, transparent 50%);
+    background-position: calc(100% - 1rem) 50%, calc(100% - 0.7rem) 50%;
+    background-size: 0.3rem 0.3rem, 0.3rem 0.3rem;
+    background-repeat: no-repeat;
+}
+
+.cs-panel--up:not(.cs-location-panel) {
+    transform-origin: bottom center;
+}
+
+.cs-location-panel.cs-panel--up {
+    transform-origin: bottom center;
+}
+
+.cs-select.is-open .cs-panel,
+.cs-panel.is-open,
+.cs-location-panel.is-open {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+
+.cs-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.cs-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.cs-list::-webkit-scrollbar-thumb {
+    background: rgba(109, 40, 217, 0.25);
+    border-radius: var(--radius-full);
+}
+
+.cs-option {
+    padding: 0.55rem 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--gray-700);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: var(--transition-fast);
+}
+
+.cs-option:hover {
+    background: var(--primary-100);
+    color: var(--primary-dark);
+}
+
+.cs-option.is-selected {
+    background: var(--gradient-1);
+    color: var(--white);
+    font-weight: 600;
+}
+
+.cs-option.is-disabled {
+    color: var(--gray-400);
+    cursor: not-allowed;
+}
+
+/* Full-width contexts: form groups, filters, checkout */
+.form-group .cs-select,
+.filter-group .cs-select,
+.filters-bar .cs-select {
+    width: 100%;
+}
+
+/* Compact contexts inside search bar / nav */
+.search-container .cs-select {
+    flex-shrink: 0;
+}
+
+.search-container .cs-trigger {
+    border: none;
+    border-right: 1px solid var(--gray-200);
+    border-radius: var(--radius-xl) 0 0 var(--radius-xl);
+    background: rgba(0, 0, 0, 0.03);
+    min-height: 100%;
+    padding: 0.625rem 1rem;
+    border-radius: var(--radius-xl) 0 0 var(--radius-xl);
+}
+
+.search-container .cs-select.is-open .cs-trigger {
+    box-shadow: none;
+    background: rgba(240, 120, 6, 0.06);
+}
+
+@media (max-width: 768px) {
+    .cs-trigger {
+        font-size: 0.8rem;
+        padding: 0.55rem 0.75rem;
+        min-height: 2.35rem;
+    }
+    .cs-panel {
+        max-width: none;
+        max-height: calc(100dvh - 1rem);
+    }
+
+    .search-container .cs-trigger {
+        padding: 0.55rem 0.65rem;
+        font-size: 0.76rem;
+    }
+}
+
+/* Every custom dropdown becomes a full-screen mobile surface. The location
+   selector uses the same surface below, with its search header layered on top. */
+@media (max-width: 768px) {
+    .cs-panel:not(.cs-location-panel) {
+        position: fixed !important;
+        inset: 0 !important;
+        width: 100vw;
+        width: 100dvw;
+        min-width: 0;
+        min-height: 100vh;
+        min-height: 100dvh;
+        height: 100vh;
+        height: 100dvh;
+        max-width: none;
+        max-height: none;
+        margin: 0 !important;
+        box-sizing: border-box;
+        z-index: 4000;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: var(--white);
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(100%) !important;
+        transition: opacity 0.18s ease, transform 0.22s ease, visibility 0.18s;
+    }
+
+    .cs-panel.cs-panel--modal:not(.cs-location-panel) {
+        z-index: 10002;
+    }
+
+    .cs-panel:not(.cs-location-panel).is-open {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0) !important;
+        pointer-events: auto;
+    }
+
+    .cs-panel:not(.cs-location-panel) .cs-generic-mobile-header {
+        display: flex;
+        align-items: center;
+        flex: 0 0 calc(64px + env(safe-area-inset-top));
+        min-height: calc(64px + env(safe-area-inset-top));
+        height: calc(64px + env(safe-area-inset-top));
+        gap: 1rem;
+        padding: calc(12px + env(safe-area-inset-top)) 16px 12px;
+        box-sizing: border-box;
+        background: #6D28D9;
+        color: #fff;
+    }
+
+    .cs-panel:not(.cs-location-panel) .cs-generic-mobile-header .cs-mobile-back {
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-start;
+        position: static;
+        flex: 0 0 auto;
+        width: auto;
+        height: 36px;
+        padding: 0 4px;
+        border: 0;
+        background: transparent;
+        color: #fff;
+        transform: none;
+        gap: 4px;
+    }
+
+    .cs-panel:not(.cs-location-panel) .cs-generic-mobile-header .cs-mobile-chevron {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+    }
+
+    .cs-panel:not(.cs-location-panel) .cs-generic-mobile-header .cs-mobile-chevron svg {
+        display: block;
+        width: 18px;
+        height: 18px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .cs-panel:not(.cs-location-panel) .cs-generic-mobile-header .cs-mobile-back-label {
+        position: static;
+        width: auto;
+        height: auto;
+        overflow: visible;
+        clip: auto;
+        white-space: nowrap;
+        color: #fff;
+        font: 500 13px/1 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .cs-panel:not(.cs-location-panel) .cs-mobile-panel-title {
+        min-width: 0;
+        overflow: hidden;
+        color: #fff;
+        font: 600 16px/1.2 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .cs-panel:not(.cs-location-panel) .cs-list {
+        flex: 1 1 auto;
+        width: 100%;
+        max-height: none;
+        padding: 0 0 calc(5rem + env(safe-area-inset-bottom));
+        overflow-y: auto;
+    }
+
+    .cs-panel:not(.cs-location-panel) .cs-option {
+        display: flex;
+        align-items: center;
+        min-height: 60px;
+        padding: 0.85rem 20px;
+        box-sizing: border-box;
+        border-bottom: 1px solid #E7EDF0;
+        border-radius: 0;
+        font: 400 16px/1.25 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        white-space: normal;
+    }
+
+    .cs-panel:not(.cs-location-panel) .cs-option.is-selected {
+        font-weight: 600;
+    }
+}
+
+.cs-mobile-header,
+.cs-mobile-search {
+    display: none;
+}
+
+.cs-location-panel .cs-mobile-header {
+    display: flex;
+    align-items: center;
+    padding: 0.55rem;
+    border-bottom: 1px solid #E7EDF0;
+}
+
+.cs-location-panel .cs-mobile-search {
+    display: flex;
+    align-items: center;
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 0.5rem;
+    padding: 0.55rem 0.7rem;
+    border: 1px solid #D7E0E4;
+    border-radius: 8px;
+    background: #fff;
+    color: #78909C;
+}
+
+.cs-location-panel .cs-mobile-back {
+    display: none;
+}
+
+.cs-location-panel .cs-mobile-back {
+    animation: none !important;
+}
+
+.cs-location-panel .cs-mobile-back .cs-mobile-chevron,
+.cs-location-panel .cs-mobile-back .cs-mobile-chevron svg {
+    animation: none !important;
+    transform: none !important;
+    transition: none !important;
+}
+
+.cs-location-panel .cs-mobile-search input {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #374151;
+    font: 400 0.9rem/1.25 var(--font-sans);
+}
+
+@media (max-width: 768px) {
+    .cs-panel--searchable:not(.cs-location-panel) .cs-generic-mobile-header {
+        align-items: center;
+        flex-wrap: wrap;
+        flex: 0 0 auto;
+        min-height: 0;
+        height: auto;
+        gap: 0.65rem;
+        padding: calc(12px + env(safe-area-inset-top)) 16px 14px;
+    }
+
+    .cs-panel--searchable .cs-mobile-panel-title {
+        flex: 1 1 auto;
+    }
+
+    .cs-panel--searchable .cs-category-search {
+        flex: 1 0 100%;
+        min-height: 44px;
+        padding: 0.65rem 0.8rem;
+        border-color: rgba(255, 255, 255, 0.55);
+    }
+
+    .cs-panel--searchable .cs-category-search input {
+        font-size: 16px;
+    }
+}
+
+@media (max-width: 768px) {
+    .cs-location-panel {
+        position: fixed !important;
+        top: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        width: 100vw;
+        width: 100dvw;
+        min-width: 0;
+        min-height: 100vh;
+        min-height: 100dvh;
+        height: 100vh;
+        height: 100dvh;
+        max-width: none;
+        max-height: none;
+        margin: 0 !important;
+        box-sizing: border-box;
+        z-index: 4000;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: var(--white);
+        transform: translateX(100%);
+    }
+
+    .cs-location-panel.is-open {
+        transform: translateX(0);
+    }
+
+    .cs-location-panel .cs-mobile-header {
+        position: relative;
+        display: block;
+        flex: 0 0 calc(84px + env(safe-area-inset-top));
+        min-height: calc(84px + env(safe-area-inset-top));
+        height: calc(84px + env(safe-area-inset-top));
+        padding: calc(12px + env(safe-area-inset-top)) 12px 16px;
+        box-sizing: border-box;
+        background: #6D28D9;
+        border: 0;
+        z-index: 2;
+    }
+
+    .cs-mobile-back {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        width: auto;
+        height: 36px;
+        padding: 0 4px;
+        border: 0;
+        background: transparent;
+        color: #6D28D9;
+        cursor: pointer;
+        z-index: 3;
+        transform: translateY(-50%);
+        gap: 2px;
+    }
+
+    .cs-location-panel .cs-mobile-back {
+        display: flex;
+        color: #6D28D9;
+    }
+
+    .cs-location-panel .cs-mobile-back-label {
+        display: none;
+    }
+
+    .cs-location-panel .cs-mobile-header strong {
+        display: none;
+    }
+
+    .cs-location-panel .cs-mobile-search {
+        display: flex;
+        align-items: center;
+        position: relative;
+        width: 100%;
+        height: 56px;
+        margin: 0;
+        padding: 0 12px 0 44px;
+        box-sizing: border-box;
+        border: 0;
+        border-radius: 12px;
+        background: #fff;
+        color: #78909C;
+    }
+
+    .cs-mobile-search input {
+        width: 100%;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: #374151;
+        font: 400 16px/1.2 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        min-width: 0;
+    }
+    .cs-mobile-search input::placeholder { color: #78909C; opacity: 1; }
+
+    .cs-location-panel .cs-list {
+        flex: 1 1 auto;
+        width: 100%;
+        max-height: none;
+        padding: 0 0 calc(5rem + env(safe-area-inset-bottom));
+        overflow-y: auto;
+    }
+
+    .cs-location-empty {
+        padding: 1.5rem;
+        color: var(--gray-500);
+        font-size: .95rem;
+        text-align: center;
+    }
+
+    .cs-location-panel .cs-option {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 64px;
+        padding: 0.75rem 20px 0.75rem 20px;
+        box-sizing: border-box;
+        border-bottom: 1px solid #E7EDF0;
+        border-radius: 0;
+        font: 400 16px/1.25 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #374151;
+    }
+
+    .cs-location-panel .cs-option span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .cs-location-panel .cs-school-option {
+        min-height: 72px;
+    }
+
+    .cs-location-panel .cs-school-option .cs-option-name {
+        align-items: flex-start;
+        white-space: normal;
+    }
+
+    .cs-location-panel .cs-school-option .cs-option-name strong,
+    .cs-location-panel .cs-school-option .cs-option-name small {
+        white-space: normal;
+    }
+
+    .cs-location-panel .cs-option i {
+        flex: 0 0 20px;
+        color: #78909C;
+        font-size: 20px;
+    }
+
+    .cs-location-panel .cs-option-chevron {
+        flex-basis: 20px;
+        width: 20px;
+        height: 20px;
+        margin-left: 0.75rem;
+    }
+
+    .cs-location-panel .cs-option.is-selected {
+        background: #fff;
+        color: #273238;
+        font-weight: 400;
+    }
+
+    .cs-location-panel .cs-option:active {
+        background: #F8FAFC;
+    }
+
+    .cs-location-section {
+        display: flex;
+        align-items: center;
+        min-height: 30px;
+        padding: 0 20px;
+        box-sizing: border-box;
+        background: #EEF5F9;
+        color: #78909C;
+        font: 400 10px/1.2 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        letter-spacing: 0;
+    }
+
+    .cs-mobile-chevron {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+    }
+
+    .cs-mobile-back-label {
+        position: static;
+        width: auto;
+        height: auto;
+        overflow: visible;
+        clip: auto;
+        white-space: nowrap;
+        color: #6D28D9;
+        font: 500 13px/1 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .cs-mobile-chevron svg,
+    .cs-option-chevron svg {
+        display: block;
+        width: 18px;
+        height: 18px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .cs-location-summary {
+        display: flex;
+        align-items: baseline;
+        justify-content: flex-start;
+        gap: 5px;
+        min-height: 72px;
+        padding: 20px;
+        box-sizing: border-box;
+        color: #374151;
+        font: 400 18px/1.2 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+}
+
+/* Search-panel back buttons only navigate between selector views. They never
+   represent a network request, so they must remain visually static. */
+button.cs-mobile-back::after,
+button.cs-location-inline-back::after {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    border: 0 !important;
+    content: none !important;
+    animation: none !important;
+}
+
+button.cs-mobile-back.is-processing,
+button.cs-location-inline-back.is-processing {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+}
+
+@media (max-width: 768px) {
+    body.custom-select-open {
+        overflow: hidden;
+    }
+
+    body.custom-select-open .mobile-bottom-nav {
+        visibility: hidden;
+        pointer-events: none;
+    }
+
+    body.location-search-open {
+        overflow: hidden;
+    }
+
+    body.location-search-open .mobile-bottom-nav {
+        visibility: hidden;
+        pointer-events: none;
+    }
+}
+
+/* Jiji-style category navigation, shared by listing forms and category filters. */
+.cs-panel--categories {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    max-width: min(440px, calc(100vw - 1rem));
+    max-height: min(560px, calc(100vh - 1rem));
+    padding: 0.35rem;
+    overflow: hidden;
+    border-color: #e6e9ed;
+    border-radius: 10px;
+    background: #fff;
+}
+
+.cs-panel--categories .cs-generic-mobile-header {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 auto;
+    align-items: stretch;
+    gap: 0.45rem;
+    padding: 0.35rem 0.4rem 0.65rem;
+    border-bottom: 1px solid #edf0f2;
+}
+
+.cs-panel--categories .cs-generic-header-row {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.55rem;
+    width: 100%;
+    min-width: 0;
+    min-height: 36px;
+}
+
+.cs-panel--categories .cs-category-search {
+    flex: 0 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 0.05rem;
+    min-height: 42px;
+    border-color: #e1e5e9;
+    border-radius: 7px;
+}
+
+.cs-panel--categories .cs-mobile-back {
+    display: inline-flex;
+    flex: 0 0 auto;
+    color: var(--primary);
+}
+
+.cs-panel--categories.cs-panel--searchable:not(.cs-location-panel) .cs-mobile-back {
+    display: inline-flex;
+}
+
+.cs-panel--categories .cs-mobile-panel-title {
+    display: block;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--gray-700);
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cs-panel--categories.cs-panel--searchable:not(.cs-location-panel) .cs-mobile-panel-title {
+    display: block;
+}
+
+.cs-panel--categories .cs-mobile-chevron svg {
+    display: block;
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.cs-panel--categories .cs-list {
+    flex: 1 1 auto;
+    width: 100%;
+    max-height: min(420px, calc(100vh - 150px));
+    overflow-y: auto;
+}
+
+.cs-panel--categories .cs-category-row {
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.65rem;
+    min-height: 60px;
+    padding: 0.45rem 0.45rem;
+    overflow: visible;
+    border-bottom: 1px solid #edf0f2;
+    border-radius: 0;
+    color: #263238;
+    font-size: 0.9rem;
+    font-weight: 400;
+    line-height: 1.3;
+    text-align: left;
+    white-space: normal;
+    cursor: pointer;
+}
+
+.cs-panel--categories .cs-category-row:last-child {
+    border-bottom: 0;
+}
+
+.cs-panel--categories .cs-category-row.cs-category-subcategory {
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-height: 56px;
+}
+
+.cs-panel--categories .cs-category-row:hover,
+.cs-panel--categories .cs-category-row:focus-visible,
+.cs-panel--categories .cs-category-row.is-active {
+    background: #f7f5ff;
+    color: var(--primary-dark);
+    outline: none;
+}
+
+.cs-panel--categories .cs-category-row.is-selected {
+    background: #f2edff;
+    color: var(--primary-dark);
+    font-weight: 600;
+}
+
+.cs-category-icon {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    overflow: hidden;
+    border-radius: 9px;
+    background: #f0f4f6;
+    color: #73818a;
+    font-size: 1rem;
+}
+
+.cs-category-icon img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.cs-category-icon > i {
+    display: none;
+}
+
+.cs-category-icon.has-fallback > i,
+.cs-category-icon--sub > i {
+    display: inline-flex;
+}
+
+.cs-category-icon--sub {
+    width: 30px;
+    height: 30px;
+    margin-left: 3px;
+    border-radius: 8px;
+    background: #f5f6f7;
+    color: #84929a;
+    font-size: 0.9rem;
+}
+
+.cs-category-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.12rem;
+    min-width: 0;
+}
+
+.cs-category-name {
+    overflow-wrap: anywhere;
+}
+
+.cs-category-parent-name {
+    color: #78858c;
+    font-size: 0.72rem;
+    font-weight: 400;
+}
+
+.cs-panel--categories .cs-category-chevron,
+.cs-panel--categories .cs-category-selected-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.15rem;
+    height: 1.15rem;
+    color: #829198;
+}
+
+.cs-panel--categories .cs-category-chevron svg {
+    display: block;
+    width: 1rem;
+    height: 1rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.cs-panel--categories .cs-category-selected-mark {
+    color: var(--primary);
+    font-size: 0.8rem;
+}
+
+.cs-panel--categories .cs-category-parent-option {
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-height: 54px;
+    background: #faf9ff;
+    color: var(--primary-dark);
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.cs-panel--categories .cs-category-parent-option .cs-category-parent-name {
+    color: #756d8a;
+}
+
+.cs-panel--categories .cs-category-all-option {
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-height: 48px;
+    color: var(--primary-dark);
+    font-weight: 600;
+}
+
+.cs-panel--categories .cs-location-empty {
+    padding: 1rem;
+    color: var(--gray-500);
+    font-size: 0.88rem;
+    text-align: center;
+}
+
+.cs-panel--categories .cs-category-row:focus-visible {
+    box-shadow: inset 0 0 0 2px rgba(109, 40, 217, 0.55);
+}
+
+@media (max-width: 768px) {
+    .cs-panel--categories:not(.cs-location-panel) {
+        max-width: none;
+        max-height: none;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+    }
+
+    .cs-panel--categories:not(.cs-location-panel) .cs-generic-mobile-header {
+        flex: 0 0 auto;
+        align-items: stretch;
+        gap: 0.5rem;
+        height: auto;
+        min-height: 0;
+        padding: calc(12px + env(safe-area-inset-top)) 16px 14px;
+        background: #6d28d9;
+        color: #fff;
+    }
+
+    .cs-panel--categories:not(.cs-location-panel) .cs-category-search {
+        min-height: 44px;
+        border-color: rgba(255, 255, 255, 0.55);
+    }
+
+    .cs-panel--categories:not(.cs-location-panel) .cs-mobile-back {
+        display: inline-flex;
+    }
+
+    .cs-panel--categories:not(.cs-location-panel) .cs-mobile-panel-title {
+        display: block;
+        color: #fff;
+    }
+
+    .cs-panel--categories:not(.cs-location-panel) .cs-list {
+        max-height: none;
+        padding: 0 0 calc(5rem + env(safe-area-inset-bottom));
+        overscroll-behavior: contain;
+    }
+
+    .cs-panel--categories:not(.cs-location-panel) .cs-category-row {
+        min-height: 64px;
+        padding: 0.6rem 16px;
+    }
+}
