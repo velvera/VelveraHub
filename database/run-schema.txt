@@ -21,10 +21,15 @@ admin workspace.
 12. database/product-delivery-options.sql
 13. database/client-error-logging.sql — adds sanitized client-error diagnostics and locks event-log reads to the admin API
 
+Run `npm run test:storage-policy-safety` before applying or changing the
+storage migrations. It prevents the product-media bucket-list policies from
+being reintroduced in a new project.
+
 Apply these separately only when the stated condition applies:
 
 - database/account-deletion.sql — legacy databases that predate the deletion-request objects in schema.sql; apply after schema.sql and before cloudflare-supabase-direct.sql
 - database/fix-product-media-delete-ambiguity.sql — existing databases affected by PostgreSQL error 42702 in product-media cleanup; apply after supabase-rls.sql
+- database/storage-public-bucket-list-policy-fix.sql — existing projects with legacy broad SELECT policies on the public product-media buckets; apply after supabase-rls.sql
 
 After all applicable migrations, run database/safety-verification.sql — read-only checks; it does not change data.
 

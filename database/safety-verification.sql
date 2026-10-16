@@ -298,6 +298,20 @@ WITH checks AS (
                   AND pg_get_constraintdef(oid) LIKE '%client_error%'
             )
         END
+    UNION ALL
+    SELECT
+        'public product media buckets cannot be listed',
+        NOT EXISTS (
+            SELECT 1
+            FROM pg_policies
+            WHERE schemaname = 'storage'
+              AND tablename = 'objects'
+              AND cmd = 'SELECT'
+              AND policyname IN (
+                  'public can read product image objects',
+                  'public can read product video objects'
+              )
+        )
 )
 SELECT check_name, passed
 FROM checks
