@@ -704,11 +704,9 @@ WITH CHECK (
     )
 );
 
+-- The public bucket already serves direct public URLs. Do not grant broad
+-- SELECT access here: it also lets clients list every object's name.
 DROP POLICY IF EXISTS "public can read product image objects" ON storage.objects;
-CREATE POLICY "public can read product image objects"
-ON storage.objects FOR SELECT
-TO anon, authenticated
-USING (bucket_id = 'product-images');
 
 DROP POLICY IF EXISTS "owners can update product images" ON storage.objects;
 CREATE POLICY "owners can update product images"
@@ -885,11 +883,8 @@ WITH CHECK (
     OR public.can_upload_product_media(bucket_id, name)
 );
 
+-- Direct public video URLs continue to work without exposing bucket listings.
 DROP POLICY IF EXISTS "public can read product video objects" ON storage.objects;
-CREATE POLICY "public can read product video objects"
-ON storage.objects FOR SELECT
-TO anon, authenticated
-USING (bucket_id = 'product-videos');
 
 DROP POLICY IF EXISTS "students can delete listing videos" ON storage.objects;
 CREATE POLICY "students can delete listing videos"

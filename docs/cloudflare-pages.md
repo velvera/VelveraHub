@@ -136,10 +136,12 @@ these screens in production.
 
 The base RLS migration:
 
-- limits public reads to active shops/products and active product images;
+- limits public product and image metadata reads to active listings;
 - limits product and relational image CRUD to the authenticated shop owner;
 - creates or updates the public `product-images` bucket and the public
   `product-videos` bucket for independent campus listings;
+- avoids broad `SELECT` policies on `storage.objects`, so public object URLs
+  continue to work without allowing clients to list bucket contents;
 - accepts only WebP images up to 5 MiB and MP4/WebM/QuickTime videos up to
   50 MiB;
 - requires a product UUID folder and a generated UUIDv4 filename with the
@@ -163,13 +165,26 @@ restrictive validator; a public bucket by itself does not grant upload access.
 ```sql
 SELECT id, public, file_size_limit, allowed_mime_types
 FROM storage.buckets
-WHERE id = 'product-images';
+WHERE id IN ('product-images', 'product-videos');
 
 SELECT policyname, permissive, cmd, roles, with_check
 FROM pg_policies
 WHERE schemaname = 'storage'
   AND tablename = 'objects'
-  AND policyname IN ('students can upload listing images', 'restrict product media uploads');
+  AND policyname IN (
+      'students can upload listing images',
+      'students can upload listing videos',
+      'restrict product media uploads'
+  );
+
+SELECT policyname, cmd, roles
+FROM pg_policies
+WHERE schemaname = 'storage'
+  AND tablename = 'objects'
+  AND policyname IN (
+      'public can read product image objects',
+      'public can read product video objects'
+  );
 
 SELECT policyname, permissive, cmd, roles, with_check
 FROM pg_policies
@@ -184,11 +199,18 @@ WHERE tgrelid = 'storage.objects'::regclass
   AND tgname IN ('enforce_product_media_object_quota', 'release_product_media_quota');
 ```
 
-The image bucket should be public for storefront reads, capped at `5242880`
-bytes, and restricted to `image/webp`. The student image policy should be a
-`PERMISSIVE` `INSERT` policy for `authenticated`; the upload validator should
-be `RESTRICTIVE` for `INSERT`. If any row is missing, re-apply
-`database/supabase-rls.sql` before testing uploads.
+The image bucket should be public, capped at `5242880` bytes, and restricted to
+`image/webp`. The video bucket should be public, capped at `52428800` bytes, and
+restricted to MP4, WebM, and QuickTime. Student upload policies should be
+`PERMISSIVE` `INSERT` policies for `authenticated`; the upload validator should
+be `RESTRICTIVE` for `INSERT`. The query for broad public read policies should
+return no rows. If either is present, apply
+`database/storage-public-bucket-list-policy-fix.sql`; if an upload policy is
+missing, re-apply `database/supabase-rls.sql` before testing uploads.
+
+Removing the broad `SELECT` policies blocks `storage.objects` listing; it does
+not disable public downloads through known public URLs. The application uses
+upload, public URL, and delete operations for these buckets, not bucket listing.
 
 Then, using an authenticated test seller and a disposable listing they own,
 send direct Storage API requests (not the marketplace upload form) with seven
