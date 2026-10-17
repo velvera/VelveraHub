@@ -53,6 +53,7 @@ assert.match(observability, /\[storage object path\]/, 'storage object names mus
 assert.match(studentListing, /stage:\s*failureStage/, 'submit diagnostics must include the failing pipeline stage');
 assert.match(studentListing, /Listing media metadata insert failed/, 'metadata failures must be visible in the browser console');
 assert.match(studentListing, /mediaCount:\s*failureMediaCount/, 'submit diagnostics must include the selected media count');
+assert.doesNotMatch(studentListing, /Apply database\/supabase-rls\.sql/, 'upload errors must not direct users to apply SQL blindly');
 
 assert.match(
     rls,
@@ -79,4 +80,22 @@ assert.match(diagnostic, /\[storage object path\]/);
 assert.doesNotMatch(diagnostic, /123e4567-e89b/);
 assert.doesNotMatch(diagnostic, /sensitive-value/);
 
-console.log('PASS public storage URLs remain usable without broad product-media bucket listing policies');
+const errorMessageSource = studentListing.match(
+    /function submissionErrorMessage\(error, stage, requestId\) \{[\s\S]*?\n    \}/,
+);
+assert.ok(errorMessageSource, 'media submission failures must map to safe, actionable messages');
+const submissionErrorMessage = vm.runInNewContext(`(${errorMessageSource[0].trim()})`);
+assert.match(
+    submissionErrorMessage({ statusCode: 403, code: '42501' }, 'media upload', 'upload-ref'),
+    /photo upload to product storage.*HTTP 403, code 42501.*Reference: upload-ref/,
+);
+assert.match(
+    submissionErrorMessage({ statusCode: 403, code: '42501' }, 'media metadata', 'metadata-ref'),
+    /listing-record step.*product image record.*permissions and triggers.*Reference: metadata-ref/,
+);
+assert.match(
+    submissionErrorMessage({ statusCode: 402 }, 'media upload', 'quota-ref'),
+    /organization usage and billing status.*HTTP 402.*Reference: quota-ref/,
+);
+
+console.log('PASS product media uploads remain owner-scoped, diagnostics are sanitized, and failures identify their stage');

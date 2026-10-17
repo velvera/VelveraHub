@@ -175,7 +175,7 @@
         return { bucket, path, url: publicUrl, mediaType };
     }
 
-    function submissionErrorMessage(error, stage) {
+    function submissionErrorMessage(error, stage, requestId) {
         const details = [
             error?.message,
             error?.details,
@@ -183,27 +183,44 @@
             error?.code,
             error?.statusCode
         ].filter(Boolean).join(' ').toLowerCase();
+        const statusCode = Number(error?.statusCode ?? error?.status);
+        const safeStatus = Number.isFinite(statusCode) && statusCode > 0 ? `HTTP ${statusCode}` : '';
+        const safeCode = typeof error?.code === 'string' && /^[a-z0-9_-]{1,40}$/i.test(error.code)
+            ? `code ${error.code}`
+            : '';
+        const diagnosticSuffix = [safeStatus, safeCode].filter(Boolean).join(', ');
+        const statusSuffix = diagnosticSuffix ? ` (${diagnosticSuffix})` : '';
+        const requestSuffix = requestId ? ` Reference: ${requestId}.` : '';
 
-        if (/row-level security|42501|permission denied|not authorized|unauthorized|access denied/.test(details)) {
-            const target = stage === 'media metadata'
-                ? 'listing image records'
-                : 'Supabase Storage';
-            return `The listing was blocked while saving ${target} permissions. Apply database/supabase-rls.sql to the live Supabase project, then retry.`;
+        if (statusCode === 402 || /\b402\b|service restriction/.test(details)) {
+            return `Supabase restricted this media request. Check the project's organization usage and billing status.${statusSuffix}${requestSuffix}`;
         }
         if (/bucket.*not found|bucket.*does not exist|storage bucket/.test(details)) {
-            return 'The listing image/video storage bucket is missing or misconfigured. Apply database/supabase-rls.sql to the live Supabase project.';
+            return `The media storage bucket was not found or is unavailable.${statusSuffix}${requestSuffix}`;
         }
         if (/payload too large|entity too large|file size|maximum.*size/.test(details)) {
-            return 'A photo or video exceeds the live storage limit. Choose smaller media and try again.';
+            return `A photo or video exceeds the current storage file limit. Choose a smaller file and retry.${statusSuffix}${requestSuffix}`;
         }
         if (/secure file naming|https and try again|cannot convert photos|cannot process|remains larger than/.test(details)) {
             return error.message;
         }
         if (stage === 'media preparation' && error?.message) return error.message;
-        if (stage === 'media upload' || stage === 'media metadata') {
-            return 'Your media could not be saved. Check your connection and the live Supabase Storage policies, then try again.';
+        if (stage === 'media upload') {
+            if (/row-level security|42501|permission denied|not authorized|unauthorized|access denied/.test(details)) {
+                return `Supabase denied the photo upload to product storage. Check the signed-in seller's upload permissions.${statusSuffix}${requestSuffix}`;
+            }
+            return `The photo failed during its Supabase Storage upload. Check the project's usage, bucket limits, and connection.${statusSuffix}${requestSuffix}`;
         }
-        return 'Your listing could not be published. Please check the details and try again.';
+        if (stage === 'media metadata') {
+            if (/row-level security|42501|permission denied|not authorized|unauthorized|access denied/.test(details)) {
+                return `The photo upload reached the listing-record step, but Supabase denied saving its product image record. Check product image permissions and triggers.${statusSuffix}${requestSuffix}`;
+            }
+            return `The photo upload reached the listing-record step, but saving the product image record failed.${statusSuffix}${requestSuffix}`;
+        }
+        if (/row-level security|42501|permission denied|not authorized|unauthorized|access denied/.test(details)) {
+            return `Supabase denied the ${stage || 'listing'} request.${statusSuffix}${requestSuffix}`;
+        }
+        return `Your listing could not be published. Check the details and try again.${statusSuffix}${requestSuffix}`;
     }
 
     async function removeUploadedMedia(supabase, uploaded) {
@@ -496,8 +513,8 @@
                 }
                 const cleanupFailed = cleanupMediaFailed || cleanupProductFailed || cleanupErrorCode === '42702';
                 setStatus(cleanupFailed
-                    ? 'Your listing was not published, and some temporary files could not be removed. Please contact support before retrying.'
-                    : submissionErrorMessage(error, failureStage), 'error');
+                    ? `Your listing was not published, and some temporary files could not be removed. Please contact support before retrying. Reference: ${requestId}.`
+                    : submissionErrorMessage(error, failureStage, requestId), 'error');
             } finally {
                 submit.disabled = false;
                 submit.innerHTML = '<i class="fas fa-paper-plane"></i> Publish listing';

@@ -978,6 +978,8 @@ td {
     position: relative;
     display: flex;
     flex-direction: column;
+    box-sizing: border-box;
+    min-width: 0;
     background: var(--white);
     border-radius: var(--radius-xl);
     width: min(92vw, 600px);
@@ -1062,6 +1064,9 @@ td {
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
     min-height: 0;
     padding: 0 2rem;
     overflow: hidden;
@@ -1071,11 +1076,17 @@ td {
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
     min-height: 0;
 }
 
 .form-scroll-region {
     flex: 1 1 auto;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
     min-height: 0;
     overflow-x: hidden;
     overflow-y: auto;
@@ -1092,17 +1103,22 @@ td {
 
 .form-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    min-width: 0;
     gap: 1.25rem;
 }
 
 .form-group {
     display: flex;
     flex-direction: column;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
 }
 
 .form-group.full-width {
-    grid-column: span 2;
+    grid-column: 1 / -1;
 }
 
 .form-group label {
@@ -1115,6 +1131,10 @@ td {
 .form-group input,
 .form-group select,
 .form-group textarea {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     padding: 0.75rem 1rem;
     border: 2px solid var(--gray-200);
     border-radius: var(--radius);
@@ -1586,11 +1606,11 @@ td {
     }
     
     .form-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
     
     .form-group.full-width {
-        grid-column: 1;
+        grid-column: 1 / -1;
     }
     
     .filters-bar {
