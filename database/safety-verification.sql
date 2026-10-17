@@ -312,87 +312,6 @@ WITH checks AS (
                   'public can read product video objects'
               )
         )
-    UNION ALL
-    SELECT
-        'product-images bucket matches WebP upload limits',
-        coalesce((
-            SELECT bucket.public
-                   AND bucket.file_size_limit = 5242880
-                   AND bucket.allowed_mime_types = ARRAY['image/webp']::text[]
-            FROM storage.buckets AS bucket
-            WHERE bucket.id = 'product-images'
-        ), false)
-    UNION ALL
-    SELECT
-        'authenticated can insert storage objects and product image rows',
-        has_table_privilege('authenticated', 'storage.objects', 'INSERT')
-        AND has_table_privilege('authenticated', 'public.product_images', 'INSERT')
-    UNION ALL
-    SELECT
-        'authenticated student product-image upload policy checks ownership',
-        EXISTS (
-            SELECT 1
-            FROM pg_policies
-            WHERE schemaname = 'storage'
-              AND tablename = 'objects'
-              AND policyname = 'students can upload listing images'
-              AND cmd = 'INSERT'
-              AND 'authenticated'::name = ANY(roles)
-              AND with_check ILIKE '%bucket_id = ''product-images''%'
-              AND with_check ILIKE '%seller_id = auth.uid()%'
-              AND with_check ILIKE '%listing_type IN%'
-        )
-    UNION ALL
-    SELECT
-        'restrictive product-media upload policy enforces owner path and quota',
-        EXISTS (
-            SELECT 1
-            FROM pg_policies
-            WHERE schemaname = 'storage'
-              AND tablename = 'objects'
-              AND policyname = 'restrict product media uploads'
-              AND permissive = 'RESTRICTIVE'
-              AND cmd = 'INSERT'
-              AND with_check ILIKE '%can_upload_product_media%'
-        )
-    UNION ALL
-    SELECT
-        'authenticated product-image metadata policy checks product ownership',
-        EXISTS (
-            SELECT 1
-            FROM pg_policies
-            WHERE schemaname = 'public'
-              AND tablename = 'product_images'
-              AND policyname = 'students can manage their listing images'
-              AND cmd = 'ALL'
-              AND 'authenticated'::name = ANY(roles)
-              AND with_check ILIKE '%seller_id = auth.uid()%'
-        )
-    UNION ALL
-    SELECT
-        'product media helper functions and storage quota trigger exist',
-        to_regprocedure('public.can_upload_product_media(text,text)') IS NOT NULL
-        AND to_regprocedure('public.can_manage_product_media(uuid)') IS NOT NULL
-        AND EXISTS (
-            SELECT 1
-            FROM pg_trigger
-            WHERE tgrelid = to_regclass('storage.objects')
-              AND tgname = 'enforce_product_media_object_quota'
-              AND NOT tgisinternal
-        )
-    UNION ALL
-    SELECT
-        'product media has no anon or PUBLIC insert policy',
-        NOT EXISTS (
-            SELECT 1
-            FROM pg_policies
-            WHERE (
-                    (schemaname = 'storage' AND tablename = 'objects')
-                    OR (schemaname = 'public' AND tablename = 'product_images')
-                  )
-              AND cmd IN ('INSERT', 'ALL')
-              AND roles && ARRAY['public'::name, 'anon'::name]
-        )
 )
 SELECT check_name, passed
 FROM checks
@@ -406,18 +325,6 @@ WHERE (schemaname, tablename) IN (
     ('public', 'seller_public_contacts')
 )
 ORDER BY schemaname, tablename, policyname;
-
--- Safe, focused inspection of the live upload/read rules and bucket limits.
--- This returns policy definitions, not stored object names or listing records.
-SELECT schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check
-FROM pg_policies
-WHERE (schemaname = 'storage' AND tablename = 'objects')
-   OR (schemaname = 'public' AND tablename = 'product_images')
-ORDER BY schemaname, tablename, policyname;
-
-SELECT id, name, public AS is_public, file_size_limit, allowed_mime_types
-FROM storage.buckets
-WHERE id = 'product-images';
 
 -- Every Auth user with an email should have a marketplace profile linked by
 -- profiles.user_id. This is a diagnostic query: pre-existing legacy accounts

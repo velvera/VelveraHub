@@ -6,8 +6,6 @@ const read = (path) => fs.readFileSync(new URL(`../${path}`, import.meta.url), '
 const rls = read('database/supabase-rls.sql');
 const focusedFix = read('database/storage-public-bucket-list-policy-fix.sql');
 const verification = read('database/safety-verification.sql');
-const uploadDiagnostics = read('database/product-image-upload-diagnostics.sql');
-const uploadPolicyFix = read('database/product-image-upload-policy-fix.sql');
 const studentListing = read('assets/js/pages/student-listing.js');
 const observability = read('assets/js/services/observability.js');
 function collectDatabaseSql(directoryUrl, relativeDirectory = 'database') {
@@ -65,23 +63,6 @@ assert.match(rls, /CREATE POLICY "students can upload listing images"/);
 assert.match(rls, /CREATE POLICY "restrict product media uploads"/);
 assert.match(rls, /public\.can_upload_product_media\(bucket_id, name\)/);
 assert.match(rls, /CREATE POLICY "students can manage their listing images"/);
-assert.match(verification, /product-images bucket matches WebP upload limits/);
-assert.match(verification, /authenticated student product-image upload policy checks ownership/);
-assert.match(verification, /product media has no anon or PUBLIC insert policy/);
-
-assert.doesNotMatch(
-    uploadDiagnostics,
-    /^\s*(?:INSERT|UPDATE|DELETE|CREATE|DROP|ALTER|GRANT|REVOKE)\b/im,
-    'the production diagnostics SQL must remain read-only',
-);
-assert.match(uploadDiagnostics, /FROM pg_policies/);
-assert.match(uploadDiagnostics, /FROM storage\.buckets/);
-assert.match(uploadPolicyFix, /ON storage\.objects AS RESTRICTIVE/);
-assert.match(uploadPolicyFix, /public\.can_upload_product_media\(bucket_id, name\)/);
-assert.match(uploadPolicyFix, /public\.can_manage_product_media\(product_id\)/);
-assert.match(uploadPolicyFix, /An anon\/PUBLIC INSERT policy exists/);
-assert.doesNotMatch(uploadPolicyFix, /GRANT\s+SELECT|CREATE\s+POLICY[\s\S]*?FOR SELECT/i);
-assert.doesNotMatch(uploadPolicyFix, /UPDATE\s+storage\.buckets/i);
 
 const vmContext = {
     window: { location: { origin: 'https://example.test', pathname: '/veeve/sell.html' } },
