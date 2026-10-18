@@ -253,7 +253,9 @@
 
 .popular-grid {
     display: flex;
+    flex-flow: row nowrap;
     overflow-x: auto;
+    overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-inline: contain;
     scroll-snap-type: x proximity;
@@ -457,20 +459,10 @@
 
 /* ── Desktop adjustments ───────────────────── */
 @media (min-width: 1200px) {
-    .popular-grid {
-        grid-template-columns: repeat(4, 1fr);
-    }
-
     .popular-card-image {
         height: 145px;
     }
 
-}
-
-@media (min-width: 768px) and (max-width: 1199px) {
-    .popular-grid {
-        grid-template-columns: repeat(3, 1fr);
-    }
 }
 
 /* ── Mobile ───────────────────── */
