@@ -242,16 +242,24 @@ function initHeroSlider() {
     const dotsContainer = document.getElementById('heroDots');
     const prevBtn = document.querySelector('.hero-prev');
     const nextBtn = document.querySelector('.hero-next');
+    const slider = document.getElementById('heroSlider');
 
     if (!slides.length || !dotsContainer) return;
 
     let currentSlide = 0;
     let autoSlideInterval;
+    const motionPreference = window.matchMedia?.('(prefers-reduced-motion: reduce)');
 
     slides.forEach((_, i) => {
         const dot = document.createElement('button');
         dot.className = `hero-dot ${i === 0 ? 'active' : ''}`;
-        dot.addEventListener('click', () => goToSlide(i));
+        dot.type = 'button';
+        dot.setAttribute('aria-label', `Show featured message ${i + 1}`);
+        dot.addEventListener('click', () => {
+            goToSlide(i);
+            stopAutoSlide();
+            startAutoSlide();
+        });
         dotsContainer.appendChild(dot);
     });
 
@@ -269,11 +277,31 @@ function initHeroSlider() {
 
     function nextSlide() { goToSlide(currentSlide + 1); }
     function prevSlide() { goToSlide(currentSlide - 1); }
-    function startAutoSlide() { autoSlideInterval = setInterval(nextSlide, 5000); }
+    function startAutoSlide() {
+        stopAutoSlide();
+        if (
+            motionPreference?.matches ||
+            document.hidden ||
+            slider?.matches(':hover') ||
+            slider?.contains(document.activeElement)
+        ) return;
+        autoSlideInterval = window.setInterval(nextSlide, 7000);
+    }
     function stopAutoSlide() { clearInterval(autoSlideInterval); }
 
     prevBtn?.addEventListener('click', () => { prevSlide(); stopAutoSlide(); startAutoSlide(); });
     nextBtn?.addEventListener('click', () => { nextSlide(); stopAutoSlide(); startAutoSlide(); });
+    slider?.addEventListener('pointerenter', stopAutoSlide);
+    slider?.addEventListener('pointerleave', startAutoSlide);
+    slider?.addEventListener('focusin', stopAutoSlide);
+    slider?.addEventListener('focusout', (event) => {
+        if (!slider.contains(event.relatedTarget)) startAutoSlide();
+    });
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) stopAutoSlide();
+        else startAutoSlide();
+    });
+    motionPreference?.addEventListener?.('change', () => startAutoSlide());
 
     startAutoSlide();
 

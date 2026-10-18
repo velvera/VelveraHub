@@ -102,7 +102,13 @@ body {
     font-size: 14px;
     line-height: 1.55;
     color: var(--gray-800);
-    background-color: var(--gray-50);
+    background-color: #f7f5fb;
+    background-image:
+        radial-gradient(ellipse 68% 38% at 8% 16%, rgba(139, 92, 246, 0.12), transparent 72%),
+        radial-gradient(ellipse 56% 34% at 92% 24%, rgba(39, 174, 173, 0.09), transparent 72%),
+        radial-gradient(ellipse 62% 38% at 52% 94%, rgba(255, 177, 0, 0.075), transparent 74%),
+        linear-gradient(135deg, #f8f6fc 0%, #f4f8fa 52%, #fbf8f4 100%);
+    background-attachment: fixed;
     overflow-x: clip;
     max-width: 100%;
     min-height: 100vh;

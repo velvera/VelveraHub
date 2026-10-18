@@ -293,34 +293,24 @@
 
             <!-- Main Content Area -->
             <main id="mainContent">
-                <!-- Hero Section (compact banner) -->
+                <!-- Marketplace hero -->
                 <section class="hero-section">
-                    <div class="hero-slider" id="heroSlider">
-                        <div
-                            class="hero-slide active"
-                            style="
-                                background: linear-gradient(
-                                    135deg,
-                                    #667eea 0%,
-                                    #764ba2 100%
-                                );
-                            "
-                        >
+                    <div class="hero-slider" id="heroSlider" role="region" aria-label="Featured marketplace highlights" aria-roledescription="carousel">
+                        <div class="hero-slide active">
                             <div class="hero-content">
-                                <span class="hero-tag">New Arrivals</span>
-                                <h1>Discover the Latest Tech</h1>
+                                <span class="hero-tag">Buy · sell · discover</span>
+                                <h1>Buy what you love.<br />Sell what you make.</h1>
                                 <p>
-                                    Explore current live listings from shops serving your location.
+                                    Explore fashion, tech, home and more from independent shops—or bring your own products to a marketplace built to help you grow.
                                 </p>
                                 <div class="hero-buttons">
                                     <a
-                                        href="/veeve/products.html?category=electronics"
+                                        href="/veeve/products.html"
                                         class="btn btn-primary"
-                                        data-category="electronics"
-                                        >Shop Now</a
+                                        >Browse products</a
                                     >
-                                    <a href="/veeve/secured-trading.html#payments" class="btn btn-outline"
-                                        >Learn More</a
+                                    <a href="/veeve/sell.html" class="btn btn-outline"
+                                        >Start selling</a
                                     >
                                 </div>
                             </div>
@@ -331,31 +321,21 @@
                                 />
                             </div>
                         </div>
-                        <div
-                            class="hero-slide"
-                            style="
-                                background: linear-gradient(
-                                    135deg,
-                                    #f093fb 0%,
-                                    #f5576c 100%
-                                );
-                            "
-                        >
+                        <div class="hero-slide">
                             <div class="hero-content">
-                                <span class="hero-tag">Fashion</span>
-                                <h1>Find your next look</h1>
+                                <span class="hero-tag">A world of independent shops</span>
+                                <h1>A good find is closer than you think.</h1>
                                 <p>
-                                    Browse current fashion listings from local sellers.
+                                    Find clothing, technology, home essentials and more from sellers with something worth sharing.
                                 </p>
                                 <div class="hero-buttons">
                                     <a
-                                        href="/veeve/products.html?category=fashion"
+                                        href="/veeve/categories.html"
                                         class="btn btn-primary"
-                                        data-category="fashion"
-                                        >Explore Collection</a
+                                        >Explore categories</a
                                     >
-                                    <a href="/veeve/products.html?category=fashion" class="btn btn-outline"
-                                        >View Trends</a
+                                    <a href="/veeve/products.html" class="btn btn-outline"
+                                        >Browse products</a
                                     >
                                 </div>
                             </div>
@@ -366,31 +346,21 @@
                                 />
                             </div>
                         </div>
-                        <div
-                            class="hero-slide"
-                            style="
-                                background: linear-gradient(
-                                    135deg,
-                                    #4facfe 0%,
-                                    #00f2fe 100%
-                                );
-                            "
-                        >
+                        <div class="hero-slide">
                             <div class="hero-content">
-                                <span class="hero-tag">Home &amp; lifestyle</span>
-                                <h1>Make space for what matters</h1>
+                                <span class="hero-tag">For independent sellers</span>
+                                <h1>Put your products in the right hands.</h1>
                                 <p>
-                                    Browse live home and lifestyle listings for every room.
+                                    Open a shop, list what you sell, and connect with people discovering products across the marketplace.
                                 </p>
                                 <div class="hero-buttons">
                                     <a
-                                        href="/veeve/products.html?category=home"
+                                        href="/veeve/sell.html"
                                         class="btn btn-primary"
-                                        data-category="home"
-                                        >Shop Home</a
+                                        >Create your shop</a
                                     >
-                                    <a href="/veeve/products.html?category=home" class="btn btn-outline"
-                                        >Get Inspired</a
+                                    <a href="/veeve/products.html" class="btn btn-outline"
+                                        >Browse the marketplace</a
                                     >
                                 </div>
                             </div>
@@ -403,11 +373,11 @@
                         </div>
                     </div>
                     <div class="hero-controls">
-                        <button class="hero-prev">
+                        <button class="hero-prev" type="button" aria-label="Previous featured message">
                             <i class="fas fa-chevron-left"></i>
                         </button>
-                        <div class="hero-dots" id="heroDots"></div>
-                        <button class="hero-next">
+                        <div class="hero-dots" id="heroDots" role="group" aria-label="Choose a featured message"></div>
+                        <button class="hero-next" type="button" aria-label="Next featured message">
                             <i class="fas fa-chevron-right"></i>
                         </button>
                     </div>
