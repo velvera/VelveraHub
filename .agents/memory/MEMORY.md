@@ -1,1 +1,2 @@
 - [Category subcategory image coverage](category-subcategory-images.md) — only five parent categories have subcategory image sets so far; keep other categories unchanged until supplied.
+- [Multi-root change coverage](multi-root-change-coverage.md) — check and update relevant pages across the root, UK, NG, shop, and admin app folders.

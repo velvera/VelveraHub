@@ -2446,3 +2446,39 @@ td {
         justify-self: start;
     }
 }
+
+/* Keep every product field inside the add-product card, even when other page
+   styles or narrow viewports impose intrinsic minimum sizes on form controls. */
+#addProductModal,
+#addProductModal * {
+    box-sizing: border-box;
+}
+
+#addProductModal .modal-content,
+#addProductModal #addProductForm,
+#addProductModal .form-scroll-region,
+#addProductModal .form-grid,
+#addProductModal .form-group {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+}
+
+#addProductModal .form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+#addProductModal .form-group input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+#addProductModal .form-group select,
+#addProductModal .form-group textarea {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+}
+
+@media (max-width: 768px) {
+    #addProductModal .form-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
