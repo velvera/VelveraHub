@@ -127,7 +127,7 @@
         .password-visibility-control > button.password-visibility-toggle {
             position: absolute;
             z-index: 2;
-            top: 50%;
+            top: calc(50% + 2px);
             right: .4rem;
             display: grid;
             place-items: center;
