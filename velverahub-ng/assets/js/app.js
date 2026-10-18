@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     await loadInitialData();
     initHeroSlider();
+    setTimeout(initYmlInfiniteScroll, 500);
     initEventListeners();
     updateAuthUI();
     updateCartUI();
@@ -305,7 +306,6 @@ function initHeroSlider() {
 
     startAutoSlide();
 
-    setTimeout(initYmlInfiniteScroll, 500);
 }
 
 /* ── Event Listeners ───────────────────── */
