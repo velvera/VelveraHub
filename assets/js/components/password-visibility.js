@@ -118,34 +118,47 @@
             min-width: 0;
         }
         .password-visibility-control > input {
+            box-sizing: border-box;
             width: 100%;
-            padding-right: 3rem !important;
+            max-width: 100%;
+            min-width: 0;
+            padding-right: 3.25rem;
         }
-        .password-visibility-toggle {
+        .password-visibility-control > button.password-visibility-toggle {
             position: absolute;
             z-index: 2;
             top: 50%;
-            right: .65rem;
-            display: inline-grid;
+            right: .4rem;
+            display: grid;
             place-items: center;
-            min-width: 2.25rem;
-            min-height: 2.25rem;
-            padding: .35rem;
+            box-sizing: border-box;
+            width: 2.5rem;
+            height: 2.5rem;
+            min-width: 2.5rem;
+            min-height: 2.5rem;
+            margin: 0;
+            padding: 0;
             border: 0;
             border-radius: .5rem;
             background: transparent;
             box-shadow: none !important;
             color: #6b7280;
             cursor: pointer;
+            line-height: 1;
             transform: translateY(-50%);
             transition: color .15s ease, background-color .15s ease;
         }
-        .password-visibility-toggle:hover {
+        .password-visibility-control > button.password-visibility-toggle > i {
+            display: block;
+            font-size: 1rem;
+            line-height: 1;
+        }
+        .password-visibility-control > button.password-visibility-toggle:hover {
             background: rgb(109 40 217 / 7%);
             color: #6d28d9;
             transform: translateY(-50%);
         }
-        .password-visibility-toggle:focus-visible {
+        .password-visibility-control > button.password-visibility-toggle:focus-visible {
             outline: 2px solid #7c3aed;
             outline-offset: 2px;
         }
