@@ -64,11 +64,6 @@ function initRegion() {
     if (ngBtn && currentRegion === 'ng') ngBtn.classList.add('active');
     if (ukBtn && currentRegion === 'uk') ukBtn.classList.add('active');
 
-    const bannerShipping = document.querySelectorAll('.banner-shipping');
-    bannerShipping.forEach(el => {
-        el.textContent = `Free Shipping on Orders Over ${region.formatShippingThreshold()}`;
-    });
-
     const regionBadgeBtn = document.getElementById('regionBadgeBtn');
     const regionModal = document.getElementById('regionModal');
 
