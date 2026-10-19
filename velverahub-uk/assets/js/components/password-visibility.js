@@ -155,6 +155,7 @@
             display: block;
             font-size: 1rem;
             line-height: 1;
+            margin: 0 !important;
         }
         .password-visibility-control > button.password-visibility-toggle:hover {
             background: transparent !important;
