@@ -26,28 +26,50 @@ const expectedCategoryIds = [
     'beauty',
     'business-industry',
     'commercial-equipment-tools',
-    'electronics'
+    'electronics',
+    'fashion',
+    'food-agriculture-farming',
+    'home',
+    'leisure-activities'
 ];
+const expectedImageCounts = {
+    'baby-kids': 10,
+    beauty: 10,
+    'business-industry': 2,
+    'commercial-equipment-tools': 10,
+    electronics: 15,
+    fashion: 4,
+    'food-agriculture-farming': 5,
+    home: 7,
+    'leisure-activities': 9
+};
 assert.deepEqual(
     Array.from(imageCategories, (category) => category.id).sort(),
     expectedCategoryIds.sort(),
-    'subcategory thumbnails should be enabled only for the five supplied parent categories'
+    'subcategory thumbnails should be enabled only for parent categories with supplied images'
 );
 
 let imageCount = 0;
 const expectedFiles = new Set();
 for (const category of imageCategories) {
+    let categoryImageCount = 0;
     for (const subcategory of category.subcategories) {
         const imageUrl = window.VelveraCategories.getSubcategoryImage(category.id, subcategory);
-        assert.ok(imageUrl, `${category.name} / ${subcategory} should have an image path`);
+        if (!imageUrl) continue;
         const imagePath = path.join(root, imageUrl.replace(/^\//, ''));
         assert.ok(fs.existsSync(imagePath), `missing image file: ${imageUrl}`);
         expectedFiles.add(path.relative(root, imagePath));
         imageCount += 1;
+        categoryImageCount += 1;
     }
+    assert.equal(
+        categoryImageCount,
+        expectedImageCounts[category.id],
+        `${category.name} should map only the supplied subcategory images`
+    );
 }
 
-assert.equal(imageCount, 47, 'the five categories should cover their 47 subcategories');
+assert.equal(imageCount, 72, 'the nine supplied categories should cover 72 subcategories');
 assert.equal(expectedFiles.size, imageCount, 'each subcategory should have its own image');
 
 function collectImages(directory) {

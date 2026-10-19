@@ -101,6 +101,13 @@
             name: 'Fashion',
             image: '/img/home-category/fashion.png',
             icon: 'fa-tshirt',
+            subcategoryImageDirectory: '/img/subcategories/fashion',
+            subcategoryImageSubcategories: [
+                'Jewelry',
+                'Shoes',
+                'Watches',
+                'Wedding Wear & Accessories'
+            ],
             subcategories: [
                 'Bags',
                 'Clothing',
@@ -116,6 +123,14 @@
             name: 'Food, Agriculture & Farming',
             image: '/img/home-category/food-agriculture-and-farming.png',
             icon: 'fa-tractor',
+            subcategoryImageDirectory: '/img/subcategories/food-agriculture-farming',
+            subcategoryImageSubcategories: [
+                'Farm Animal Feed & Supplements',
+                'Farm Animals',
+                'Farm Machinery & Equipment',
+                'Food & Beverages',
+                'Seeds & Fertilizers'
+            ],
             subcategories: [
                 'Farm Animal Feed & Supplements',
                 'Farm Animals',
@@ -129,6 +144,16 @@
             name: 'Home, Furniture & Appliances',
             image: '/img/home-category/home-furniture-and-appliances.png',
             icon: 'fa-couch',
+            subcategoryImageDirectory: '/img/subcategories/home',
+            subcategoryImageSubcategories: [
+                'Furniture',
+                'Garden Supplies',
+                'Home Accessories',
+                'Home Appliances',
+                'Household Chemicals',
+                'Kitchen Appliances',
+                'Kitchenware & Cookware'
+            ],
             subcategories: [
                 'Furniture',
                 'Garden Supplies',
@@ -192,6 +217,18 @@
             name: 'Leisure & Activities',
             image: '/img/home-category/leisure-and-activities.png',
             icon: 'fa-futbol',
+            subcategoryImageDirectory: '/img/subcategories/leisure-activities',
+            subcategoryImageSubcategories: [
+                'Arts, Crafts & Awards',
+                'Books & Table Games',
+                'Massagers',
+                'Music & Video',
+                'Musical Instruments & Gear',
+                'Outdoor Gear',
+                'Personal Mobility',
+                'Smoking Accessories',
+                'Sports Equipment'
+            ],
             subcategories: [
                 'Arts, Crafts & Awards',
                 'Books & Table Games',
@@ -387,7 +424,9 @@
     function getSubcategoryImage(categoryId, subcategoryName) {
         const category = byId.get(String(categoryId || ''));
         if (!category?.subcategoryImageDirectory ||
-            !category.subcategories.includes(subcategoryName)) return null;
+            !category.subcategories.includes(subcategoryName) ||
+            (category.subcategoryImageSubcategories &&
+                !category.subcategoryImageSubcategories.includes(subcategoryName))) return null;
         return `${category.subcategoryImageDirectory}/${subcategoryImageSlug(subcategoryName)}.png`;
     }
 
