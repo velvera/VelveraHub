@@ -251,6 +251,15 @@
             name: 'Pets',
             image: '/img/home-category/animals-and-pets.png',
             icon: 'fa-paw',
+            subcategoryImageDirectory: '/img/subcategories/pets',
+            subcategoryImageSubcategories: [
+                'Birds',
+                'Cats & Kittens',
+                'Dogs & Puppies',
+                'Fish',
+                'Other Animals',
+                'Pet Accessories'
+            ],
             subcategories: [
                 'Birds',
                 'Cats & Kittens',
@@ -265,6 +274,13 @@
             name: 'Phones & Tablets',
             image: '/img/home-category/phones-and-tablets.png',
             icon: 'fa-mobile-alt',
+            subcategoryImageDirectory: '/img/subcategories/phones-tablets',
+            subcategoryImageSubcategories: [
+                'Accessories for Phones & Tablets',
+                'Mobile Phones',
+                'Smart Watches',
+                'Tablets'
+            ],
             subcategories: [
                 'Accessories for Phones & Tablets',
                 'Mobile Phones',
@@ -348,6 +364,16 @@
             name: 'Vehicles',
             image: '/img/home-category/vehicles.png',
             icon: 'fa-car',
+            subcategoryImageDirectory: '/img/subcategories/vehicles',
+            subcategoryImageSubcategories: [
+                'Buses & Microbuses',
+                'Cars',
+                'Construction & Heavy Machinery',
+                'Motorcycles & Scooters',
+                'Trucks & Trailers',
+                'Vehicle Parts & Accessories',
+                'Watercraft & Boats'
+            ],
             subcategories: [
                 'Buses & Microbuses',
                 'Cars',

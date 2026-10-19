@@ -30,7 +30,10 @@ const expectedCategoryIds = [
     'fashion',
     'food-agriculture-farming',
     'home',
-    'leisure-activities'
+    'leisure-activities',
+    'pets',
+    'phones-tablets',
+    'vehicles'
 ];
 const expectedImageCounts = {
     'baby-kids': 10,
@@ -41,7 +44,10 @@ const expectedImageCounts = {
     fashion: 7,
     'food-agriculture-farming': 5,
     home: 9,
-    'leisure-activities': 9
+    'leisure-activities': 9,
+    pets: 6,
+    'phones-tablets': 4,
+    vehicles: 7
 };
 assert.deepEqual(
     Array.from(imageCategories, (category) => category.id).sort(),
@@ -69,7 +75,7 @@ for (const category of imageCategories) {
     );
 }
 
-assert.equal(imageCount, 77, 'the nine supplied categories should cover 77 subcategories');
+assert.equal(imageCount, 94, 'the twelve supplied categories should cover 94 subcategories');
 assert.equal(expectedFiles.size, imageCount, 'each subcategory should have its own image');
 
 function collectImages(directory) {
