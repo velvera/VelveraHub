@@ -118,6 +118,7 @@
             min-width: 0;
         }
         .password-visibility-control > input {
+            display: block;
             box-sizing: border-box;
             width: 100%;
             max-width: 100%;
@@ -127,7 +128,7 @@
         .password-visibility-control > button.password-visibility-toggle {
             position: absolute;
             z-index: 2;
-            top: calc(50% + 2px);
+            top: 50%;
             right: .4rem;
             display: grid;
             place-items: center;
@@ -140,7 +141,9 @@
             padding: 0;
             border: 0;
             border-radius: .5rem;
-            background: transparent;
+            appearance: none;
+            -webkit-appearance: none;
+            background: transparent !important;
             box-shadow: none !important;
             color: #6b7280;
             cursor: pointer;
@@ -154,7 +157,7 @@
             line-height: 1;
         }
         .password-visibility-control > button.password-visibility-toggle:hover {
-            background: rgb(109 40 217 / 7%);
+            background: transparent !important;
             color: #6d28d9;
             transform: translateY(-50%);
         }
