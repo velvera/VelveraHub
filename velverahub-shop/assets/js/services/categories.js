@@ -103,6 +103,9 @@
             icon: 'fa-tshirt',
             subcategoryImageDirectory: '/img/subcategories/fashion',
             subcategoryImageSubcategories: [
+                'Bags',
+                'Clothing',
+                'Clothing Accessories',
                 'Jewelry',
                 'Shoes',
                 'Watches',
@@ -152,7 +155,9 @@
                 'Home Appliances',
                 'Household Chemicals',
                 'Kitchen Appliances',
-                'Kitchenware & Cookware'
+                'Kitchenware & Cookware',
+                'Lighting',
+                'Storage & Organization'
             ],
             subcategories: [
                 'Furniture',
