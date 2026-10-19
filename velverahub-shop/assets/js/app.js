@@ -97,7 +97,7 @@ async function loadPopularInRegion() {
     if (!container) return;
 
     if (flagEl) flagEl.textContent = isNG ? '🇳🇬' : '🇬🇧';
-    if (titleEl) titleEl.textContent = isNG ? 'Popular in Nigeria' : 'Popular in UK';
+    if (titleEl) titleEl.textContent = isNG ? 'Trending in Nigeria' : 'Popular in UK';
 
     let products = [];
     try {
