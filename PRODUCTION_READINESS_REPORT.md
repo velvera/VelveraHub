@@ -14,6 +14,10 @@
 - `npm run mobile:regression` exited successfully across the configured viewport and app-root matrix; the focused 320px parent/shop-owner regression also passed.
 - `npm audit` reported 0 vulnerabilities after updating Express to 5.3.0 and pinning `path-to-regexp` to 8.4.2.
 - Shared navigation now applies the local logo before remote branding settings resolve, retries the static footer mark after an image error, and preserves product-specific SEO metadata. Removed unsupported “Ltd.” and “trusted products” footer copy.
+- `npm run test:storage-policy-safety` passed, but it is a static source/SQL invariant test (`scripts/storage-policy-safety.test.mjs`), not a direct Supabase API test. The task-provided `scripts/test-storage-policy-safety.mjs` path does not exist.
+- Existing 14 October notes document the account-deletion request-queue migration and RLS/grant checks plus disposable customer/admin RPC tests. They also explicitly record that Auth-user deletion was not tested, the NG/UK privacy assets were stale, and the admin root was blocked by a Cloudflare challenge. No current evidence confirms the upload-quota or checkout-RPC acceptance tests.
+- `database/run-schema.txt` defines the canonical ordered migration set; `database/account-deletion.sql` is conditional for legacy schemas only. No migration was applied during this review.
+- The regional payment design is documented (Paystack for Nigeria, Stripe Connect for the UK), but provider charges, signed webhooks, refunds, settlement, and reconciliation remain unimplemented. Checkout continues to reject card/wallet methods.
 - `Start application` restarted successfully on port 5000. No new browser-console errors were reported during this verification.
 - These are repository/local results only. Production Supabase, Cloudflare, payment providers, legal/operator details, monitoring, backups, and domain configuration remain unverified.
 

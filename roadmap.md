@@ -13,7 +13,7 @@ This is the current source of truth, consolidated from `improvement.md`, `finala
 
 ## Summary
 
-The project has substantial marketplace, security, mobile, and operational groundwork. Local route, generated-app, accessibility-alt, and targeted regression checks pass. Production readiness is **not established**: live Supabase migrations and data, payment provider/webhook configuration, operator/legal details, monitoring, backups, and domain verification remain unresolved.
+The project has substantial marketplace, security, mobile, and operational groundwork. Local route, generated-app, accessibility-alt, and targeted regression checks pass. A Supabase account-deletion request-queue migration and its access controls were recorded as verified on 14 October; that does not establish that the full migration set or upload/checkout policies are ready. Payment provider/webhook configuration, operator/legal details, monitoring, backups, and domain verification remain unresolved.
 
 The 65-item production checklist currently contains **20 PASS, 36 NEEDS REVIEW, and 9 BLOCKED** items. Do not treat a local PASS as evidence that a production database, payment flow, or domain has been tested.
 
@@ -58,9 +58,32 @@ The 65-item production checklist currently contains **20 PASS, 36 NEEDS REVIEW, 
 - `npm run apps:check`
 - `npm run apps:production:check`
 - `npm run smoke`
+- `npm run test:storage-policy-safety` — passed; this is a static repository test, not a live Supabase request.
 - `npm audit` — 0 vulnerabilities after the dependency update.
 - Focused mobile regression at 320px for the parent storefront and standalone shop-owner portal.
 - Full `npm run mobile:regression` — completed with exit code 0 across the configured viewport and app-root matrix.
+
+## Supabase and payment acceptance status — 21 October 2026
+
+### Confirmed from the repository
+
+- `database/run-schema.txt` defines the 13-step Supabase migration order: `schema.sql`, `seller.sql`, `admin.sql`, `supabase-rls.sql`, `security-hardening.sql`, `cloudflare-dashboard.sql`, `cloudflare-supabase-direct.sql`, `production-hardening.sql`, `shop-owner-payments.sql`, `shop-verification-compliance.sql`, `seller-contact-safety.sql`, `product-delivery-options.sql`, and `client-error-logging.sql`.
+- `database/account-deletion.sql` is a **legacy-only** migration. The runbook says to apply it after `schema.sql` and before `cloudflare-supabase-direct.sql` only when the older database lacks the deletion-request objects. Do not apply it as an extra migration to a fresh/current schema.
+- The supplied storage-test path `scripts/test-storage-policy-safety.mjs` does not exist. The actual test is `scripts/storage-policy-safety.test.mjs`, run by `npm run test:storage-policy-safety`; it checks source and SQL invariants without contacting Supabase.
+- `docs/cloudflare-pages.md` contains direct Storage acceptance steps: concurrently upload seven distinct valid objects to a disposable listing, require six successes and at least one rejection, then verify cross-owner and invalid-path/MIME/size rejections and clean up the test objects.
+- `database/production-hardening.sql` derives checkout totals from database product prices, locks products, enforces stock and idempotency, and allows only cash-on-delivery or bank-transfer orders. The repository has no current evidence that the latest RPC has passed a staging invocation.
+- `docs/payment-architecture.md` confirms the existing plan: Paystack Transaction Splits/subaccounts for Nigeria and Stripe Connect for the UK. This remains design/data-model work: there are no provider charge, signature-verification, refund, settlement, or reconciliation handlers. The API accepts only offline payment methods.
+
+### Existing external evidence (not re-run in this review)
+
+- `docs/cloudflare-pages.md` records that the account-deletion request-queue migration was applied on 14 October 2026, with RLS/grants checked and disposable customer/admin RPC tests passed for submission, duplicate reuse, access denial, and transitions through `rejected`.
+- The record explicitly says the `completed` transition and Auth-user deletion were not performed; test accounts remained active. It also records stale deployed `account-privacy.js` files on the NG/UK roots and a Cloudflare challenge blocking automated inspection of the admin/shop roots.
+- No external record confirms the seven-upload quota test, cross-owner upload denial, invalid upload rejection, or current `place_order_secure` staging behavior. The earlier improvement review said that RPC was missing from the live schema cache at that time.
+
+### Access required to complete the acceptance tests
+
+- This workspace has no Supabase integration or staging-specific connection configured. The available Stripe connector is not connected. No payment credentials were accessed or exposed.
+- Do not run storage, checkout, account-deletion, or payment writes against the live project. To continue safely, connect/provide a dedicated staging Supabase target and disposable seller/customer/admin accounts; connect Stripe before implementing or testing UK provider calls. Paystack is not available as a Replit payment connector in the current integration flow, so its Nigeria adapter requires an explicitly approved external-provider setup.
 
 ## Pending work and launch gates
 
@@ -77,7 +100,7 @@ The 65-item production checklist currently contains **20 PASS, 36 NEEDS REVIEW, 
 | Fees and pricing disclosure | NEEDS REVIEW | Verify all mandatory buyer/seller fees, delivery charges, taxes, commissions, and regional pricing before users commit. |
 | Review integrity | NEEDS REVIEW | Verify reviews are tied to eligible transactions, approval/moderation is server-enforced, and no seeded or fabricated reviews/ratings are presented as genuine. |
 | Unsupported marketing claims | NEEDS REVIEW | Review badges, guarantees, ratings, trust language, and performance claims against evidence. The unsupported footer wording found in this pass has been removed; the wider audit remains. |
-| Account data deletion | NEEDS REVIEW | Apply `database/account-deletion.sql` to production, verify identity checks and lawful retention, then test deletion/anonymization outcomes against production-like data. |
+| Account data deletion | NEEDS REVIEW | Follow `database/run-schema.txt`; use `database/account-deletion.sql` only for a legacy schema. The 14 October request-queue/RLS checks passed, but Auth-user deletion and final data cleanup were intentionally not performed. Test the complete operator workflow on staging with disposable accounts and document retention. |
 | Children’s data / age consent | NEEDS REVIEW | Verify every regional and external sign-up path enforces the intended age restriction and that the policy matches applicable law. |
 | Marketing email unsubscribe | NEEDS REVIEW | No marketing sender is configured. If marketing email is enabled, implement and test reliable unsubscribe handling before sending. |
 | Font/image licensing | NEEDS REVIEW | Confirm commercial rights for bundled images, fonts, icons, and third-party CDN assets. |
@@ -86,7 +109,7 @@ The 65-item production checklist currently contains **20 PASS, 36 NEEDS REVIEW, 
 
 | Item | Status | Required next step |
 |---|---|---|
-| Upload limits | NEEDS REVIEW | Apply `database/supabase-rls.sql` in production; verify bucket policies, ownership, invalid paths/MIME/size rejection, and concurrent six-file quota enforcement using disposable accounts. |
+| Upload limits | NEEDS REVIEW | Local static source checks pass. Apply `database/supabase-rls.sql` in staging and verify bucket policies, ownership, invalid paths/MIME/size rejection, and concurrent six-file quota enforcement using disposable accounts. |
 | Duplicate subscriptions | NEEDS REVIEW | No complete subscription flow is configured. Confirm subscriptions are not advertised; if introduced, make creation idempotent across retries and races. |
 | Duplicate payments and webhooks | NEEDS REVIEW / BLOCKED | Order creation is idempotent, but provider charge execution, signed webhooks, replay protection, refunds, and authoritative reconciliation are not complete. Implement and stage-test Paystack for Nigeria and Stripe Connect for the UK before enabling card/wallet payments. |
 | Error handling and failed requests | NEEDS REVIEW | Complete the cross-surface audit for database, network, auth, upload, and payment failures; verify safe messages, retry rules, preserved form state, and duplicate-submit protection. |
