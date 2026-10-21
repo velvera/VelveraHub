@@ -1,3 +1,4 @@
+- [Secure private Git imports](secure-private-git-imports.md) — keep PATs out of remote URLs and use transient askpass for one-time imports.
 - [Category subcategory image coverage](category-subcategory-images.md) — track supplied parent and child image coverage; only map images the user has provided.
 - [Multi-root change coverage](multi-root-change-coverage.md) — check and update relevant pages across the root, UK, NG, shop, and admin app folders.
 - [Password toggle alignment](password-toggle-alignment.md) — keep the visible eye centered within each password field with no button background.
