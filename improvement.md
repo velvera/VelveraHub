@@ -2,6 +2,8 @@
 
 Updated: 2026-09-25
 
+> Historical review snapshot. The current consolidated status and next steps are maintained in [`roadmap.md`](roadmap.md), updated 21 October 2026.
+
 ## Completed in this pass
 
 - Removed shopper-facing fabricated catalogue, recommendation, shop-directory, shop-detail, and checkout sample data.

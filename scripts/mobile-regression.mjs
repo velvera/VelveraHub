@@ -1313,12 +1313,8 @@ async function assertShopOwnerCategories(page, width) {
     await page.locator('#addProductModal').evaluate((modal) => modal.classList.add('active'));
     await page.evaluate(() => window.CustomSelect.refresh(document.querySelector('#productCategory')));
     const deliverySelectors = ['#productDeliveryPickup', '#productDeliveryLocal', '#productDeliveryRegional', '#productDeliveryNotes', '#promoteCurrentProduct'];
-    await page.waitForFunction((selectors) =>
-        selectors.every((selector) => {
-            const element = document.querySelector(selector);
-            return element && element.getClientRects().length > 0;
-        }), deliverySelectors);
     for (const selector of deliverySelectors) {
+        await page.locator('#addProductModal').locator(selector).waitFor({ state: 'visible' });
         if (!(await page.locator('#addProductModal').locator(selector).isVisible())) {
             throw new Error(`shop-owner ${width}px product form is missing ${selector}`);
         }

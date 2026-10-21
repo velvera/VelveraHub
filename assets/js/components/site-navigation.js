@@ -157,7 +157,7 @@
                     <div class="footer-links">
                         <div class="footer-container">
                             <div class="footer-intro">
-                                <p>Discover trusted products and shops with delivery-aware shopping.</p>
+                                <p>Discover products and shops with delivery-aware shopping.</p>
                             </div>
                             <div class="footer-col">
                                 <h4>Shop</h4>
@@ -198,7 +198,7 @@
                     <div class="footer-bottom">
                         <div class="footer-container">
                             <div class="footer-bottom-left">
-                                <p>© ${new Date().getFullYear()} VelveraHub Ltd. All rights reserved.</p>
+                                <p>© ${new Date().getFullYear()} VelveraHub. All rights reserved.</p>
                             </div>
                             <div class="footer-bottom-right">
                                 <div class="footer-social" aria-label="Social links">
@@ -441,11 +441,7 @@
         return fallback;
     }
 
-    async function normalizeBranding() {
-        const branding = await loadBranding();
-        // This is a plain static asset, so keep the brand visible even when
-        // Supabase branding is unavailable or unconfigured.
-        const logoUrl = safeBrandImageUrl(branding.logoUrl);
+    function applyBranding(logoUrl) {
         document.querySelectorAll('.navbar .logo').forEach((logo) => {
             const icon = logo.querySelector('.logo-icon');
             if (!icon) return;
@@ -485,12 +481,28 @@
             image.loading = 'eager';
             image.decoding = 'async';
             image.addEventListener('error', () => {
-                mark.classList.add('footer-brand-mark--empty');
-            }, { once: true });
+                if (image.dataset.staticFallback) {
+                    mark.classList.add('footer-brand-mark--empty');
+                    return;
+                }
+                image.dataset.staticFallback = 'true';
+                image.src = '/img/logo.png';
+            });
             mark.classList.remove('footer-brand-mark--empty');
             mark.replaceChildren(image);
             mark.hidden = false;
         });
+    }
+
+    async function normalizeBranding() {
+        // Paint a local brand mark before waiting for remote configuration so
+        // slow Supabase/API settings cannot leave the header or footer blank.
+        const staticLogo = '/img/logo.png';
+        applyBranding(staticLogo);
+
+        const branding = await loadBranding();
+        const logoUrl = safeBrandImageUrl(branding.logoUrl);
+        if (logoUrl !== staticLogo) applyBranding(logoUrl);
     }
 
     function optimizeImages() {
@@ -601,6 +613,14 @@
                 if (response.ok) seo = await response.json();
             }
             if (!seo) return;
+            // Product pages set title, description, canonical URL, and social
+            // metadata from the live listing. Generic site settings must not
+            // race that data and replace it with homepage-level values.
+            if (document.body.classList.contains('product-page')) {
+                setMeta('property', 'og:site_name', seo.siteName);
+                setMeta('property', 'og:locale', seo.locale);
+                return;
+            }
             document.title = seo.title || document.title;
             setMeta('name', 'description', seo.description);
             setMeta('name', 'keywords', seo.keywords);

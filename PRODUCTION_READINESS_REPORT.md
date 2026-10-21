@@ -4,7 +4,20 @@
 **Scope:** Repository implementation and local Replit preview.  
 **Release decision:** **DO NOT LAUNCH YET.** Critical production, legal-operator, payment, monitoring, backup, and infrastructure evidence is still missing.
 
-## Verification evidence
+> This is the detailed 7 October evidence snapshot. The consolidated current roadmap is `roadmap.md`.
+
+## Verification update — 21 October 2026
+
+- `npm run test:product-meta`, `test:messages-moderation`, `test:storage-policy-safety`, `test:category-images`, and `test:domain-routing` passed.
+- `npm run audit:image-alt` passed for 384 static image tags and 25 dynamically created image elements across 254 HTML/JavaScript files.
+- `npm run apps:check`, `npm run apps:production:check`, and `npm run smoke` passed; smoke checks covered API health, all storefront/admin/seller routes, CORS, and legacy redirects.
+- `npm run mobile:regression` exited successfully across the configured viewport and app-root matrix; the focused 320px parent/shop-owner regression also passed.
+- `npm audit` reported 0 vulnerabilities after updating Express to 5.3.0 and pinning `path-to-regexp` to 8.4.2.
+- Shared navigation now applies the local logo before remote branding settings resolve, retries the static footer mark after an image error, and preserves product-specific SEO metadata. Removed unsupported “Ltd.” and “trusted products” footer copy.
+- `Start application` restarted successfully on port 5000. No new browser-console errors were reported during this verification.
+- These are repository/local results only. Production Supabase, Cloudflare, payment providers, legal/operator details, monitoring, backups, and domain configuration remain unverified.
+
+## Historical verification evidence (7 October 2026)
 
 - `npm run smoke` — passed all existing API, page, CORS, and legacy-route checks after restoring the runtime dependencies.
 - `npm run mobile:regression` — passed all 320px, 390px, and 430px checks for the parent, Nigeria, UK, admin, and shop roots, including nav hide/show at top, bottom, and while scrolling.
@@ -133,7 +146,7 @@
 | Payment Webhooks | BLOCKED | No production payment provider webhook configuration or signed-event evidence is available. |
 | Canonical URLs | NEEDS REVIEW | Dynamic canonical support and legacy route redirects exist; verify NG/UK/domain canonical behavior in deployed environments. |
 | HTTPS & Domain Configuration | BLOCKED | Cloudflare Pages/domain/certificate/redirect state cannot be verified from this repository. |
-| Final Launch Report | PASS | This file records all 64 checklist items, evidence, changed files, tests, risks, and blockers. |
+| Final Launch Report | PASS | This file records all 65 checklist items, evidence, changed files, tests, risks, and blockers. |
 
 ## Files changed in this implementation batch
 

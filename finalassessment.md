@@ -2,6 +2,8 @@
 
 **Purpose:** Track the work required to prepare VelveraHub for release to real users. Completed suggestions are recorded separately from the remaining roadmap so the next work is clear.
 
+> Historical assessment snapshot from 7 October 2026. Use [`roadmap.md`](roadmap.md) for the consolidated current status and release gates.
+
 ## How to use this roadmap
 
 For every pending item:
