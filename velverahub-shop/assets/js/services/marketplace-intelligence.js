@@ -61,6 +61,7 @@
     }
 
     function getVariant() {
+        if (getConsent() !== 'granted') return 'holdout';
         let variant = localStorage.getItem(EXPERIMENT_KEY);
         if (!variant) {
             variant = stableBucket(sessionId()) < 15 ? 'holdout' : 'personalized';
@@ -70,17 +71,43 @@
     }
 
     function getConsent() {
+        if (window.CookieConsent?.getStatus?.() !== 'granted') return null;
         try { return localStorage.getItem(CONSENT_KEY); } catch (_) { return null; }
     }
 
     function setConsent(value) {
-        try { localStorage.setItem(CONSENT_KEY, value); } catch (_) {}
-        const prompt = document.getElementById('personalizationConsent');
-        if (prompt) prompt.remove();
-        if (value === 'granted') {
+        const consent = value === 'granted' ? 'granted' : 'denied';
+        let previous = null;
+        try {
+            previous = localStorage.getItem(CONSENT_KEY);
+            localStorage.setItem(CONSENT_KEY, consent);
+        } catch (_) {}
+        if (consent === 'granted' && previous !== 'granted') {
             track('experiment_assignment', { variant: getVariant() });
+        } else if (consent === 'denied') {
+            try {
+                localStorage.removeItem(PROFILE_KEY);
+                localStorage.removeItem(EXPERIMENT_KEY);
+                localStorage.removeItem(EVENTS_KEY);
+            } catch (_) {}
         }
     }
+
+    function syncCookieConsent(value) {
+        if (!['granted', 'rejected'].includes(value)) return;
+        const consent = value === 'granted' ? 'granted' : 'denied';
+        try {
+            if (localStorage.getItem(CONSENT_KEY) === consent) return;
+        } catch (_) {}
+        setConsent(consent);
+    }
+
+    window.addEventListener('velverahub:cookie-consent', (event) => {
+        syncCookieConsent(event.detail?.value);
+    });
+    window.addEventListener('velverahub:cookie-consent-ready', (event) => {
+        syncCookieConsent(event.detail?.value);
+    });
 
     function track(name, properties = {}) {
         if (!EVENT_NAMES.has(name) || getConsent() !== 'granted') return;
@@ -123,6 +150,9 @@
     }
 
     function getProfile() {
+        if (getConsent() !== 'granted') {
+            return { categories: {}, viewed: [], clicked: [] };
+        }
         return readJson(PROFILE_KEY, { categories: {}, viewed: [], clicked: [] });
     }
 
@@ -235,12 +265,7 @@
         rankProducts,
         track,
         init() {
-            const prompt = document.getElementById('personalizationConsent');
-            if (prompt && getConsent() === null) {
-                prompt.hidden = false;
-                prompt.querySelector('[data-consent="grant"]')?.addEventListener('click', () => setConsent('granted'));
-                prompt.querySelector('[data-consent="deny"]')?.addEventListener('click', () => setConsent('denied'));
-            }
+            syncCookieConsent(window.CookieConsent?.getStatus?.());
 
             document.addEventListener('click', (event) => {
                 const target = event.target.closest('[data-product-id], [data-action]');

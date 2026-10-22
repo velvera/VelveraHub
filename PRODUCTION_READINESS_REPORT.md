@@ -55,7 +55,7 @@
 | Terms of Service | NEEDS REVIEW | `veeve/legal.html#terms` covers buyers, sellers, listings, payments, delivery, disputes, IP, liability, and termination. Confirm applicable law and operator details. |
 | Refund Policy | PASS | `veeve/legal.html#refunds` states eligibility, exclusions, evidence, timing, seller responsibility, and payment-safety guidance. |
 | Cookie Policy | PASS | `veeve/legal.html#cookies` documents essential storage, optional analytics consent, providers/service categories, and management. |
-| Cookie Consent Banner | PASS | `assets/js/components/cookie-consent.js` and `assets/css/components/cookie-consent.css`; choices are opt-in, readable, keyboard-compatible, and covered by mobile regression. |
+| Cookie Consent Banner | PASS (local) | `assets/js/components/cookie-consent.js` and `assets/css/components/cookie-consent.css` provide only Decline/Accept, no settings modal, and consent-gated optional analytics. Local behavior and the synchronized generated roots pass tests; deployed-domain verification remains outstanding. |
 | Form Consents | PASS | Public registration, checkout, seller workspace, shop-owner registration, and campus listing publication expose linked required acknowledgements; listing consent is recorded with the listing metadata. Future external forms must follow the same policy. |
 | No Unnecessary Data | NEEDS REVIEW | New deletion flow removes/anonymises eligible profile, wishlist, and cart data. A full payload/event/database-field audit remains. |
 | Third-Party SDK Audit | NEEDS REVIEW | Existing Supabase, Google Fonts, Font Awesome CDN, Playwright, and API/service usage need an owner-approved inventory and necessity/licensing review. |
@@ -203,6 +203,15 @@
 - `seller-workspace/index.html`
 - synchronized `velverahub-ng/`, `velverahub-uk/`, `velverahub-admin/`, and `velverahub-shop/` static roots
 - `finalassessment.md`
+
+## Verification update — 22 October 2026
+
+- Added a two-choice cookie banner matching the supplied reference, removed the cookie-settings dialog and duplicate personalization prompt, and synchronized analytics permission with the cookie decision. The generated roots pass drift checks; deployed-domain verification remains outstanding.
+- Added read-only Supabase preflight checks for Storage policy/quota objects, account-deletion RPC access, checkout RPC grants, order idempotency, and private payment tables. `npm run test:supabase-readiness` validates the local migration list and check definitions only.
+- Added `docs/staging-acceptance.md` for staging-only disposable-account tests and sanitized evidence. No live Supabase project was queried or modified.
+- Confirmed the documented choice remains Paystack Transaction Splits/subaccounts for Nigeria and Stripe Connect for the UK. No provider charge, signed webhook, refund, seller settlement, or reconciliation handlers are implemented. Offline-only checkout remains enforced; no live payment tests were run.
+- Cookie consent, Supabase safety-source tests, Storage source checks, generated-root drift checks, API smoke, and filtered mobile regressions pass locally. Preview checked at 1024px and 402px with no browser console errors; the 320px all-root regression was rerun after the final analytics-consent change.
+- Verification is blocked on a dedicated staging Supabase target, disposable test accounts, and approved provider test-mode setup. The 14 October account-deletion evidence covers request-queue/RLS behavior, not final Auth-user deletion.
 
 ## Launch blockers
 

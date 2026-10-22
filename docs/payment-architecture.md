@@ -88,3 +88,23 @@ accounts and server-only credentials, reconcile signed webhook retries,
 exercise partial and full refunds, and run successful/failed/concurrent staging
 orders. Keep the provider credentials and webhook secrets out of Cloudflare
 static assets and the browser Supabase configuration.
+
+## Provider verification gate
+
+The provider choice is confirmed as Paystack Transaction Splits/subaccounts for
+Nigeria and Stripe Connect for the UK. No live or test-mode provider adapter is
+currently implemented. Keep card and wallet methods disabled in both the API
+and `place_order_secure` until this gate is met.
+
+The staging matrix is maintained in [`staging-acceptance.md`](staging-acceptance.md).
+At minimum, exercise success, decline, timeout, duplicate/replayed callbacks,
+invalid signatures, amount/currency/reference mismatches, partial failure,
+partial and full refunds, and reconciliation. Verify that an order and seller
+ledger transition only once, using provider-confirmed values and the server's
+database-calculated amount. Checkout must not trust client totals or provider
+redirect parameters as proof of payment.
+
+Before building settlement logic, the operator must approve the commission,
+multi-seller allocation, refund/chargeback, and payout rules, and complete
+provider onboarding for both markets. The current schema is a server-only data
+model; it does not execute these flows.

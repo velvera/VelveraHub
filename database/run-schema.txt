@@ -32,6 +32,10 @@ Apply these separately only when the stated condition applies:
 - database/storage-public-bucket-list-policy-fix.sql — existing projects with legacy broad SELECT policies on the public product-media buckets; apply after supabase-rls.sql
 
 After all applicable migrations, run database/safety-verification.sql — read-only checks; it does not change data.
+For authenticated behavior tests, use docs/staging-acceptance.md with a
+dedicated non-production project and disposable accounts. The SQL preflight
+checks effective schema state; it does not prove live upload, checkout, or
+account-deletion behavior.
 
 ## Operator role promotion
 

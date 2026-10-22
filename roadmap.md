@@ -1,6 +1,6 @@
 # VelveraHub Master Roadmap
 
-**Updated:** 21 October 2026  
+**Updated:** 22 October 2026  
 **Release decision:** **DO NOT LAUNCH YET**
 
 This is the current source of truth, consolidated from `improvement.md`, `finalassessment.md`, the previous `roadmap.md`, and the repository checks run during this review. The two dated review files are retained as historical evidence; their current status is superseded by this document.
@@ -27,6 +27,9 @@ The 65-item production checklist currently contains **20 PASS, 36 NEEDS REVIEW, 
 - Updated Express within major version 5 and pinned its vulnerable router dependency to patched `path-to-regexp` 8.4.2.
 - Replaced a timing-sensitive product-form regression wait with Playwright visibility waits.
 - Synchronized shared navigation changes across the Nigeria, UK, shop-owner, and admin static roots.
+- Replaced the cookie settings dialog and separate personalization prompt with one accessible, two-choice Decline/Accept banner; optional analytics now follows the same consent decision.
+- Expanded the read-only Supabase preflight to check Storage ownership/validation policies and quota triggers, deletion-request access, checkout RPC access, idempotency indexing, and server-only payment tables.
+- Added a staging acceptance runbook covering disposable-account checks, evidence handling, and the payment-provider test matrix.
 
 ### Production checklist items marked PASS
 
@@ -59,11 +62,17 @@ The 65-item production checklist currently contains **20 PASS, 36 NEEDS REVIEW, 
 - `npm run apps:production:check`
 - `npm run smoke`
 - `npm run test:storage-policy-safety` — passed; this is a static repository test, not a live Supabase request.
+- `npm run test:cookie-consent`
+- `npm run test:supabase-readiness` — validates the local migration manifest and safe-check definitions; it does not connect to Supabase.
+- `npm run apps:check` and `npm run apps:production:check` — both pass after synchronizing all four generated roots.
+- `npm run smoke` — API, route, CORS, and static-root checks pass after the workflow restart.
+- Filtered mobile regressions at 320px, 390px, and 430px pass across the storefront, regional, admin, and shop-owner roots. The 320px matrix was rerun after the final analytics-consent change.
+- Preview checked at 1024px desktop and 402px mobile; the two-choice banner renders and the browser console is clean.
 - `npm audit` — 0 vulnerabilities after the dependency update.
 - Focused mobile regression at 320px for the parent storefront and standalone shop-owner portal.
 - Full `npm run mobile:regression` — completed with exit code 0 across the configured viewport and app-root matrix.
 
-## Supabase and payment acceptance status — 21 October 2026
+## Supabase and payment acceptance status — 22 October 2026
 
 ### Confirmed from the repository
 
@@ -73,6 +82,9 @@ The 65-item production checklist currently contains **20 PASS, 36 NEEDS REVIEW, 
 - `docs/cloudflare-pages.md` contains direct Storage acceptance steps: concurrently upload seven distinct valid objects to a disposable listing, require six successes and at least one rejection, then verify cross-owner and invalid-path/MIME/size rejections and clean up the test objects.
 - `database/production-hardening.sql` derives checkout totals from database product prices, locks products, enforces stock and idempotency, and allows only cash-on-delivery or bank-transfer orders. The repository has no current evidence that the latest RPC has passed a staging invocation.
 - `docs/payment-architecture.md` confirms the existing plan: Paystack Transaction Splits/subaccounts for Nigeria and Stripe Connect for the UK. This remains design/data-model work: there are no provider charge, signature-verification, refund, settlement, or reconciliation handlers. The API accepts only offline payment methods.
+- `database/safety-verification.sql` now checks whether the key Storage, deletion, checkout, idempotency, and payment-schema objects are installed and safely granted. It remains a read-only metadata check and cannot prove real owner/cross-owner behavior.
+- `docs/staging-acceptance.md` defines the staging-only tests and sanitized evidence format. No staging test was run in this workspace.
+- The cookie change is synchronized to all generated roots and verified with `apps:check`, `apps:production:check`, unit coverage, and filtered browser regressions. This is local preview evidence, not deployed-domain evidence.
 
 ### Existing external evidence (not re-run in this review)
 
@@ -82,8 +94,8 @@ The 65-item production checklist currently contains **20 PASS, 36 NEEDS REVIEW, 
 
 ### Access required to complete the acceptance tests
 
-- This workspace has no Supabase integration or staging-specific connection configured. The available Stripe connector is not connected. No payment credentials were accessed or exposed.
-- Do not run storage, checkout, account-deletion, or payment writes against the live project. To continue safely, connect/provide a dedicated staging Supabase target and disposable seller/customer/admin accounts; connect Stripe before implementing or testing UK provider calls. Paystack is not available as a Replit payment connector in the current integration flow, so its Nigeria adapter requires an explicitly approved external-provider setup.
+- This workspace has no Supabase staging connection or approved provider test credentials. No payment credentials were accessed or exposed. The managed Stripe connector is optional; it is not connected. Paystack is not offered by the current managed payment connector flow.
+- Do not run storage, checkout, account-deletion, or payment writes against the live project. Complete acceptance only with a dedicated staging Supabase target, disposable seller/customer/admin accounts, provider test-mode accounts, and server-only credentials stored through the secure secrets flow. Paystack and Stripe Connect adapters, webhook handling, refunds, settlement, and reconciliation are still unimplemented.
 
 ## Pending work and launch gates
 

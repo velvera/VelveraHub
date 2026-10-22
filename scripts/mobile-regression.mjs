@@ -117,6 +117,18 @@ function route(root, path) {
     return `${baseUrl}${root.prefix}${path}`;
 }
 
+async function resolveCookieConsent(page) {
+    const banner = page.locator('#cookieConsentBanner');
+    const decline = banner.locator('[data-cookie-choice="rejected"]');
+    try {
+        await decline.waitFor({ state: 'visible', timeout: 2500 });
+    } catch (_) {
+        return;
+    }
+    await decline.click();
+    await banner.waitFor({ state: 'detached' });
+}
+
 async function assertLoader(page, rootName, width) {
     const loader = await page.evaluate(() => {
         const rules = [...document.styleSheets].flatMap((sheet) => {
@@ -830,6 +842,7 @@ async function assertAuth(page, rootName, width) {
     await page.goto(route({ prefix: rootName === 'parent app' ? '' : `/${rootName}` }, '/veeve/auth.html'), {
         waitUntil: 'domcontentloaded',
     });
+    await resolveCookieConsent(page);
     await page.waitForSelector('#authRegisterForm', { state: 'attached' });
     await assertLoader(page, rootName, width);
     await page.locator('[data-auth-mode="register"]').click();
@@ -1441,6 +1454,7 @@ async function assertDropdowns(page, rootName, width) {
 
 async function assertAdminRoot(page, width) {
     await page.goto(route(adminRoot, '/?mobile-test=1'), { waitUntil: 'domcontentloaded' });
+    await resolveCookieConsent(page);
     const adminSurface = await page.evaluate(() => ({
         hasAdminShell: Boolean(document.querySelector('.admin-shell')),
         hasLoginPanel: Boolean(document.querySelector('#adminAuthPanel')),
@@ -1514,6 +1528,7 @@ async function assertAdminDynamicForm(page, width) {
 
 async function assertShopPortalMobile(page, width) {
     await page.goto(`${baseUrl}/velverahub-shop/`, { waitUntil: 'domcontentloaded' });
+    await resolveCookieConsent(page);
     await page.waitForSelector('[data-surface-auth-mode="register"]', { state: 'attached' });
     await page.locator('[data-surface-auth-mode="register"]').click();
     await page.locator('#surfaceRegisterForm').waitFor({ state: 'visible' });
@@ -1684,6 +1699,8 @@ async function run() {
                 if (message.type() === 'error') errors.push(message.text());
             });
             try {
+                await page.goto(route(root, '/'), { waitUntil: 'domcontentloaded' });
+                await resolveCookieConsent(page);
                 await assertCategoryFiltering(page, root, desktopWidth);
                 await assertSellerListingPublish(page, root, desktopWidth);
                 if (errors.length) throw new Error(`console errors: ${errors.join(' | ')}`);

@@ -312,6 +312,184 @@ WITH checks AS (
                   'public can read product video objects'
               )
         )
+    UNION ALL
+    SELECT
+        'product image bucket enforces WebP and 5 MiB',
+        EXISTS (
+            SELECT 1
+            FROM storage.buckets
+            WHERE id = 'product-images'
+              AND public IS TRUE
+              AND file_size_limit = 5242880
+              AND allowed_mime_types = ARRAY['image/webp']::text[]
+        )
+    UNION ALL
+    SELECT
+        'product media uploads require owner policies and restrictive validation',
+        EXISTS (
+            SELECT 1
+            FROM pg_policies
+            WHERE schemaname = 'storage'
+              AND tablename = 'objects'
+              AND policyname = 'owners can upload product images'
+              AND cmd = 'INSERT'
+              AND 'authenticated' = ANY(roles)
+        )
+        AND EXISTS (
+            SELECT 1
+            FROM pg_policies
+            WHERE schemaname = 'storage'
+              AND tablename = 'objects'
+              AND policyname = 'students can upload listing images'
+              AND cmd = 'INSERT'
+              AND 'authenticated' = ANY(roles)
+        )
+        AND EXISTS (
+            SELECT 1
+            FROM pg_policies
+            WHERE schemaname = 'storage'
+              AND tablename = 'objects'
+              AND policyname = 'restrict product media uploads'
+              AND permissive = 'RESTRICTIVE'
+              AND cmd = 'INSERT'
+              AND with_check ILIKE '%can_upload_product_media%'
+        )
+    UNION ALL
+    SELECT
+        'atomic product media quota tables and storage triggers exist',
+        to_regclass('public.product_media_quota_usage') IS NOT NULL
+        AND to_regclass('public.product_media_quota_objects') IS NOT NULL
+        AND to_regclass('storage.objects') IS NOT NULL
+        AND EXISTS (
+            SELECT 1 FROM pg_trigger
+            WHERE tgrelid = to_regclass('storage.objects')
+              AND tgname = 'enforce_product_media_object_quota'
+              AND NOT tgisinternal
+        )
+        AND EXISTS (
+            SELECT 1 FROM pg_trigger
+            WHERE tgrelid = to_regclass('storage.objects')
+              AND tgname = 'release_product_media_quota'
+              AND NOT tgisinternal
+        )
+    UNION ALL
+    SELECT
+        'product media quota state is private to server-side policies',
+        CASE
+            WHEN to_regclass('public.product_media_quota_usage') IS NULL
+              OR to_regclass('public.product_media_quota_objects') IS NULL
+                THEN false
+            ELSE (
+                SELECT relrowsecurity
+                FROM pg_class
+                WHERE oid = to_regclass('public.product_media_quota_usage')
+            )
+            AND (
+                SELECT relrowsecurity
+                FROM pg_class
+                WHERE oid = to_regclass('public.product_media_quota_objects')
+            )
+            AND NOT has_table_privilege('anon', 'public.product_media_quota_usage', 'SELECT')
+            AND NOT has_table_privilege('authenticated', 'public.product_media_quota_usage', 'SELECT')
+            AND NOT has_table_privilege('anon', 'public.product_media_quota_objects', 'SELECT')
+            AND NOT has_table_privilege('authenticated', 'public.product_media_quota_objects', 'SELECT')
+        END
+    UNION ALL
+    SELECT
+        'account deletion request table is protected by RLS',
+        CASE
+            WHEN to_regclass('public.data_deletion_requests') IS NULL THEN false
+            ELSE (
+                SELECT relrowsecurity
+                FROM pg_class
+                WHERE oid = to_regclass('public.data_deletion_requests')
+            )
+            AND NOT has_table_privilege('anon', 'public.data_deletion_requests', 'SELECT')
+            AND NOT has_table_privilege('authenticated', 'public.data_deletion_requests', 'SELECT')
+            AND NOT has_table_privilege('anon', 'public.data_deletion_requests', 'INSERT')
+            AND NOT has_table_privilege('authenticated', 'public.data_deletion_requests', 'INSERT')
+        END
+    UNION ALL
+    SELECT
+        'account deletion RPCs exist with restricted request access',
+        CASE
+            WHEN to_regprocedure('public.request_account_deletion()') IS NULL
+              OR to_regprocedure('public.admin_list_account_deletion_requests(text)') IS NULL
+              OR to_regprocedure('public.admin_update_account_deletion_request(uuid,text)') IS NULL
+                THEN false
+            ELSE has_function_privilege(
+                     'authenticated',
+                     to_regprocedure('public.request_account_deletion()'),
+                     'EXECUTE'
+                 )
+                 AND NOT has_function_privilege(
+                     'anon',
+                     to_regprocedure('public.request_account_deletion()'),
+                     'EXECUTE'
+                 )
+        END
+    UNION ALL
+    SELECT
+        'secure checkout RPC exists and is not missing its client grants',
+        CASE
+            WHEN to_regprocedure('public.place_order_secure(jsonb,jsonb,jsonb,text,text,text)') IS NULL
+                THEN false
+            ELSE has_function_privilege(
+                     'anon',
+                     to_regprocedure('public.place_order_secure(jsonb,jsonb,jsonb,text,text,text)'),
+                     'EXECUTE'
+                 )
+                 AND has_function_privilege(
+                     'authenticated',
+                     to_regprocedure('public.place_order_secure(jsonb,jsonb,jsonb,text,text,text)'),
+                     'EXECUTE'
+                 )
+        END
+    UNION ALL
+    SELECT
+        'order idempotency has a valid unique index',
+        to_regclass('public.orders') IS NOT NULL
+        AND EXISTS (
+            SELECT 1
+            FROM pg_index AS index_row
+            WHERE index_row.indrelid = to_regclass('public.orders')
+              AND index_row.indisunique
+              AND index_row.indisvalid
+              AND pg_get_indexdef(index_row.indexrelid) ILIKE '%idempotency_key%'
+        )
+    UNION ALL
+    SELECT
+        'regional payment records remain server-only',
+        CASE
+            WHEN to_regclass('public.regional_payment_attempts') IS NULL
+              OR to_regclass('public.payment_provider_events') IS NULL
+              OR to_regclass('public.regional_payment_refunds') IS NULL
+                THEN false
+            ELSE (
+                SELECT relrowsecurity
+                FROM pg_class
+                WHERE oid = to_regclass('public.regional_payment_attempts')
+            )
+            AND (
+                SELECT relrowsecurity
+                FROM pg_class
+                WHERE oid = to_regclass('public.payment_provider_events')
+            )
+            AND (
+                SELECT relrowsecurity
+                FROM pg_class
+                WHERE oid = to_regclass('public.regional_payment_refunds')
+            )
+            AND NOT has_table_privilege('anon', 'public.regional_payment_attempts', 'SELECT')
+            AND NOT has_table_privilege('authenticated', 'public.regional_payment_attempts', 'SELECT')
+            AND NOT has_table_privilege('anon', 'public.payment_provider_events', 'SELECT')
+            AND NOT has_table_privilege('authenticated', 'public.payment_provider_events', 'SELECT')
+            AND NOT has_table_privilege('anon', 'public.regional_payment_refunds', 'SELECT')
+            AND NOT has_table_privilege('authenticated', 'public.regional_payment_refunds', 'SELECT')
+            AND has_table_privilege('service_role', 'public.regional_payment_attempts', 'INSERT')
+            AND has_table_privilege('service_role', 'public.payment_provider_events', 'INSERT')
+            AND has_table_privilege('service_role', 'public.regional_payment_refunds', 'INSERT')
+        END
 )
 SELECT check_name, passed
 FROM checks
