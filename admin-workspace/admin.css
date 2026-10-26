@@ -463,8 +463,16 @@ h3 {
 }
 
 .manual-payment-order-total {
+    display: grid;
+    gap: 3px;
     white-space: nowrap;
     font-weight: 750;
+}
+
+.manual-payment-order-total small {
+    color: var(--muted);
+    font-size: .76rem;
+    font-weight: 500;
 }
 
 .manual-payment-order-details {

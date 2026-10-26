@@ -524,6 +524,52 @@ body {
     overflow-x: auto;
 }
 
+.seller-manual-payment-queue {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.seller-manual-payment-queue > h2,
+.seller-manual-payment-queue > p {
+    margin: 0;
+}
+
+.seller-manual-payment-queue > p {
+    color: var(--text-muted, #667085);
+}
+
+.seller-manual-payment-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 14px;
+    padding: 16px;
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 12px;
+    background: var(--card-bg, #fff);
+}
+
+.seller-manual-payment-card p {
+    margin: 5px 0 0;
+}
+
+.seller-manual-payment-instructions {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.seller-manual-payment-status {
+    grid-column: 1 / -1;
+    color: var(--text-muted, #667085);
+    font-size: .9rem;
+}
+
+@media (max-width: 560px) {
+    .seller-manual-payment-card {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
 table {
     width: 100%;
     border-collapse: collapse;

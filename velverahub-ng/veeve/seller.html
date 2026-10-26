@@ -349,6 +349,46 @@
                         </div>
                     </div>
 
+                    <div class="dashboard-card settings-card" id="sellerPaymentKycNotice" hidden>
+                        <div class="card-header">
+                            <h2><i class="fas fa-shield-halved"></i> Manual payment options</h2>
+                        </div>
+                        <div class="card-body">
+                            <p class="form-help">Choose a VelveraHub or seller-provided manual payment method after your shop’s KYC documents have been approved by an administrator.</p>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-card settings-card" id="sellerPaymentSettings" hidden>
+                        <div class="card-header">
+                            <h2><i class="fas fa-money-bill-transfer"></i> Buyer payment preference</h2>
+                        </div>
+                        <div class="card-body">
+                            <form id="sellerPaymentPreferencesForm" class="settings-form">
+                                <div class="form-group">
+                                    <label for="manualPaymentPreference">Manual payment option</label>
+                                    <select id="manualPaymentPreference" name="preference" required>
+                                        <option value="velverahub">Use VelveraHub’s admin-configured account</option>
+                                        <option value="seller_direct">Use my own payment method</option>
+                                    </select>
+                                    <small class="form-help">Manual payment is available only to KYC-approved shops. Orders remain pending until payment is confirmed.</small>
+                                </div>
+                                <div id="sellerDirectPaymentFields" hidden>
+                                    <div class="form-group">
+                                        <label for="manualPaymentMethod">Your payment method</label>
+                                        <input id="manualPaymentMethod" name="method" type="text" maxlength="80" placeholder="For example, bank transfer">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="manualPaymentInstructions">Payment instructions for buyers</label>
+                                        <textarea id="manualPaymentInstructions" name="instructions" rows="4" maxlength="1200" placeholder="Enter the details buyers need, then ask them to confirm with you in chat."></textarea>
+                                        <small class="form-help">Buyers can see these details. Never include passwords, PINs, or one-time codes.</small>
+                                    </div>
+                                </div>
+                                <p class="shop-onboarding-form-message" id="sellerPaymentPreferenceMessage" role="status" hidden></p>
+                                <button class="btn btn-primary" type="submit"><i class="fas fa-save"></i> Save payment preference</button>
+                            </form>
+                        </div>
+                    </div>
+
                     <!-- Shop Key Card -->
                     <div class="dashboard-card settings-card">
                         <div class="card-header">

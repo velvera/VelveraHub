@@ -279,7 +279,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-    v_order_id UUID := CASE WHEN TG_OP = 'DELETE' THEN OLD.order_id ELSE NEW.order_id END;
+    v_order_id UUID;
     v_region TEXT;
     v_payment_method TEXT;
     v_shop RECORD;
@@ -287,6 +287,12 @@ DECLARE
     v_destinations JSONB := '[]'::JSONB;
     v_detail JSONB;
 BEGIN
+    IF TG_OP = 'DELETE' THEN
+        v_order_id := OLD.order_id;
+    ELSE
+        v_order_id := NEW.order_id;
+    END IF;
+
     SELECT lower(coalesce(order_row.region, 'ng')),
            lower(trim(coalesce(order_row.payment_method, '')))
       INTO v_region, v_payment_method
@@ -420,7 +426,7 @@ BEGIN
        SET payment_details = jsonb_build_object(
             'region', v_region,
             'destinations', v_destinations,
-            'notice', 'This order remains pending until payment is confirmed. Agree on payment and delivery with the seller first.'
+            'notice', 'This order remains pending until every payment recipient confirms receipt. The shown amounts are item subtotals; agree on delivery cost and timing with the seller in chat. Avoid paying in advance, including for delivery.'
        )
      WHERE id = v_order_id;
 
@@ -692,8 +698,7 @@ BEGIN
     WHERE order_row.payment_status = 'pending'
       AND order_row.status NOT IN ('cancelled', 'refunded')
       AND destination.value->>'recipient_type' = 'seller'
-      AND destination.value->>'shop_id' = p_shop_id::TEXT
-    ORDER BY order_row.created_at;
+      AND destination.value->>'shop_id' = p_shop_id::TEXT;
 
     RETURN v_orders;
 END;

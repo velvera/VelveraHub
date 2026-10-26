@@ -114,4 +114,7 @@ receiving account for each market in the admin workspace. In staging, verify
 that unverified sellers cannot enable direct payment, approved KYC sellers can
 choose either destination, missing regional admin details block VelveraHub
 manual payments, and created orders snapshot the correct instructions while
-remaining pending. Do not use real orders or payment accounts for these checks.
+remaining pending. Verify that the platform admin and each relevant seller can
+confirm only their own receiving destination, and that a multi-shop order stays
+pending until all destinations confirm. Do not use real orders or payment
+accounts for these checks.

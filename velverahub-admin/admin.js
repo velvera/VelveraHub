@@ -9,6 +9,10 @@
         productReviewLoading: false,
         systemErrors: [],
         systemErrorsLoading: false,
+        paymentDestinations: [],
+        paymentSettingsLoading: false,
+        pendingManualPayments: [],
+        manualPaymentsLoading: false,
         activeView: 'verification'
     };
 
@@ -547,7 +551,8 @@
             verification: ['verificationPanel', 'verificationTab'],
             deletion: ['deletionPanel', 'deletionTab'],
             listingReviews: ['listingReviewPanel', 'listingReviewTab'],
-            systemErrors: ['systemErrorsPanel', 'systemErrorsTab']
+            systemErrors: ['systemErrorsPanel', 'systemErrorsTab'],
+            paymentSettings: ['paymentSettingsPanel', 'paymentSettingsTab']
         };
         if (!views[view]) return;
         state.activeView = view;
@@ -559,7 +564,189 @@
         if (view === 'deletion') loadDeletionQueue();
         else if (view === 'listingReviews') loadProductReviewQueue();
         else if (view === 'systemErrors') loadSystemErrors();
+        else if (view === 'paymentSettings') {
+            loadMarketplacePaymentSettings();
+            loadPendingManualPayments();
+        }
         else loadQueue();
+    }
+
+    function setPaymentFieldRequirements() {
+        const enabled = byId('marketplacePaymentEnabled').checked;
+        const region = byId('marketplacePaymentRegion').value;
+        for (const id of ['marketplacePaymentBank', 'marketplacePaymentAccountName', 'marketplacePaymentAccountNumber']) {
+            byId(id).required = enabled;
+        }
+        byId('marketplacePaymentSortCode').required = enabled && region === 'uk';
+        byId('marketplaceSortCodeField').hidden = region !== 'uk';
+    }
+
+    function renderMarketplacePaymentSettings() {
+        const region = byId('marketplacePaymentRegion').value;
+        const destination = state.paymentDestinations.find((item) => item.region === region) || {};
+        byId('marketplacePaymentEnabled').checked = destination.enabled === true;
+        byId('marketplacePaymentBank').value = destination.bank_name || '';
+        byId('marketplacePaymentAccountName').value = destination.account_name || '';
+        byId('marketplacePaymentAccountNumber').value = destination.account_number || '';
+        byId('marketplacePaymentSortCode').value = destination.sort_code || '';
+        byId('marketplacePaymentInstructions').value = destination.instructions || '';
+        setPaymentFieldRequirements();
+    }
+
+    async function loadMarketplacePaymentSettings() {
+        if (state.paymentSettingsLoading) return;
+        state.paymentSettingsLoading = true;
+        const message = byId('marketplacePaymentSettingsMessage');
+        message.hidden = true;
+        try {
+            const { data, error } = await state.supabase
+                .from('marketplace_payment_destinations')
+                .select('region, bank_name, account_name, account_number, sort_code, instructions, enabled, updated_at');
+            if (error) throw error;
+            state.paymentDestinations = data || [];
+            renderMarketplacePaymentSettings();
+        } catch (error) {
+            message.textContent = /does not exist|schema cache|column/i.test(error?.message || '')
+                ? 'Payment settings are not installed yet. Apply database/marketplace-manual-payments.sql, then refresh this page.'
+                : window.AsyncFeedback?.errorMessage(error, 'Payment settings could not be loaded. Please try again.', 'admin-payment-settings-load') || 'Payment settings could not be loaded. Please try again.';
+            message.classList.add('is-error');
+            message.hidden = false;
+        } finally {
+            state.paymentSettingsLoading = false;
+        }
+    }
+
+    async function saveMarketplacePaymentSettings(event) {
+        event.preventDefault();
+        const form = event.currentTarget;
+        if (!form.reportValidity()) return;
+        const button = byId('saveMarketplacePaymentSettings');
+        const message = byId('marketplacePaymentSettingsMessage');
+        const region = byId('marketplacePaymentRegion').value;
+        const enabled = byId('marketplacePaymentEnabled').checked;
+        button.disabled = true;
+        message.hidden = true;
+        message.classList.remove('is-error');
+        try {
+            const { data, error } = await state.supabase.rpc('admin_save_marketplace_payment_destination', {
+                p_region: region,
+                p_enabled: enabled,
+                p_bank_name: byId('marketplacePaymentBank').value.trim(),
+                p_account_name: byId('marketplacePaymentAccountName').value.trim(),
+                p_account_number: byId('marketplacePaymentAccountNumber').value.trim(),
+                p_sort_code: byId('marketplacePaymentSortCode').value.trim(),
+                p_instructions: byId('marketplacePaymentInstructions').value.trim()
+            });
+            if (error) throw error;
+            state.paymentDestinations = state.paymentDestinations.filter((item) => item.region !== region);
+            if (data) state.paymentDestinations.push(data);
+            renderMarketplacePaymentSettings();
+            message.textContent = enabled
+                ? 'VelveraHub manual payment is enabled for this market.'
+                : 'VelveraHub manual payment is disabled for this market.';
+            message.hidden = false;
+        } catch (error) {
+            message.textContent = window.AsyncFeedback?.errorMessage(
+                error,
+                'Payment settings could not be saved. Confirm the bank details and try again.',
+                'admin-payment-settings-save'
+            ) || 'Payment settings could not be saved. Confirm the bank details and try again.';
+            message.classList.add('is-error');
+            message.hidden = false;
+        } finally {
+            button.disabled = false;
+        }
+    }
+
+    function renderPendingManualPayments() {
+        const container = byId('pendingManualPaymentOrders');
+        if (!state.pendingManualPayments.length) {
+            container.innerHTML = '<p class="table-empty">No pending VelveraHub manual payments.</p>';
+            return;
+        }
+
+        container.innerHTML = state.pendingManualPayments.map((order) => {
+            const details = order.payment_details || {};
+            const entries = Array.isArray(details.destinations) ? details.destinations : [];
+            const destination = entries[0] || {};
+            const shopNames = [...new Set(entries.map((entry) => entry.shop_name).filter(Boolean))].join(', ');
+            const currency = order.region === 'uk' ? 'GBP' : 'NGN';
+            const total = new Intl.NumberFormat(undefined, {
+                style: 'currency',
+                currency
+            }).format(Number(order.total) || 0);
+            const instructionFields = [
+                ['Market', order.region === 'uk' ? 'United Kingdom' : 'Nigeria'],
+                ['Bank', destination.bank_name],
+                ['Account name', destination.account_name],
+                ['Account number', destination.account_number],
+                ['Sort code', destination.sort_code],
+                ['Shops', shopNames],
+                ['Payment instructions', destination.instructions]
+            ].filter(([, value]) => value);
+            return `
+                <article class="manual-payment-order">
+                    <header class="manual-payment-order-heading">
+                        <div>
+                            <h3>${escapeHtml(order.order_number || order.id)}</h3>
+                            <p>Created ${escapeHtml(formatDate(order.created_at))}</p>
+                        </div>
+                        <div class="manual-payment-order-total"><small>Item subtotal due to VelveraHub</small><strong>${escapeHtml(total)}</strong></div>
+                    </header>
+                    <dl class="manual-payment-order-details">
+                        ${instructionFields.map(([label, value]) => `
+                            <div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>
+                        `).join('')}
+                    </dl>
+                    <button class="admin-primary-button" type="button" data-confirm-manual-payment="${escapeHtml(order.id)}">Confirm funds received</button>
+                </article>
+            `;
+        }).join('');
+    }
+
+    async function loadPendingManualPayments() {
+        if (state.manualPaymentsLoading) return;
+        state.manualPaymentsLoading = true;
+        const container = byId('pendingManualPaymentOrders');
+        container.innerHTML = '<p class="table-empty">Loading pending payments…</p>';
+        try {
+            const { data, error } = await state.supabase.rpc('admin_list_pending_platform_manual_payments');
+            if (error) throw error;
+            state.pendingManualPayments = Array.isArray(data) ? data : [];
+            renderPendingManualPayments();
+        } catch (error) {
+            container.innerHTML = '';
+            const message = document.createElement('p');
+            message.className = 'table-empty';
+            message.textContent = /does not exist|schema cache|function/i.test(error?.message || '')
+                ? 'Payment review is not installed yet. Apply database/marketplace-manual-payments.sql, then refresh this page.'
+                : window.AsyncFeedback?.errorMessage(error, 'Pending payments could not be loaded.', 'admin-manual-payment-queue') || 'Pending payments could not be loaded.';
+            container.appendChild(message);
+        } finally {
+            state.manualPaymentsLoading = false;
+        }
+    }
+
+    async function confirmManualPayment(orderId, button) {
+        if (!window.confirm('Confirm only if the full payment has cleared into the VelveraHub account. Mark this order as paid?')) return;
+        button.disabled = true;
+        try {
+            const { data, error } = await state.supabase.rpc('admin_confirm_platform_manual_payment', {
+                p_order_id: orderId
+            });
+            if (error) throw error;
+            setGlobalMessage(data?.order_confirmed
+                ? 'Payment confirmed. All recipients are confirmed and the order is marked paid.'
+                : 'VelveraHub receipt recorded. The order remains pending until the other payment recipients confirm.');
+            await loadPendingManualPayments();
+        } catch (error) {
+            window.AsyncFeedback?.log('admin-manual-payment-confirm', window.AsyncFeedback?.createRequestId('admin-manual-payment-confirm'), error);
+            setGlobalMessage(
+                window.AsyncFeedback?.errorMessage(error, 'Payment could not be confirmed. Refresh the queue and try again.', 'admin-manual-payment-confirm') || 'Payment could not be confirmed. Refresh the queue and try again.',
+                true
+            );
+            button.disabled = false;
+        }
     }
 
     function renderSystemErrors() {
@@ -708,12 +895,24 @@
             if (state.activeView === 'deletion') loadDeletionQueue();
             else if (state.activeView === 'listingReviews') loadProductReviewQueue();
             else if (state.activeView === 'systemErrors') loadSystemErrors();
+            else if (state.activeView === 'paymentSettings') {
+                loadMarketplacePaymentSettings();
+                loadPendingManualPayments();
+            }
             else loadQueue();
         });
         byId('refreshSystemErrors').addEventListener('click', loadSystemErrors);
         byId('queueStatus').addEventListener('change', loadQueue);
         byId('deletionStatus').addEventListener('change', loadDeletionQueue);
         byId('listingReviewStatus').addEventListener('change', loadProductReviewQueue);
+        byId('marketplacePaymentSettingsForm').addEventListener('submit', saveMarketplacePaymentSettings);
+        byId('marketplacePaymentRegion').addEventListener('change', renderMarketplacePaymentSettings);
+        byId('marketplacePaymentEnabled').addEventListener('change', setPaymentFieldRequirements);
+        byId('refreshManualPaymentOrders').addEventListener('click', loadPendingManualPayments);
+        byId('pendingManualPaymentOrders').addEventListener('click', (event) => {
+            const button = event.target.closest('[data-confirm-manual-payment]');
+            if (button) confirmManualPayment(button.dataset.confirmManualPayment, button);
+        });
         document.querySelectorAll('[data-admin-view]').forEach((tab) => {
             tab.addEventListener('click', () => switchAdminView(tab.dataset.adminView));
         });

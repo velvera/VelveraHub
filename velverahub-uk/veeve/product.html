@@ -234,6 +234,15 @@
                 }
                 return `${methods.length ? `<ul class="product-delivery-options">${methods.map(([, label]) => `<li><i class="fas fa-circle-check" aria-hidden="true"></i>${esc(label)}</li>`).join('')}</ul>` : ''}${notes ? `<p class="product-delivery-notes">${esc(notes)}</p>` : ''}<p class="product-delivery-disclaimer">Confirm the delivery area, fee, and timing with the seller before payment.</p>`;
             };
+            const renderPaymentOptions = () => {
+                if (!verifiedShop) {
+                    return '<p class="product-delivery-empty">Discuss payment with the seller in chat. Manual prepayment is not available for unverified sellers.</p>';
+                }
+                if (shop.manual_payment_preference === 'seller_direct' && shop.manual_payment_method) {
+                    return `<p><strong>Seller’s preferred method:</strong> ${esc(shop.manual_payment_method)}</p><p class="product-delivery-disclaimer">Message the seller to agree on payment and delivery before arranging anything.</p>`;
+                }
+                return '<p><strong>VelveraHub manual payment</strong> is selected by this verified shop. Message the seller to agree on delivery and confirm payment details before paying. Transfer instructions are shown after checkout when the admin account is configured for this market.</p>';
+            };
             target.innerHTML = `
                 <nav class="product-breadcrumbs" aria-label="Breadcrumb"><a href="/veeve/products.html">Catalogue</a><span>/</span><span>${esc(product.category || 'Product')}</span><span>/</span><strong>${esc(product.title)}</strong></nav>
                 <article class="product-detail-card">
@@ -257,15 +266,17 @@
                 <div class="product-detail-sections">
                     <section class="product-info-panel"><h2>Description</h2><p>${esc(product.description || 'The seller has not added a description yet.')}</p></section>
                     <section class="product-info-panel product-delivery-panel"><h2>Delivery options</h2>${renderDeliveryOptions(product.delivery_options, esc)}</section>
+                    <section class="product-info-panel product-payment-panel"><h2>Payment options</h2>${renderPaymentOptions()}</section>
                     <section class="product-info-panel"><h2>Details and specifications</h2><dl class="product-spec-grid">${specs.map(([label, value]) => `<div><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl></section>
                     <section class="product-info-panel seller-panel"><div class="seller-panel-avatar">${shop.logo_url ? `<img src="${esc(shop.logo_url)}" alt="${esc(sellerName)} logo">` : '<i class="fas fa-store" aria-hidden="true"></i>'}</div><div><p class="eyebrow">${isShopListing ? (verifiedShop ? 'Verified shop' : 'Shop') : 'Independent seller'}</p><h2>${esc(sellerName)} ${verifiedShop ? '<span class="verified-mark" title="Shop verification reviewed">✓</span>' : ''}</h2><p>${esc([shop.city, shop.country].filter(Boolean).join(', ') || 'VelveraHub marketplace seller')}</p></div><a class="btn btn-secondary" href="/veeve/products.html">View more products</a></section>
                     <section class="product-info-panel product-chat-panel" id="productMessagePanel" aria-labelledby="productMessageHeading">
                         <div class="product-chat-heading"><div><p class="eyebrow">Private conversation</p><h2 id="productMessageHeading">Message the seller</h2></div><span class="product-chat-privacy"><i class="fas fa-lock" aria-hidden="true"></i> Only you and the seller</span></div>
-                        <p class="product-chat-intro">Ask a question about this listing. Your conversation stays connected to this product.</p>
+                        <p class="product-chat-intro">Ask a question about this listing or agree on payment and delivery. Your conversation stays connected to this product.</p>
                         <div class="product-chat-prompts" aria-label="Quick message suggestions">
                             <button type="button" data-chat-prompt="Is this available?" data-no-processing>Is this available?</button>
                             <button type="button" data-chat-prompt="I would like to make an offer." data-no-processing>Make an offer</button>
                             <button type="button" data-chat-prompt="What is your best price?" data-no-processing>Best price?</button>
+                            <button type="button" data-chat-prompt="Can we agree on payment and delivery options?" data-no-processing>Payment &amp; delivery</button>
                         </div>
                         <div class="product-chat-thread" data-chat-thread role="log" aria-live="polite" aria-label="Conversation messages" hidden></div>
                         <form class="product-chat-form" data-chat-form>
@@ -277,7 +288,7 @@
                     </section>
                     <section class="product-info-panel seller-contact-panel"><h2>Contact the seller</h2>${contactActions.length ? `<div class="seller-contact-actions">${contactActions.join('')}</div>` : '<p class="seller-contact-empty">The seller has not shared public contact details.</p>'}<p class="seller-trust-note">${isShopListing ? (verifiedShop ? 'Shop documents have been reviewed by VelveraHub. Verification does not guarantee a product, delivery, refund, or seller outcome.' : 'This shop has not completed VelveraHub verification yet.') : 'This independent seller is not identity-verified by VelveraHub. Contact details are shared by the seller and are not a verification badge.'}</p></section>
                     <section class="product-info-panel"><h2>Reviews and ratings</h2><div class="review-summary"><strong>${product.rating ? esc(product.rating) : 'New'}</strong><span class="product-stars">${product.rating ? '★'.repeat(Math.round(product.rating)) : '—'}</span><span>${product.rating ? `${esc(product.reviews_count || 0)} buyer reviews` : 'No buyer reviews yet'}</span></div><p>${product.rating ? 'Ratings are shown from marketplace feedback for this listing.' : 'Be the first buyer to share useful feedback after your purchase.'}</p></section>
-                    <section class="product-info-panel"><h2>Buy safely</h2><div class="safety-notes"><span><i class="fas fa-shield-halved"></i> Use only payment options shown at checkout; never share passwords, card PINs, or one-time codes.</span><span><i class="fas fa-location-dot"></i> Confirm delivery or pickup details before meeting, and choose a public place for in-person handover.</span><span><i class="fas fa-flag"></i> Report suspicious behavior to VelveraHub support. External contact does not make an off-platform payment protected by VelveraHub.</span></div></section>
+                    <section class="product-info-panel product-safety-panel"><h2>Safety tips</h2><ul class="product-safety-tips"><li>Avoid paying in advance, even for delivery</li><li>Meet with the seller at a safe public place</li><li>Inspect the item and ensure it's exactly what you want</li><li>Make sure that the packed item is the one you've inspected</li><li>Only pay if you're satisfied</li></ul></section>
                 </div>
                 <div class="product-mobile-actions"><strong>${esc(price)}</strong><button class="btn btn-primary" type="button" data-mobile-add><i class="fas fa-cart-plus"></i> Add to cart</button></div>
                 <section class="related-products-section" id="relatedProducts"><div class="section-heading"><div><p class="eyebrow">Keep exploring</p><h2>More from the catalogue</h2></div><a href="/veeve/products.html">Browse all <i class="fas fa-arrow-right"></i></a></div><div class="related-products-grid"></div></section>`;

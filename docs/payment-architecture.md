@@ -76,10 +76,14 @@ chosen destination into the order and rejects manual payment unless every
 listed shop is active and has approved KYC. Buyers are directed to agree on
 payment and delivery with the seller first. Admin receiving accounts are
 market-specific and must be configured in the restricted admin workspace;
-manual payment is unavailable for a market until its account is enabled.
+manual payment is unavailable for a market until its account is enabled. The
+admin workspace lists pending amounts routed to the VelveraHub account and
+lets an admin record cleared funds. Sellers can record cleared seller-direct
+receipts from their order page. An order becomes paid and confirmed only after
+every destination in a multi-shop order has been confirmed.
 
 Manual instructions do not verify a transfer or mark an order paid. Orders
-remain pending until an authorized operator confirms payment. No card or wallet
+remain pending until each destination's authorized recipient confirms payment. No card or wallet
 UI should be enabled until the Nigeria Paystack and UK Stripe Connect flows
 have secure server-side credentials, verified webhooks, refund handling, and
 staging reconciliation tests.

@@ -169,6 +169,12 @@
                             if (className) line.classList.add(className);
                             card.appendChild(line);
                         };
+                    const paymentCurrency = data.region === 'uk' ? 'GBP' : 'NGN';
+                    const shopAmount = new Intl.NumberFormat(undefined, {
+                        style: 'currency',
+                        currency: paymentCurrency
+                    }).format(Number(entry.shop_total) || 0);
+                    addDetail('Item subtotal for this shop', shopAmount);
                         addDetail('Method', entry.method);
                         addDetail('Bank', entry.bank_name);
                         addDetail('Account name', entry.account_name);

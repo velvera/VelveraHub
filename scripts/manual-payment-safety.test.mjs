@@ -23,9 +23,13 @@ assert.match(migration, /shop_owner_save_manual_payment_preferences/);
 assert.match(migration, /verification\.status = 'approved'/);
 assert.match(migration, /Only an active shop with approved KYC can change manual payment preferences/);
 assert.match(migration, /capture_order_manual_payment_details/);
+assert.match(migration, /order_manual_payment_confirmations/);
 assert.match(migration, /payment_details = jsonb_build_object/);
 assert.match(migration, /require_order_manual_payment_details/);
 assert.match(migration, /get_order_manual_payment_details/);
+assert.match(migration, /admin_confirm_platform_manual_payment/);
+assert.match(migration, /shop_owner_confirm_manual_payment_receipt/);
+assert.match(migration, /order_confirmed/);
 assert.match(migration, /TO anon, authenticated/);
 
 for (const safetyTip of [
@@ -43,6 +47,8 @@ assert.match(product, /renderPaymentOptions/);
 assert.match(sellerPortal, /id="sellerPaymentPreferencesForm"/);
 assert.match(seller, /shop\.verified === true/);
 assert.match(seller, /shop_owner_save_manual_payment_preferences/);
+assert.match(seller, /shop_owner_list_pending_manual_payment_orders/);
+assert.match(seller, /shop_owner_confirm_manual_payment_receipt/);
 assert.match(seller, /seller_direct/);
 
 assert.match(adminPage, /id="paymentSettingsTab"/);

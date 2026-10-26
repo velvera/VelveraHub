@@ -1642,12 +1642,44 @@ function renderSellerOrders(orders, pendingManualPayments = []) {
     const paymentQueue = pendingManualPayments.length
         ? `<section class="seller-manual-payment-queue"><h2>Pending seller-direct payments</h2><p>Confirm only after you independently verify that the payment has cleared to you.</p>${pendingManualPayments.map(order => {
             const payment = order.payment || {};
-            return `<article class="seller-manual-payment-card"><div><strong>${escapeHtml(order.order_number || order.id)}</strong><p>${escapeHtml(payment.method || 'Manual payment')} · ${formatSellerPrice(payment.shop_total || 0)}</p><p class="seller-manual-payment-instructions">${escapeHtml(payment.instructions || 'Confirm the agreed payment details with the buyer in chat.')}</p></div><button class="action-btn-sm" type="button" data-confirm-seller-manual-payment="${escapeHtml(order.id)}">Confirm payment received</button><p class="seller-manual-payment-status" role="status" aria-live="polite"></p></article>`;
+            return `<article class="seller-manual-payment-card"><div><strong>${escapeHtml(order.order_number || order.id)}</strong><p>${escapeHtml(payment.method || 'Manual payment')} · item subtotal ${formatSellerPrice(payment.shop_total || 0)}</p><p class="seller-manual-payment-instructions">${escapeHtml(payment.instructions || 'Confirm the agreed payment details with the buyer in chat.')}</p></div><button class="action-btn-sm" type="button" data-confirm-seller-manual-payment="${escapeHtml(order.id)}">Confirm payment received</button><p class="seller-manual-payment-status" role="status" aria-live="polite"></p></article>`;
         }).join('')}</section>`
         : '';
     if (!orders.length) return `${paymentQueue}${sellerEmpty('New orders will appear here when customers purchase from your shop.')}`;
     return `${paymentQueue}<div class="orders-table"><table><thead><tr><th>Order</th><th>Items</th><th>Total</th><th>Status</th><th>Date</th></tr></thead><tbody>${orders.map(order => `<tr><td>${escapeHtml(order.order_number || order.id)}</td><td>${escapeHtml((order.order_items || []).map(item => `${item.title || 'Item'} ×${item.quantity || 1}`).join(', ') || 'Order items')}</td><td>${formatSellerPrice(order.total)}</td><td><span class="status-badge ${escapeHtml(order.status || 'pending')}">${escapeHtml(order.status || 'pending')}</span></td><td>${order.created_at ? new Date(order.created_at).toLocaleDateString() : '—'}</td></tr>`).join('')}</tbody></table></div>`;
 }
+
+document.addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-confirm-seller-manual-payment]');
+    if (!button || !window.confirm('Confirm only if the full payment for your shop has cleared. Mark this payment as received?')) return;
+    event.preventDefault();
+    button.disabled = true;
+    const card = button.closest('.seller-manual-payment-card');
+    const status = card?.querySelector('.seller-manual-payment-status');
+    try {
+        const context = await getSupabaseSellerContext();
+        if (!context?.supabase) throw new Error('Sign in to the seller account that owns this shop.');
+        const { data, error } = await context.supabase.rpc('shop_owner_confirm_manual_payment_receipt', {
+            p_order_id: button.dataset.confirmSellerManualPayment
+        });
+        if (error) throw error;
+        if (status) {
+            status.textContent = data?.payment_status === 'paid'
+                ? 'Payment is confirmed and all payment recipients have reported receipt.'
+                : 'Your receipt is recorded. The order will stay pending until all other payment recipients confirm.';
+        }
+        button.remove();
+    } catch (error) {
+        if (status) {
+            status.textContent = window.AsyncFeedback?.errorMessage(
+                error,
+                'Payment could not be confirmed. Refresh the orders page and try again.',
+                'seller-manual-payment-confirm'
+            ) || 'Payment could not be confirmed. Refresh the orders page and try again.';
+        }
+        button.disabled = false;
+    }
+});
 
 function renderSellerReviews(reviews) {
     if (!reviews.length) return sellerEmpty('Customer reviews will appear here after verified purchases.');

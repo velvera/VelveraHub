@@ -592,10 +592,10 @@
                         </div>
                         <div class="payment-method" data-payment-method="bank_transfer" role="button" tabindex="0">
                             <i class="fas fa-building-columns"></i>
-                            <span>Bank transfer</span>
+                            <span>Manual payment (agree with seller)</span>
                         </div>
                     </div>
-                    <p class="payment-disclaimer" id="sellerPaymentRestriction" hidden>Bank transfer is available only for active, verified shops. Independent or unverified shop listings can use pay on delivery while VelveraHub completes seller verification.</p>
+                    <p class="payment-disclaimer" id="sellerPaymentRestriction" hidden>Manual payment is available only for active, KYC-approved shop listings with a configured payment method. Choose pay on delivery or message the seller instead.</p>
                     <p class="payment-disclaimer">Your order is created as pending until payment is confirmed. Never enter card numbers on this page.</p>
                         <label class="checkout-consent">
                             <input type="checkbox" id="checkoutPolicyConsent" required>
@@ -708,6 +708,7 @@
             if (window.supabaseConfigReady) await window.supabaseConfigReady;
             initCheckoutRegion();
             loadCartItems();
+            await applySellerPaymentPolicy(JSON.parse(localStorage.getItem('velverahub_cart') || '[]'));
             initPaymentMethods();
             initPlaceOrder();
         });
@@ -769,8 +770,6 @@
             
             const region = window.RegionService;
             const fmt = (usd) => region ? region.formatPrice(usd) : '$' + parseFloat(usd).toFixed(2);
-            applySellerPaymentPolicy(cart);
-
             summaryItems.innerHTML = cart.map(item => {
                 const product = item.product || item;
                     const imageUrl = product.product_images?.[0]?.url || product.image_url || product.image || '/img/product-placeholder.svg';
@@ -839,19 +838,50 @@
             });
         }
 
-        function applySellerPaymentPolicy(cart) {
+        async function applySellerPaymentPolicy(cart) {
             const bankTransfer = document.querySelector('[data-payment-method="bank_transfer"]');
             const restriction = document.getElementById('sellerPaymentRestriction');
             if (!bankTransfer) return;
-            const restricted = cart.some((item) => {
+            let restricted = cart.some((item) => {
                 const product = item.product || item;
                 const shop = product.shops || {};
                 return product.listing_type !== 'shop' || !shop.id || shop.verified !== true;
             });
+            let needsVelveraHubAccount = false;
+            if (!restricted) {
+                restricted = cart.some((item) => {
+                    const product = item.product || item;
+                    const shop = product.shops || {};
+                    if (shop.manual_payment_preference === 'seller_direct') {
+                        return !String(shop.manual_payment_method || '').trim()
+                            || String(shop.manual_payment_instructions || '').trim().length < 10;
+                    }
+                    needsVelveraHubAccount = true;
+                    return false;
+                });
+            }
+            if (!restricted && needsVelveraHubAccount) {
+                try {
+                    const supabase = window.SupabaseClient?.get();
+                    if (!supabase) {
+                        restricted = true;
+                    } else {
+                        const { data, error } = await supabase
+                            .from('marketplace_payment_destinations')
+                            .select('region, enabled')
+                            .eq('region', window.RegionService?.region || 'ng')
+                            .eq('enabled', true)
+                            .maybeSingle();
+                        restricted = Boolean(error || !data?.enabled);
+                    }
+                } catch (_) {
+                    restricted = true;
+                }
+            }
             bankTransfer.setAttribute('aria-disabled', String(restricted));
             bankTransfer.dataset.unavailable = String(restricted);
             const label = bankTransfer.querySelector('span');
-            if (label) label.textContent = restricted ? 'Bank transfer — verified shops only' : 'Bank transfer';
+            if (label) label.textContent = restricted ? 'Manual payment unavailable' : 'Manual payment (agree with seller)';
             if (restriction) restriction.hidden = !restricted;
             if (restricted && bankTransfer.classList.contains('selected')) {
                 bankTransfer.classList.remove('selected');
@@ -984,6 +1014,13 @@
                     const orderReference = order.order_number || order.orderNumber || '';
                     const successParams = new URLSearchParams({ type: 'order' });
                     if (orderReference) successParams.set('order', orderReference);
+                    if (orderInput.p_payment_method === 'bank_transfer') {
+                        const orderId = order.orderId || order.order_id || order.id;
+                        successParams.set('payment', 'manual');
+                        if (/^[0-9a-f-]{36}$/i.test(String(orderId || ''))) {
+                            successParams.set('order_id', orderId);
+                        }
+                    }
                     window.location.assign(`/pages/success.html?${successParams.toString()}`);
                 } catch (e) {
                     const requestId = AsyncFeedback.createRequestId('checkout');

@@ -691,7 +691,7 @@
                             <h3>${escapeHtml(order.order_number || order.id)}</h3>
                             <p>Created ${escapeHtml(formatDate(order.created_at))}</p>
                         </div>
-                        <strong class="manual-payment-order-total">${escapeHtml(total)}</strong>
+                        <div class="manual-payment-order-total"><small>Item subtotal due to VelveraHub</small><strong>${escapeHtml(total)}</strong></div>
                     </header>
                     <dl class="manual-payment-order-details">
                         ${instructionFields.map(([label, value]) => `
@@ -731,11 +731,13 @@
         if (!window.confirm('Confirm only if the full payment has cleared into the VelveraHub account. Mark this order as paid?')) return;
         button.disabled = true;
         try {
-            const { error } = await state.supabase.rpc('admin_confirm_platform_manual_payment', {
+            const { data, error } = await state.supabase.rpc('admin_confirm_platform_manual_payment', {
                 p_order_id: orderId
             });
             if (error) throw error;
-            setGlobalMessage('Payment confirmed. The order is now marked paid and confirmed.');
+            setGlobalMessage(data?.order_confirmed
+                ? 'Payment confirmed. All recipients are confirmed and the order is marked paid.'
+                : 'VelveraHub receipt recorded. The order remains pending until the other payment recipients confirm.');
             await loadPendingManualPayments();
         } catch (error) {
             window.AsyncFeedback?.log('admin-manual-payment-confirm', window.AsyncFeedback?.createRequestId('admin-manual-payment-confirm'), error);
