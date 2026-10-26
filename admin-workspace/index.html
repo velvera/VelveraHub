@@ -62,6 +62,7 @@
                 <button class="admin-tab" id="deletionTab" type="button" aria-pressed="false" aria-controls="deletionPanel" data-admin-view="deletion">Account deletion</button>
                 <button class="admin-tab" id="listingReviewTab" type="button" aria-pressed="false" aria-controls="listingReviewPanel" data-admin-view="listingReviews">Product listings</button>
                 <button class="admin-tab" id="systemErrorsTab" type="button" aria-pressed="false" aria-controls="systemErrorsPanel" data-admin-view="systemErrors">System errors</button>
+                <button class="admin-tab" id="paymentSettingsTab" type="button" aria-pressed="false" aria-controls="paymentSettingsPanel" data-admin-view="paymentSettings">Payment settings</button>
             </div>
 
             <p class="admin-global-message" id="adminGlobalMessage" role="status" aria-live="polite" hidden></p>
@@ -136,6 +137,63 @@
                     </button>
                 </section>
                 <div class="verification-list" id="systemErrorList" aria-live="polite"></div>
+            </section>
+            <section id="paymentSettingsPanel" aria-labelledby="paymentSettingsTab" hidden>
+                <div class="deletion-review-note">
+                    <strong>Manual payment details are visible to buyers.</strong>
+                    <span>Only enter the VelveraHub receiving account. Do not enter passwords, PINs, or payment-provider credentials. Card and wallet payments remain disabled.</span>
+                </div>
+                <form class="marketplace-payment-form" id="marketplacePaymentSettingsForm">
+                    <div class="marketplace-payment-form-heading">
+                        <h2>VelveraHub receiving account</h2>
+                        <p>Configure one destination for each market. Sellers with approved KYC can choose this account or publish their own payment method.</p>
+                    </div>
+                    <div class="marketplace-payment-field">
+                        <label for="marketplacePaymentRegion">Market</label>
+                        <select id="marketplacePaymentRegion" name="region" required>
+                            <option value="ng">Nigeria (NGN)</option>
+                            <option value="uk">United Kingdom (GBP)</option>
+                        </select>
+                    </div>
+                    <label class="marketplace-payment-enabled">
+                        <input id="marketplacePaymentEnabled" name="enabled" type="checkbox">
+                        <span>Enable VelveraHub manual payments for this market</span>
+                    </label>
+                    <div class="marketplace-payment-fields">
+                        <div class="marketplace-payment-field">
+                            <label for="marketplacePaymentBank">Bank name</label>
+                            <input id="marketplacePaymentBank" name="bank_name" type="text" maxlength="120" autocomplete="off">
+                        </div>
+                        <div class="marketplace-payment-field">
+                            <label for="marketplacePaymentAccountName">Account name</label>
+                            <input id="marketplacePaymentAccountName" name="account_name" type="text" maxlength="160" autocomplete="off">
+                        </div>
+                        <div class="marketplace-payment-field">
+                            <label for="marketplacePaymentAccountNumber">Account number</label>
+                            <input id="marketplacePaymentAccountNumber" name="account_number" type="text" maxlength="80" inputmode="numeric" autocomplete="off">
+                        </div>
+                        <div class="marketplace-payment-field" id="marketplaceSortCodeField">
+                            <label for="marketplacePaymentSortCode">UK sort code</label>
+                            <input id="marketplacePaymentSortCode" name="sort_code" type="text" maxlength="40" autocomplete="off">
+                        </div>
+                    </div>
+                    <div class="marketplace-payment-field">
+                        <label for="marketplacePaymentInstructions">Buyer instructions (optional)</label>
+                        <textarea id="marketplacePaymentInstructions" name="instructions" rows="4" maxlength="1200" placeholder="Include a payment reference or any other instructions buyers need."></textarea>
+                    </div>
+                    <p class="admin-global-message" id="marketplacePaymentSettingsMessage" role="status" aria-live="polite" hidden></p>
+                    <button class="admin-primary-button" id="saveMarketplacePaymentSettings" type="submit">Save payment settings</button>
+                </form>
+                <section class="marketplace-payment-queue" aria-labelledby="pendingMarketplacePaymentsHeading">
+                    <div class="marketplace-payment-queue-heading">
+                        <div>
+                            <h2 id="pendingMarketplacePaymentsHeading">Pending VelveraHub payments</h2>
+                            <p>Confirm an order only after you independently verify that the full transfer has cleared into the VelveraHub account.</p>
+                        </div>
+                        <button class="admin-secondary-button" id="refreshManualPaymentOrders" type="button">Refresh</button>
+                    </div>
+                    <div class="verification-list" id="pendingManualPaymentOrders" aria-live="polite"></div>
+                </section>
             </section>
         </section>
     </main>

@@ -16,6 +16,35 @@
     <link href="../assets/css/components/navbar.css" rel="stylesheet">
     <link href="../assets/css/components/landing-pages.css" rel="stylesheet">
     <link href="../assets/css/components/footer.css" rel="stylesheet">
+    <style>
+        .manual-payment-instructions {
+            width: min(100%, 760px);
+            margin: 1.5rem auto 0;
+            padding: 1.25rem;
+            border: 1px solid #ddd6fe;
+            border-radius: 14px;
+            background: #faf8ff;
+            text-align: left;
+        }
+        .manual-payment-instructions h2,
+        .manual-payment-destination h3 {
+            margin: 0 0 .65rem;
+        }
+        .manual-payment-instructions p {
+            margin: .4rem 0;
+            overflow-wrap: anywhere;
+        }
+        .manual-payment-destination {
+            padding: .9rem 0;
+            border-top: 1px solid #e8e3f4;
+        }
+        .manual-payment-destination:first-child {
+            border-top: 0;
+        }
+        .manual-payment-free-text {
+            white-space: pre-wrap;
+        }
+    </style>
 </head>
 <body>
     <nav class="navbar">
@@ -32,6 +61,11 @@
             <h1 id="successTitle">You’re all set</h1>
             <p id="successMessage">Your action was completed successfully.</p>
             <p id="successDetail" class="success-detail" hidden></p>
+            <section class="manual-payment-instructions" id="manualPaymentInstructions" aria-live="polite" hidden>
+                <h2>Payment instructions</h2>
+                <p id="manualPaymentStatus"></p>
+                <div id="manualPaymentDestinations"></div>
+            </section>
             <div class="landing-actions">
                 <a class="btn btn-primary" id="successNext" href="/pages/account.html">Continue</a>
                 <a class="btn btn-secondary" href="/pages/products.html">Keep shopping</a>
@@ -40,8 +74,13 @@
     </main>
     <footer class="footer shared-footer" data-collapsible-footer data-shared-footer-placeholder aria-label="VelveraHub site footer"></footer>
     <script src="../assets/js/components/site-navigation.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../assets/js/services/region.js"></script>
+    <script src="../assets/js/config.js"></script>
+    <script src="../assets/js/services/publicSupabaseConfig.js"></script>
+    <script src="../assets/js/services/supabaseClient.js"></script>
     <script>
-        (() => {
+        (async () => {
             const params = new URLSearchParams(window.location.search);
             const type = params.get('type') || 'general';
             const pending = params.get('pending') === '1';
@@ -89,6 +128,59 @@
             next.href = requestedNext && requestedNext.startsWith('/') && !requestedNext.startsWith('//')
                 ? requestedNext
                 : selected.href;
+
+            if (type === 'order' && params.get('payment') === 'manual') {
+                const panel = document.getElementById('manualPaymentInstructions');
+                const status = document.getElementById('manualPaymentStatus');
+                const destinations = document.getElementById('manualPaymentDestinations');
+                panel.hidden = false;
+                const orderId = params.get('order_id') || '';
+                if (!/^[0-9a-f-]{36}$/i.test(orderId)) {
+                    status.textContent = 'The order was created, but payment instructions are unavailable here. Message the seller to confirm payment and delivery before paying.';
+                    return;
+                }
+                try {
+                    if (window.supabaseConfigReady) await window.supabaseConfigReady;
+                    const supabase = window.SupabaseClient?.get();
+                    if (!supabase) throw new Error('Payment details are unavailable');
+                    const { data, error } = await supabase.rpc('get_order_manual_payment_details', {
+                        p_order_id: orderId
+                    });
+                    if (error) throw error;
+                    const entries = Array.isArray(data?.destinations) ? data.destinations : [];
+                    if (!entries.length) throw new Error('Payment instructions were not returned');
+                    status.textContent = data.payment_status === 'paid'
+                        ? 'Payment for this order has already been confirmed.'
+                        : data.notice || 'Your order is pending. Confirm payment and delivery arrangements with the seller before paying.';
+                    for (const entry of entries) {
+                        const card = document.createElement('section');
+                        card.className = 'manual-payment-destination';
+                        const heading = document.createElement('h3');
+                        heading.textContent = entry.recipient_type === 'seller'
+                            ? `Payment to ${entry.shop_name || 'the seller'}`
+                            : `VelveraHub account · ${entry.shop_name || 'marketplace order'}`;
+                        card.appendChild(heading);
+                        const addDetail = (label, value, className = '') => {
+                            if (!value) return;
+                            const line = document.createElement('p');
+                            const title = document.createElement('strong');
+                            title.textContent = `${label}: `;
+                            line.append(title, document.createTextNode(String(value)));
+                            if (className) line.classList.add(className);
+                            card.appendChild(line);
+                        };
+                        addDetail('Method', entry.method);
+                        addDetail('Bank', entry.bank_name);
+                        addDetail('Account name', entry.account_name);
+                        addDetail('Account number', entry.account_number);
+                        addDetail('Sort code', entry.sort_code);
+                        addDetail('Instructions', entry.instructions, 'manual-payment-free-text');
+                        destinations.appendChild(card);
+                    }
+                } catch (_) {
+                    status.textContent = 'Your order is pending, but payment instructions could not be loaded. Message the seller to confirm payment and delivery before paying.';
+                }
+            }
         })();
     </script>
 </body>

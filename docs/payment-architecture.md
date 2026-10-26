@@ -68,11 +68,21 @@ courier collection state, failed delivery, and return outcome.
 
 ## Current project state
 
-The storefront currently supports only `cash_on_delivery` and `bank_transfer`
-orders that remain `pending` until confirmed. No card or wallet UI should be
-enabled until the Nigeria Paystack and UK Stripe Connect flows have secure
-server-side credentials, verified webhooks, refund handling, and staging
-reconciliation tests.
+The storefront supports `cash_on_delivery` and manual-payment orders that
+remain `pending` until confirmed. A verified shop can choose the
+admin-configured VelveraHub receiving account for its market or publish its own
+manual payment method and instructions. The secure checkout snapshots the
+chosen destination into the order and rejects manual payment unless every
+listed shop is active and has approved KYC. Buyers are directed to agree on
+payment and delivery with the seller first. Admin receiving accounts are
+market-specific and must be configured in the restricted admin workspace;
+manual payment is unavailable for a market until its account is enabled.
+
+Manual instructions do not verify a transfer or mark an order paid. Orders
+remain pending until an authorized operator confirms payment. No card or wallet
+UI should be enabled until the Nigeria Paystack and UK Stripe Connect flows
+have secure server-side credentials, verified webhooks, refund handling, and
+staging reconciliation tests.
 
 The repository now includes the regional payment-attempt, webhook-event,
 refund, payout-account, and seller-ledger schema. This is data-model
@@ -94,7 +104,8 @@ static assets and the browser Supabase configuration.
 The provider choice is confirmed as Paystack Transaction Splits/subaccounts for
 Nigeria and Stripe Connect for the UK. No live or test-mode provider adapter is
 currently implemented. Keep card and wallet methods disabled in both the API
-and `place_order_secure` until this gate is met.
+and `place_order_secure` until this gate is met. The manual-payment migration
+does not alter this provider gate.
 
 The staging matrix is maintained in [`staging-acceptance.md`](staging-acceptance.md).
 At minimum, exercise success, decline, timeout, duplicate/replayed callbacks,

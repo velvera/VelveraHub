@@ -8,6 +8,7 @@
     "test:storage-policy-safety": "node scripts/storage-policy-safety.test.mjs",
     "test:supabase-readiness": "node scripts/supabase-readiness.test.mjs",
     "test:cookie-consent": "node scripts/cookie-consent.test.mjs",
+    "test:manual-payments": "node scripts/manual-payment-safety.test.mjs",
     "test:category-images": "node scripts/category-subcategory-images.test.mjs",
     "test:domain-routing": "node scripts/domain-routing.test.mjs",
     "auth:browser": "node scripts/authenticated-browser.mjs",

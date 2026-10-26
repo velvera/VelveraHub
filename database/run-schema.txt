@@ -20,6 +20,7 @@ admin workspace.
 11. database/seller-contact-safety.sql
 12. database/product-delivery-options.sql
 13. database/client-error-logging.sql — adds sanitized client-error diagnostics and locks event-log reads to the admin API
+14. database/marketplace-manual-payments.sql — admin-managed regional receiving accounts, KYC-gated seller payment preferences, and pending-order instructions
 
 Run `npm run test:storage-policy-safety` before applying or changing the
 storage migrations. It prevents the product-media bucket-list policies from

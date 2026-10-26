@@ -100,8 +100,18 @@ secret or card number in a staging run.
 
 ## Current evidence boundary
 
-As of 22 October 2026, this repository contains the migration order, read-only
+As of 26 October 2026, the workspace does not have a dedicated Supabase
+staging project or disposable test accounts, so no live safety or payment
+checks have been run. This repository contains the migration order, read-only
 verification SQL, Storage acceptance procedure, and payment design. Local
-Storage checks validate source/SQL invariants only. The recorded 14 October
+checks validate source/SQL invariants only. The recorded 14 October
 account-deletion checks cover request queue/RLS behavior, not final Auth-user
-deletion. No live Supabase staging run or provider payment scenario is recorded.
+deletion.
+
+Before enabling manual payments, apply migration
+`database/marketplace-manual-payments.sql` and configure the correct VelveraHub
+receiving account for each market in the admin workspace. In staging, verify
+that unverified sellers cannot enable direct payment, approved KYC sellers can
+choose either destination, missing regional admin details block VelveraHub
+manual payments, and created orders snapshot the correct instructions while
+remaining pending. Do not use real orders or payment accounts for these checks.

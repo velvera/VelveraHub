@@ -330,6 +330,186 @@ h3 {
     gap: 16px;
 }
 
+.marketplace-payment-form {
+    display: grid;
+    gap: 16px;
+    width: min(100%, 720px);
+    padding: 22px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--surface);
+    box-shadow: 0 8px 24px rgb(21 36 55 / 5%);
+}
+
+.marketplace-payment-form-heading h2,
+.marketplace-payment-form-heading p {
+    margin: 0;
+}
+
+.marketplace-payment-form-heading p {
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: .9rem;
+    line-height: 1.5;
+}
+
+.marketplace-payment-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.marketplace-payment-field {
+    display: grid;
+    gap: 7px;
+}
+
+.marketplace-payment-field label {
+    font-size: .86rem;
+    font-weight: 650;
+}
+
+.marketplace-payment-field input,
+.marketplace-payment-field select,
+.marketplace-payment-field textarea {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: #fff;
+    color: var(--ink);
+    font: inherit;
+}
+
+.marketplace-payment-field textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.marketplace-payment-field input:focus-visible,
+.marketplace-payment-field select:focus-visible,
+.marketplace-payment-field textarea:focus-visible {
+    outline: 3px solid rgb(8 127 140 / 22%);
+    border-color: var(--brand);
+}
+
+.marketplace-payment-enabled {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    font-weight: 600;
+}
+
+.marketplace-payment-enabled input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--brand);
+}
+
+.marketplace-payment-queue {
+    display: grid;
+    gap: 14px;
+    margin-top: 26px;
+}
+
+.marketplace-payment-queue-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.marketplace-payment-queue-heading h2,
+.marketplace-payment-queue-heading p {
+    margin: 0;
+}
+
+.marketplace-payment-queue-heading p {
+    margin-top: 6px;
+    max-width: 680px;
+    color: var(--muted);
+    line-height: 1.5;
+}
+
+.manual-payment-order {
+    display: grid;
+    gap: 12px;
+    padding: 18px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface);
+}
+
+.manual-payment-order-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.manual-payment-order-heading h3,
+.manual-payment-order-heading p {
+    margin: 0;
+}
+
+.manual-payment-order-heading p {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: .9rem;
+}
+
+.manual-payment-order-total {
+    white-space: nowrap;
+    font-weight: 750;
+}
+
+.manual-payment-order-details {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 18px;
+    margin: 0;
+}
+
+.manual-payment-order-details div {
+    display: grid;
+    gap: 2px;
+    overflow-wrap: anywhere;
+}
+
+.manual-payment-order-details dt {
+    color: var(--muted);
+    font-size: .82rem;
+}
+
+.manual-payment-order-details dd {
+    margin: 0;
+    font-weight: 600;
+    white-space: pre-wrap;
+}
+
+@media (max-width: 620px) {
+    .marketplace-payment-form {
+        padding: 16px;
+    }
+
+    .marketplace-payment-fields {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .marketplace-payment-queue-heading,
+    .manual-payment-order-heading {
+        flex-direction: column;
+    }
+
+    .manual-payment-order-details {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
 .system-error-entry {
     min-width: 0;
     padding: 18px;

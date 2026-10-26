@@ -9,6 +9,13 @@ const legalPage = read('veeve/legal.html');
 const homePage = read('index.html');
 const intelligence = read('assets/js/services/marketplace-intelligence.js');
 
+assert.match(cookieStyles, /background:\s*linear-gradient\(112deg,\s*#57158f 0%,\s*#6520c3 52%,\s*#7c35ee 100%\)/);
+assert.match(cookieStyles, /padding:\s*0\.9rem 1\.15rem/);
+assert.match(cookieStyles, /@media \(max-width: 360px\)/);
+assert.match(cookieScript, /We use essential storage to keep VelveraHub working\. Optional analytics and browsing-based recommendations are off unless you accept\./);
+assert.match(cookieScript, /data-cookie-choice="rejected">Decline/);
+assert.match(cookieScript, /data-cookie-choice="granted">Accept/);
+
 function createHarness(initialChoice = null) {
     const values = new Map(initialChoice ? [['velverahub_cookie_consent', initialChoice]] : []);
     const events = [];

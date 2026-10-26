@@ -240,7 +240,7 @@ async function getSupabaseSellerContext() {
 
     const { data: shop, error: shopError } = await supabase
         .from('shops')
-        .select('id, logo_url, name, slug, status, address, email, phone, city, country, service_location, description, whatsapp, facebook, instagram, twitter, other_contact_label, other_contact_url, shop_key')
+        .select('id, logo_url, name, slug, status, verified, address, email, phone, city, country, service_location, description, whatsapp, facebook, instagram, twitter, other_contact_label, other_contact_url, shop_key')
         .or(ownerFilters)
         .limit(1)
         .maybeSingle();
@@ -379,7 +379,23 @@ async function renderShopPortalState(context) {
         statusBadge.className = `status-badge ${presentation.className}`;
         message.textContent = presentation.message;
         settings.classList.remove('hidden');
-        await loadShopSettings();
+        let verification = null;
+        let verificationError = null;
+        try {
+            const result = await context.supabase
+                .from('shop_verification_submissions')
+                .select('status')
+                .eq('shop_id', context.shop.id)
+                .maybeSingle();
+            verification = result.data;
+            verificationError = result.error;
+        } catch (error) {
+            verificationError = error;
+        }
+        const kycApproved = context.shop.verified === true
+            && String(verification?.status || '').toLowerCase() === 'approved'
+            && !verificationError;
+        await loadShopSettings({ context, kycApproved, verificationError });
         return;
     }
 
@@ -1331,7 +1347,16 @@ async function renderSellerPage(page) {
             }
             const { data, error } = await supabase.from('orders').select('id, order_number, status, total, created_at, order_items(title, quantity)').eq('shop_id', shop.id).order('created_at', { ascending: false }).limit(50);
             if (error) throw error;
-            body.innerHTML = renderSellerOrders(data || []);
+            let pendingManualPayments = [];
+            const paymentResult = await supabase.rpc('shop_owner_list_pending_manual_payment_orders', {
+                p_shop_id: shop.id
+            });
+            if (paymentResult.error) {
+                window.AsyncFeedback?.log('seller-manual-payment-orders', window.AsyncFeedback?.createRequestId('seller-manual-payment-orders'), paymentResult.error);
+            } else if (Array.isArray(paymentResult.data)) {
+                pendingManualPayments = paymentResult.data;
+            }
+            body.innerHTML = renderSellerOrders(data || [], pendingManualPayments);
         } else if (page === 'reviews') {
             if (!shop) {
                 body.innerHTML = sellerEmpty('Reviews appear after customers complete verified purchases.');
@@ -1613,9 +1638,15 @@ async function renderSellerMessagesPage(context) {
     }
 }
 
-function renderSellerOrders(orders) {
-    if (!orders.length) return sellerEmpty('New orders will appear here when customers purchase from your shop.');
-    return `<div class="orders-table"><table><thead><tr><th>Order</th><th>Items</th><th>Total</th><th>Status</th><th>Date</th></tr></thead><tbody>${orders.map(order => `<tr><td>${escapeHtml(order.order_number || order.id)}</td><td>${escapeHtml((order.order_items || []).map(item => `${item.title || 'Item'} ×${item.quantity || 1}`).join(', ') || 'Order items')}</td><td>${formatSellerPrice(order.total)}</td><td><span class="status-badge ${escapeHtml(order.status || 'pending')}">${escapeHtml(order.status || 'pending')}</span></td><td>${order.created_at ? new Date(order.created_at).toLocaleDateString() : '—'}</td></tr>`).join('')}</tbody></table></div>`;
+function renderSellerOrders(orders, pendingManualPayments = []) {
+    const paymentQueue = pendingManualPayments.length
+        ? `<section class="seller-manual-payment-queue"><h2>Pending seller-direct payments</h2><p>Confirm only after you independently verify that the payment has cleared to you.</p>${pendingManualPayments.map(order => {
+            const payment = order.payment || {};
+            return `<article class="seller-manual-payment-card"><div><strong>${escapeHtml(order.order_number || order.id)}</strong><p>${escapeHtml(payment.method || 'Manual payment')} · ${formatSellerPrice(payment.shop_total || 0)}</p><p class="seller-manual-payment-instructions">${escapeHtml(payment.instructions || 'Confirm the agreed payment details with the buyer in chat.')}</p></div><button class="action-btn-sm" type="button" data-confirm-seller-manual-payment="${escapeHtml(order.id)}">Confirm payment received</button><p class="seller-manual-payment-status" role="status" aria-live="polite"></p></article>`;
+        }).join('')}</section>`
+        : '';
+    if (!orders.length) return `${paymentQueue}${sellerEmpty('New orders will appear here when customers purchase from your shop.')}`;
+    return `${paymentQueue}<div class="orders-table"><table><thead><tr><th>Order</th><th>Items</th><th>Total</th><th>Status</th><th>Date</th></tr></thead><tbody>${orders.map(order => `<tr><td>${escapeHtml(order.order_number || order.id)}</td><td>${escapeHtml((order.order_items || []).map(item => `${item.title || 'Item'} ×${item.quantity || 1}`).join(', ') || 'Order items')}</td><td>${formatSellerPrice(order.total)}</td><td><span class="status-badge ${escapeHtml(order.status || 'pending')}">${escapeHtml(order.status || 'pending')}</span></td><td>${order.created_at ? new Date(order.created_at).toLocaleDateString() : '—'}</td></tr>`).join('')}</tbody></table></div>`;
 }
 
 function renderSellerReviews(reviews) {
@@ -2393,6 +2424,8 @@ function initShopSettings() {
     try {
         const shopInfoForm = document.getElementById('shopInfoForm');
         const socialMediaForm = document.getElementById('socialMediaForm');
+        const paymentPreferencesForm = document.getElementById('sellerPaymentPreferencesForm');
+        const paymentPreference = document.getElementById('manualPaymentPreference');
         const passwordForm = document.getElementById('passwordForm');
         const copyShopKeyBtn = document.getElementById('copyShopKey');
         const toggleKeyBtn = document.getElementById('toggleKeyVisibility');
@@ -2430,6 +2463,9 @@ function initShopSettings() {
                 }
             });
         }
+
+        paymentPreference?.addEventListener('change', syncSellerManualPaymentFields);
+        paymentPreferencesForm?.addEventListener('submit', saveSellerManualPaymentPreferences);
         
         if (passwordForm) {
             passwordForm.addEventListener('submit', async (e) => {
@@ -2542,7 +2578,100 @@ function maskShopKey(key) {
     return parts[0] + '-****-****-' + parts[parts.length - 1];
 }
 
-async function loadShopSettings() {
+function syncSellerManualPaymentFields() {
+    const preference = document.getElementById('manualPaymentPreference');
+    const fields = document.getElementById('sellerDirectPaymentFields');
+    const method = document.getElementById('manualPaymentMethod');
+    const instructions = document.getElementById('manualPaymentInstructions');
+    const sellerDirect = preference?.value === 'seller_direct';
+    if (fields) fields.hidden = !sellerDirect;
+    if (method) method.required = Boolean(sellerDirect);
+    if (instructions) instructions.required = Boolean(sellerDirect);
+}
+
+async function loadSellerManualPaymentPreferences(context, kycApproved, verificationError) {
+    const panel = document.getElementById('sellerPaymentSettings');
+    const notice = document.getElementById('sellerPaymentKycNotice');
+    const form = document.getElementById('sellerPaymentPreferencesForm');
+    const message = document.getElementById('sellerPaymentPreferenceMessage');
+    if (!panel || !notice || !form) return;
+
+    panel.hidden = true;
+    notice.hidden = true;
+    message.hidden = true;
+    if (!kycApproved) {
+        notice.hidden = false;
+        if (verificationError) {
+            const noticeCopy = notice.querySelector('.form-help');
+            if (noticeCopy) noticeCopy.textContent = 'Manual payment settings are unavailable until your shop’s KYC approval can be confirmed.';
+        }
+        return;
+    }
+
+    panel.hidden = false;
+    const button = form.querySelector('button[type="submit"]');
+    try {
+        const { data, error } = await context.supabase
+            .from('shops')
+            .select('manual_payment_preference, manual_payment_method, manual_payment_instructions')
+            .eq('id', context.shop.id)
+            .single();
+        if (error) throw error;
+        document.getElementById('manualPaymentPreference').value = data.manual_payment_preference || 'velverahub';
+        document.getElementById('manualPaymentMethod').value = data.manual_payment_method || '';
+        document.getElementById('manualPaymentInstructions').value = data.manual_payment_instructions || '';
+        syncSellerManualPaymentFields();
+    } catch (error) {
+        message.textContent = /column|schema cache|does not exist/i.test(error?.message || '')
+            ? 'Payment settings are not installed yet. Apply database/marketplace-manual-payments.sql, then refresh this page.'
+            : window.AsyncFeedback?.errorMessage(error, 'Payment preferences could not be loaded. Please try again.', 'seller-payment-settings-load') || 'Payment preferences could not be loaded. Please try again.';
+        message.classList.add('is-error');
+        message.hidden = false;
+        if (button) button.disabled = true;
+    }
+}
+
+async function saveSellerManualPaymentPreferences(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const message = document.getElementById('sellerPaymentPreferenceMessage');
+    const button = form.querySelector('button[type="submit"]');
+    const preference = document.getElementById('manualPaymentPreference').value;
+    const method = document.getElementById('manualPaymentMethod').value.trim();
+    const instructions = document.getElementById('manualPaymentInstructions').value.trim();
+    message.hidden = true;
+    message.classList.remove('is-error');
+    if (!form.reportValidity()) return;
+
+    button.disabled = true;
+    try {
+        const context = await getSupabaseSellerContext();
+        if (!context?.shop?.id || !context?.supabase) {
+            throw new Error('Sign in to the seller account that owns this shop.');
+        }
+        const { error } = await context.supabase.rpc('shop_owner_save_manual_payment_preferences', {
+            p_shop_id: context.shop.id,
+            p_preference: preference,
+            p_method: method,
+            p_instructions: instructions
+        });
+        if (error) throw error;
+        message.textContent = 'Payment preference saved. Buyers will be asked to agree on payment and delivery with you before paying.';
+        message.hidden = false;
+    } catch (error) {
+        message.textContent = window.AsyncFeedback?.errorMessage(
+            error,
+            'Payment preference could not be saved. Confirm your KYC approval and try again.',
+            'seller-payment-settings-save'
+        ) || 'Payment preference could not be saved. Confirm your KYC approval and try again.';
+        message.classList.add('is-error');
+        message.hidden = false;
+    } finally {
+        button.disabled = false;
+    }
+}
+
+async function loadShopSettings(options = {}) {
     const supabase = window.SupabaseClient?.get();
     
     if (!currentShopKey) {
@@ -2556,7 +2685,7 @@ async function loadShopSettings() {
     
     if (supabase && window.SupabaseClient?.isConfigured()) {
         try {
-            const context = await getSupabaseSellerContext();
+            const context = options.context || await getSupabaseSellerContext();
             if (context?.shop) {
                 const { shop } = context;
                 document.getElementById('shopName').value = shop.name || '';
@@ -2578,6 +2707,7 @@ async function loadShopSettings() {
                     currentShopKey = shop.shop_key;
                     if (keyInput) keyInput.value = shopKeyVisible ? currentShopKey : maskShopKey(currentShopKey);
                 }
+                await loadSellerManualPaymentPreferences(context, options.kycApproved === true, options.verificationError);
             }
         } catch (error) {
             window.AsyncFeedback?.log('seller-settings-load', window.AsyncFeedback?.createRequestId('seller-settings-load'), error);
