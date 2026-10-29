@@ -82,6 +82,11 @@ lets an admin record cleared funds. Sellers can record cleared seller-direct
 receipts from their order page. An order becomes paid and confirmed only after
 every destination in a multi-shop order has been confirmed.
 
+The manual-payment schema was applied to the production Supabase project on
+29 October 2026. Post-apply checks confirmed the payment tables' RLS and RPC
+grants; no regional receiving destinations exist or are enabled. This verifies
+the schema only, not buyer checkout, order snapshots, or receipt confirmation.
+
 Manual instructions do not verify a transfer or mark an order paid. Orders
 remain pending until each destination's authorized recipient confirms payment. No card or wallet
 UI should be enabled until the Nigeria Paystack and UK Stripe Connect flows

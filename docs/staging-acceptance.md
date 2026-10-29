@@ -100,21 +100,23 @@ secret or card number in a staging run.
 
 ## Current evidence boundary
 
-As of 26 October 2026, the workspace does not have a dedicated Supabase
+As of 29 October 2026, the workspace does not have a dedicated Supabase
 staging project or disposable test accounts, so no live safety or payment
-checks have been run. This repository contains the migration order, read-only
-verification SQL, Storage acceptance procedure, and payment design. Local
+behavior checks have been run. The manual-payment schema was applied to
+production on 29 October; read-only checks confirmed its tables, RLS, grants,
+and that no regional receiving destinations exist or are enabled. This verifies
+DDL only, not checkout, order snapshots, or receipt-confirmation behavior. Local
 checks validate source/SQL invariants only. The recorded 14 October
 account-deletion checks cover request queue/RLS behavior, not final Auth-user
 deletion.
 
-Before enabling manual payments, apply migration
-`database/marketplace-manual-payments.sql` and configure the correct VelveraHub
-receiving account for each market in the admin workspace. In staging, verify
-that unverified sellers cannot enable direct payment, approved KYC sellers can
-choose either destination, missing regional admin details block VelveraHub
-manual payments, and created orders snapshot the correct instructions while
-remaining pending. Verify that the platform admin and each relevant seller can
-confirm only their own receiving destination, and that a multi-shop order stays
-pending until all destinations confirm. Do not use real orders or payment
-accounts for these checks.
+Before enabling manual payments, an authorized admin must verify and configure
+the correct VelveraHub receiving account for each market in the authenticated
+admin workspace. In dedicated staging, verify that unverified sellers cannot
+enable direct payment, approved KYC sellers can choose either destination,
+missing regional admin details block VelveraHub manual payments, and test
+orders snapshot the correct instructions while remaining pending. Verify that
+the platform admin and each relevant seller can confirm only their own
+receiving destination, and that a multi-shop order stays pending until all
+destinations confirm. Do not use real orders or payment accounts for these
+checks.

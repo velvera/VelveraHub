@@ -2,6 +2,8 @@
 -- Apply after the migrations in database/run-schema.txt. No provider card or
 -- wallet payments are enabled by this file.
 
+BEGIN;
+
 ALTER TABLE public.shops
     ADD COLUMN IF NOT EXISTS manual_payment_preference TEXT NOT NULL DEFAULT 'velverahub',
     ADD COLUMN IF NOT EXISTS manual_payment_method TEXT NOT NULL DEFAULT '',

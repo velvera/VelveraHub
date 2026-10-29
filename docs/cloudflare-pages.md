@@ -104,6 +104,7 @@ Run these files in order in the Supabase SQL editor:
 11. `database/seller-contact-safety.sql`
 12. `database/product-delivery-options.sql`
 13. `database/client-error-logging.sql`
+14. `database/marketplace-manual-payments.sql`
 
 For an existing database that reports PostgreSQL error `42702` while removing
 or cleaning up failed listing media uploads, apply
@@ -124,6 +125,12 @@ for shops. Neither migration enables provider checkout.
 The delivery-options migration adds seller-selected pickup/local/regional
 delivery indicators and an optional 300-character note. It does not set prices,
 delivery coverage, or timing; sellers and buyers must confirm those separately.
+
+The manual-payment migration adds regional VelveraHub receiving destinations,
+KYC-gated seller payment preferences, order instruction snapshots, and
+recipient-specific receipt confirmations. Regional destinations start disabled
+and must remain disabled until an authorized admin verifies and configures them.
+It does not enable Paystack or Stripe.
 
 Product conversations are accessible only to the buyer and current seller.
 Messages are created through authenticated RPCs; direct browser inserts and
