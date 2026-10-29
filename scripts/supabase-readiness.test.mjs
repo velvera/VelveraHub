@@ -17,6 +17,10 @@ assert.equal(migrations.length, 14, 'the migration guide must list the full numb
 assert.deepEqual(migrations.map(({ order }) => order), Array.from({ length: 14 }, (_, index) => index + 1));
 assert.equal(new Set(migrations.map(({ path }) => path)).size, migrations.length, 'migration files must not be duplicated');
 for (const { path } of migrations) assert.ok(fs.existsSync(new URL(`../${path}`, import.meta.url)), `${path} must exist`);
+const sqlFiles = fs.readdirSync(new URL('../database/', import.meta.url)).filter((name) => name.endsWith('.sql'));
+for (const filename of sqlFiles) {
+    assert.ok(migrationGuide.includes(`database/${filename}`), `${filename} must be classified in the migration runbook`);
+}
 assert.match(migrationGuide, /account-deletion\.sql.*legacy databases/i);
 assert.match(migrationGuide, /docs\/staging-acceptance\.md/);
 

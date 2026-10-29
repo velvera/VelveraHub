@@ -1,5 +1,5 @@
 -- KYC-gated manual payment routing for VelveraHub marketplace orders.
--- Apply after the migrations in database/run-schema.txt. No provider card or
+-- Apply after steps 1–13 in database/run-schema.txt. No provider card or
 -- wallet payments are enabled by this file.
 
 BEGIN;

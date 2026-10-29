@@ -1,7 +1,7 @@
 -- Secure browser checkout for static Cloudflare Pages storefronts.
--- Apply after schema.sql, seller.sql, supabase-rls.sql, and
--- security-hardening.sql and cloudflare-dashboard.sql. Re-runnable and
--- additive; it does not delete data.
+-- Apply after schema.sql, seller.sql, supabase-rls.sql,
+-- security-hardening.sql, and cloudflare-dashboard.sql. Apply before
+-- shop-owner-payments.sql. Re-runnable and additive; it does not delete data.
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 

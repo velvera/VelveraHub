@@ -1,9 +1,11 @@
 -- VelveraHub security hardening.
 --
--- Apply after schema.sql, supabase-rls.sql, seller.sql/admin.sql, and the
--- feature migrations that create shop/order tables. This migration is
--- additive and re-runnable. Run it in the target Supabase SQL Editor with a
--- privileged database role; never expose that role to the browser.
+-- Apply after schema.sql, seller.sql, admin.sql, and supabase-rls.sql.
+-- schema.sql creates the core shop/order tables. Apply this before
+-- cloudflare-dashboard.sql and production-hardening.sql, which rely on these
+-- security helpers. This migration is additive and re-runnable. Run it in the
+-- target Supabase SQL Editor with a privileged database role; never expose
+-- that role to the browser.
 
 BEGIN;
 
