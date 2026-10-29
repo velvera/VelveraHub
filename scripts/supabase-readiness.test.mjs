@@ -13,8 +13,8 @@ const stagingGuide = read('docs/staging-acceptance.md');
 
 const migrations = [...migrationGuide.matchAll(/^\s*(\d+)\.\s+(database\/[^\s—]+)/gm)]
     .map((match) => ({ order: Number(match[1]), path: match[2] }));
-assert.equal(migrations.length, 13, 'the migration guide must list the full numbered migration set');
-assert.deepEqual(migrations.map(({ order }) => order), Array.from({ length: 13 }, (_, index) => index + 1));
+assert.equal(migrations.length, 14, 'the migration guide must list the full numbered migration set');
+assert.deepEqual(migrations.map(({ order }) => order), Array.from({ length: 14 }, (_, index) => index + 1));
 assert.equal(new Set(migrations.map(({ path }) => path)).size, migrations.length, 'migration files must not be duplicated');
 for (const { path } of migrations) assert.ok(fs.existsSync(new URL(`../${path}`, import.meta.url)), `${path} must exist`);
 assert.match(migrationGuide, /account-deletion\.sql.*legacy databases/i);

@@ -101,12 +101,17 @@ secret or card number in a staging run.
 ## Current evidence boundary
 
 As of 29 October 2026, the workspace does not have a dedicated Supabase
-staging project or disposable test accounts, so no live safety or payment
-behavior checks have been run. The manual-payment schema was applied to
-production on 29 October; read-only checks confirmed its tables, RLS, grants,
-and that no regional receiving destinations exist or are enabled. This verifies
-DDL only, not checkout, order snapshots, or receipt-confirmation behavior. Local
-checks validate source/SQL invariants only. The recorded 14 October
+staging project or disposable test accounts accessible, so no staging
+migrations, authenticated safety checks, or payment-confirmation checks have
+been run. The manual-payment schema was applied to production on 29 October;
+read-only checks confirmed its tables, RLS, grants, and that no regional
+receiving destinations exist or are enabled. This verifies DDL only, not
+checkout, order snapshots, or receipt-confirmation behavior.
+The local checks `npm run test:manual-payments` and
+`npm run test:supabase-readiness` validate source/SQL invariants only; they do
+not prove that a migration was applied or that Supabase enforces the behavior.
+This repository contains the migration order, read-only verification SQL,
+Storage acceptance procedure, and payment design. The recorded 14 October
 account-deletion checks cover request queue/RLS behavior, not final Auth-user
 deletion.
 
