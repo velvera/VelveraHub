@@ -8,8 +8,10 @@ const storagePolicies = read('database/supabase-rls.sql');
 const deletionPolicies = read('database/cloudflare-supabase-direct.sql');
 const checkoutMigration = read('database/production-hardening.sql');
 const paymentsMigration = read('database/shop-owner-payments.sql');
+const manualPaymentsMigration = read('database/marketplace-manual-payments.sql');
 const server = read('server.js');
 const stagingGuide = read('docs/staging-acceptance.md');
+const cloudflareGuide = read('docs/cloudflare-pages.md');
 
 const migrations = [...migrationGuide.matchAll(/^\s*(\d+)\.\s+(database\/[^\s—]+)/gm)]
     .map((match) => ({ order: Number(match[1]), path: match[2] }));
@@ -36,6 +38,10 @@ for (const check of [
     'secure checkout RPC exists and is not missing its client grants',
     'order idempotency has a valid unique index',
     'regional payment records remain server-only',
+    'manual-payment columns exist',
+    'manual-payment destinations have scoped read and admin-only writes',
+    'manual-payment confirmations remain server and RPC only',
+    'manual-payment RPCs have the expected role grants',
 ]) {
     assert.ok(verificationSql.includes(check), `read-only preflight must report: ${check}`);
 }
@@ -50,7 +56,11 @@ assert.match(checkoutMigration, /v_payment_method NOT IN \('cash_on_delivery', '
 assert.match(server, /if \(!\['cash_on_delivery', 'bank_transfer'\]\.includes\(payment_method\)\)/);
 
 assert.match(paymentsMigration, /provider IN \('paystack', 'stripe'\)/);
+assert.match(manualPaymentsMigration, /CREATE TABLE IF NOT EXISTS public\.marketplace_payment_destinations/i);
+assert.match(manualPaymentsMigration, /REVOKE ALL ON public\.order_manual_payment_confirmations FROM PUBLIC, anon, authenticated/i);
 assert.match(stagingGuide, /Do not run the write tests against production/);
+assert.match(cloudflareGuide, /Staging upload-policy acceptance/);
+assert.match(cloudflareGuide, /Never run these\s+write tests against production/);
 assert.match(stagingGuide, /Invalid signature/);
 assert.match(stagingGuide, /Timeout\/unknown result/);
 assert.match(stagingGuide, /Partial and full refund/);

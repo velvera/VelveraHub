@@ -100,13 +100,16 @@ secret or card number in a staging run.
 
 ## Current evidence boundary
 
-As of 29 October 2026, the workspace does not have a dedicated Supabase
+As of 30 October 2026, the workspace does not have a dedicated Supabase
 staging project or disposable test accounts accessible, so no staging
 migrations, authenticated safety checks, or payment-confirmation checks have
 been run. The manual-payment schema was applied to production on 29 October;
 read-only checks confirmed its tables, RLS, grants, and that no regional
-receiving destinations exist or are enabled. This verifies DDL only, not
-checkout, order snapshots, or receipt-confirmation behavior.
+receiving destinations exist or are enabled. A 30 October read-only production
+preflight passed 46 of 47 checks; product-media bucket size and MIME limits are
+unset. This verifies metadata only, not checkout, order snapshots, uploads, or
+receipt-confirmation behavior. No customer rows were queried and no writes
+were made.
 The local checks `npm run test:manual-payments` and
 `npm run test:supabase-readiness` validate source/SQL invariants only; they do
 not prove that a migration was applied or that Supabase enforces the behavior.

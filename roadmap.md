@@ -1,6 +1,6 @@
 # VelveraHub Master Roadmap
 
-**Updated:** 22 October 2026  
+**Updated:** 30 October 2026
 **Release decision:** **DO NOT LAUNCH YET**
 
 This is the current source of truth, consolidated from `improvement.md`, `finalassessment.md`, the previous `roadmap.md`, and the repository checks run during this review. The two dated review files are retained as historical evidence; their current status is superseded by this document.
@@ -13,9 +13,9 @@ This is the current source of truth, consolidated from `improvement.md`, `finala
 
 ## Summary
 
-The project has substantial marketplace, security, mobile, and operational groundwork. Local route, generated-app, accessibility-alt, and targeted regression checks pass. A Supabase account-deletion request-queue migration and its access controls were recorded as verified on 14 October; that does not establish that the full migration set or upload/checkout policies are ready. Payment provider/webhook configuration, operator/legal details, monitoring, backups, and domain verification remain unresolved.
+The project has substantial marketplace, security, mobile, and operational groundwork. The current local product, payment, storage-safety, generated-app, image-alt, and smoke checks pass. A production read-only Supabase preflight returned 46 of 47 checks as passing; the remaining failure is the product-image bucket restriction. A focused metadata read found that both product-media buckets have null size and MIME limits. The upload policies, quota controls, and moderation metadata are present, but safe live uploads have not been tested.
 
-The 65-item production checklist currently contains **20 PASS, 36 NEEDS REVIEW, and 9 BLOCKED** items. Do not treat a local PASS as evidence that a production database, payment flow, or domain has been tested.
+The expanded 66-item production checklist contains **20 PASS, 37 NEEDS REVIEW, and 9 BLOCKED** items. Do not treat a local PASS or metadata-only database check as evidence that an authenticated production upload, payment flow, or domain has been tested. The release decision remains **DO NOT LAUNCH YET**.
 
 ## Work completed
 
@@ -29,6 +29,9 @@ The 65-item production checklist currently contains **20 PASS, 36 NEEDS REVIEW, 
 - Synchronized shared navigation changes across the Nigeria, UK, shop-owner, and admin static roots.
 - Replaced the cookie settings dialog and separate personalization prompt with one accessible, two-choice Decline/Accept banner; optional analytics now follows the same consent decision.
 - Expanded the read-only Supabase preflight to check Storage ownership/validation policies and quota triggers, deletion-request access, checkout RPC access, idempotency indexing, and server-only payment tables.
+- Extended the read-only preflight to cover the manual-payment migration's tables, RLS, and RPC grants; the production manual-payment schema was applied on 29 October, with no receiving destination configured or enabled.
+- Re-ran the read-only production preflight on 30 October. Ownership policies, quota triggers, moderation metadata, and manual-payment grants are present; product bucket size/MIME restrictions are not.
+- Corrected the Cloudflare upload-acceptance instructions to require disposable staging accounts and prohibit write tests against production.
 - Added a staging acceptance runbook covering disposable-account checks, evidence handling, and the payment-provider test matrix.
 
 ### Production checklist items marked PASS
@@ -66,35 +69,38 @@ The 65-item production checklist currently contains **20 PASS, 36 NEEDS REVIEW, 
 - `npm run test:supabase-readiness` — validates the local migration manifest and safe-check definitions; it does not connect to Supabase.
 - `npm run apps:check` and `npm run apps:production:check` — both pass after synchronizing all four generated roots.
 - `npm run smoke` — API, route, CORS, and static-root checks pass after the workflow restart.
+- 30 October re-run: all eight focused product, message-moderation, storage-safety, Supabase-readiness, cookie-consent, manual-payment, category-image, and domain-routing test scripts pass; both generated-root checks, the image-alt audit, and the smoke suite pass.
 - Filtered mobile regressions at 320px, 390px, and 430px pass across the storefront, regional, admin, and shop-owner roots. The 320px matrix was rerun after the final analytics-consent change.
 - Preview checked at 1024px desktop and 402px mobile; the two-choice banner renders and the browser console is clean.
 - `npm audit` — 0 vulnerabilities after the dependency update.
 - Focused mobile regression at 320px for the parent storefront and standalone shop-owner portal.
 - Full `npm run mobile:regression` — completed with exit code 0 across the configured viewport and app-root matrix.
 
-## Supabase and payment acceptance status — 22 October 2026
+## Supabase and payment acceptance status — 30 October 2026
 
 ### Confirmed from the repository
 
-- `database/run-schema.txt` defines the 13-step Supabase migration order: `schema.sql`, `seller.sql`, `admin.sql`, `supabase-rls.sql`, `security-hardening.sql`, `cloudflare-dashboard.sql`, `cloudflare-supabase-direct.sql`, `production-hardening.sql`, `shop-owner-payments.sql`, `shop-verification-compliance.sql`, `seller-contact-safety.sql`, `product-delivery-options.sql`, and `client-error-logging.sql`.
+- `database/run-schema.txt` defines the 14-step Supabase migration order: `schema.sql`, `seller.sql`, `admin.sql`, `supabase-rls.sql`, `security-hardening.sql`, `cloudflare-dashboard.sql`, `cloudflare-supabase-direct.sql`, `production-hardening.sql`, `shop-owner-payments.sql`, `shop-verification-compliance.sql`, `seller-contact-safety.sql`, `product-delivery-options.sql`, `client-error-logging.sql`, and `marketplace-manual-payments.sql`.
 - `database/account-deletion.sql` is a **legacy-only** migration. The runbook says to apply it after `schema.sql` and before `cloudflare-supabase-direct.sql` only when the older database lacks the deletion-request objects. Do not apply it as an extra migration to a fresh/current schema.
 - The supplied storage-test path `scripts/test-storage-policy-safety.mjs` does not exist. The actual test is `scripts/storage-policy-safety.test.mjs`, run by `npm run test:storage-policy-safety`; it checks source and SQL invariants without contacting Supabase.
-- `docs/cloudflare-pages.md` contains direct Storage acceptance steps: concurrently upload seven distinct valid objects to a disposable listing, require six successes and at least one rejection, then verify cross-owner and invalid-path/MIME/size rejections and clean up the test objects.
+- `docs/cloudflare-pages.md` contains direct Storage acceptance steps for a dedicated staging project: concurrently upload seven distinct valid objects to a disposable listing, require six successes and at least one rejection, then verify cross-owner and invalid-path/MIME/size rejections and clean up the test objects. Production write tests are prohibited.
 - `database/production-hardening.sql` derives checkout totals from database product prices, locks products, enforces stock and idempotency, and allows only cash-on-delivery or bank-transfer orders. The repository has no current evidence that the latest RPC has passed a staging invocation.
 - `docs/payment-architecture.md` confirms the existing plan: Paystack Transaction Splits/subaccounts for Nigeria and Stripe Connect for the UK. This remains design/data-model work: there are no provider charge, signature-verification, refund, settlement, or reconciliation handlers. The API accepts only offline payment methods.
-- `database/safety-verification.sql` now checks whether the key Storage, deletion, checkout, idempotency, and payment-schema objects are installed and safely granted. It remains a read-only metadata check and cannot prove real owner/cross-owner behavior.
+- `database/safety-verification.sql` checks whether the key Storage, deletion, checkout, idempotency, regional payment, and manual-payment objects are installed and safely granted. It remains a read-only metadata check and cannot prove real owner/cross-owner behavior.
 - `docs/staging-acceptance.md` defines the staging-only tests and sanitized evidence format. No staging test was run in this workspace.
+- On 30 October, the read-only production preflight returned 46/47 checks passing. The sole failed check was “product image bucket enforces WebP and 5 MiB”; a separate metadata-only query confirmed both `product-images` and `product-videos` have `file_size_limit` and `allowed_mime_types` unset. No customer rows were queried and no writes were made.
+- The 29 October production migration for manual marketplace payments was previously verified for table RLS and RPC grants. No Nigeria or UK receiving destination exists or is enabled, and no checkout/order/confirmation behavior has been tested.
 - The cookie change is synchronized to all generated roots and verified with `apps:check`, `apps:production:check`, unit coverage, and filtered browser regressions. This is local preview evidence, not deployed-domain evidence.
 
 ### Existing external evidence (not re-run in this review)
 
 - `docs/cloudflare-pages.md` records that the account-deletion request-queue migration was applied on 14 October 2026, with RLS/grants checked and disposable customer/admin RPC tests passed for submission, duplicate reuse, access denial, and transitions through `rejected`.
 - The record explicitly says the `completed` transition and Auth-user deletion were not performed; test accounts remained active. It also records stale deployed `account-privacy.js` files on the NG/UK roots and a Cloudflare challenge blocking automated inspection of the admin/shop roots.
-- No external record confirms the seven-upload quota test, cross-owner upload denial, invalid upload rejection, or current `place_order_secure` staging behavior. The earlier improvement review said that RPC was missing from the live schema cache at that time.
+- No external record confirms the seven-upload quota test, cross-owner upload denial, invalid upload rejection, current `place_order_secure` staging behavior, or manual-payment order/receipt behavior. The earlier improvement review said that RPC was missing from the live schema cache at that time.
 
 ### Access required to complete the acceptance tests
 
-- This workspace has no Supabase staging connection or approved provider test credentials. No payment credentials were accessed or exposed. The managed Stripe connector is optional; it is not connected. Paystack is not offered by the current managed payment connector flow.
+- A production database connection was available for read-only catalog checks, but this workspace has no dedicated Supabase staging project or disposable test accounts. No payment credentials were accessed or exposed. The managed Stripe connector is optional; it is not connected. Paystack is not offered by the current managed payment connector flow.
 - Do not run storage, checkout, account-deletion, or payment writes against the live project. Complete acceptance only with a dedicated staging Supabase target, disposable seller/customer/admin accounts, provider test-mode accounts, and server-only credentials stored through the secure secrets flow. Paystack and Stripe Connect adapters, webhook handling, refunds, settlement, and reconciliation are still unimplemented.
 
 ## Pending work and launch gates
@@ -121,9 +127,10 @@ The 65-item production checklist currently contains **20 PASS, 36 NEEDS REVIEW, 
 
 | Item | Status | Required next step |
 |---|---|---|
-| Upload limits | NEEDS REVIEW | Local static source checks pass. Apply `database/supabase-rls.sql` in staging and verify bucket policies, ownership, invalid paths/MIME/size rejection, and concurrent six-file quota enforcement using disposable accounts. |
+| Upload limits | NEEDS REVIEW | Production metadata shows seller ownership policies, restrictive insert validation, quota tables/triggers, and moderation controls present, but both media buckets have no size or MIME limits. Correct the bucket configuration and run the seven-upload, cross-owner, invalid-path/MIME/size checks only in dedicated staging with disposable accounts. |
 | Duplicate subscriptions | NEEDS REVIEW | No complete subscription flow is configured. Confirm subscriptions are not advertised; if introduced, make creation idempotent across retries and races. |
 | Duplicate payments and webhooks | NEEDS REVIEW / BLOCKED | Order creation is idempotent, but provider charge execution, signed webhooks, replay protection, refunds, and authoritative reconciliation are not complete. Implement and stage-test Paystack for Nigeria and Stripe Connect for the UK before enabling card/wallet payments. |
+| Manual bank-transfer payments | NEEDS REVIEW | The production schema is applied, but no authorized Nigeria/UK receiving account is configured or enabled and no staging order/receipt tests have run. Verify the flow in staging first; then an authorized admin must configure only confirmed account details in the admin workspace. Do not send bank details in chat. |
 | Error handling and failed requests | NEEDS REVIEW | Complete the cross-surface audit for database, network, auth, upload, and payment failures; verify safe messages, retry rules, preserved form state, and duplicate-submit protection. |
 | Uptime and production monitoring | BLOCKED | Choose a monitoring provider and responsible alert destination; cover storefront/API health, database, payment, and critical error signals. |
 | Concurrent usage | NEEDS REVIEW | Run controlled load/concurrency tests for sign-in, search, listing creation, checkout, inventory locks, and seller operations; fix races and document capacity. |
@@ -149,7 +156,7 @@ The 65-item production checklist currently contains **20 PASS, 36 NEEDS REVIEW, 
 
 ### 5. Deployment and final production gate
 
-- **BLOCKED — Production Cloudflare/Supabase:** apply ordered migrations and validate real active catalogue data, checkout RPCs, and account deletion against the configured production project.
+- **BLOCKED — Production Cloudflare/Supabase:** verify the remaining ordered migrations and deploy the latest static roots. Manual-payment migration 14 is applied, but upload bucket limits are unset and authenticated upload/checkout/deletion behavior has not been tested.
 - **NEEDS REVIEW — Environment and secrets:** verify production secrets remain server-side and deployed static bundles contain only intended public configuration.
 - **NEEDS REVIEW — Debug/test cleanup:** audit production bundles, endpoints, sample data, test accounts, and debug settings.
 - **NEEDS REVIEW — Security headers:** verify CSP, HSTS, frame, referrer, and permissions policies on every deployed domain without breaking required flows.
@@ -158,6 +165,16 @@ The 65-item production checklist currently contains **20 PASS, 36 NEEDS REVIEW, 
 - **BLOCKED — Full production audit:** test registration, seller onboarding, listings, search, checkout/payment, refunds, account settings/deletion, email, mobile/accessibility, monitoring, backups, and concurrent use in the production environment.
 
 **Release gate:** Do not launch or enable card payments until the blocked items are resolved and the NEEDS REVIEW items have production evidence. Keep checkout limited to the currently supported offline methods until provider/webhook flows are verified.
+
+## Owner input needed to clear the remaining gates
+
+- Verified legal/operator name, registration jurisdiction and number, business address, and support contact; obtain legal review of privacy, terms, age/eligibility, fees, delivery, returns, and dispute wording.
+- Confirm the first launch markets and seller eligibility/KYC approval process, listing moderation rules, commissions, buyer/seller fees, taxes, delivery responsibilities, and refund/dispute policy.
+- Provide a separate staging Supabase project and disposable buyer, seller, and admin accounts. Keep credentials in workspace Secrets; do not put them in chat.
+- Confirm whether the launch will use manual bank transfer only. After staging tests, an authorized admin should enter verified Nigeria and/or UK receiving details directly in the authenticated admin workspace; keep each market disabled until verified.
+- Supply Paystack/Stripe business onboarding and test-mode access only if card/wallet payments are part of launch. Card/wallet payments must remain disabled until signed webhooks, refunds, settlement, and reconciliation are implemented and tested.
+- Provide access to the existing Cloudflare Pages account and confirm the production domains so the latest static roots, security headers, redirects, and certificates can be checked and deployed.
+- Choose an uptime/alert destination, backup-restore owner and window, and spending caps/alert limits for Supabase, storage, email, analytics, and hosting.
 
 ## Product growth roadmap after launch gates
 

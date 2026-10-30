@@ -490,6 +490,174 @@ WITH checks AS (
             AND has_table_privilege('service_role', 'public.payment_provider_events', 'INSERT')
             AND has_table_privilege('service_role', 'public.regional_payment_refunds', 'INSERT')
         END
+    UNION ALL
+    SELECT
+        'manual-payment columns exist',
+        (
+            SELECT count(*) = 3
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'shops'
+              AND column_name IN (
+                  'manual_payment_preference',
+                  'manual_payment_method',
+                  'manual_payment_instructions'
+              )
+        )
+        AND (
+            SELECT count(*) = 3
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'orders'
+              AND column_name IN (
+                  'payment_details',
+                  'payment_confirmed_at',
+                  'payment_confirmed_by'
+              )
+        )
+    UNION ALL
+    SELECT
+        'manual-payment destinations have scoped read and admin-only writes',
+        CASE
+            WHEN to_regclass('public.marketplace_payment_destinations') IS NULL
+                THEN false
+            ELSE (
+                SELECT relrowsecurity
+                FROM pg_class
+                WHERE oid = to_regclass('public.marketplace_payment_destinations')
+            )
+            AND has_table_privilege('anon', 'public.marketplace_payment_destinations', 'SELECT')
+            AND has_table_privilege('authenticated', 'public.marketplace_payment_destinations', 'SELECT')
+            AND NOT has_table_privilege('anon', 'public.marketplace_payment_destinations', 'INSERT')
+            AND NOT has_table_privilege('anon', 'public.marketplace_payment_destinations', 'UPDATE')
+            AND NOT has_table_privilege('anon', 'public.marketplace_payment_destinations', 'DELETE')
+            AND NOT has_table_privilege('authenticated', 'public.marketplace_payment_destinations', 'INSERT')
+            AND NOT has_table_privilege('authenticated', 'public.marketplace_payment_destinations', 'UPDATE')
+            AND NOT has_table_privilege('authenticated', 'public.marketplace_payment_destinations', 'DELETE')
+            AND EXISTS (
+                SELECT 1
+                FROM pg_policies
+                WHERE schemaname = 'public'
+                  AND tablename = 'marketplace_payment_destinations'
+                  AND policyname = 'marketplace_payment_destination_public_read'
+                  AND cmd = 'SELECT'
+                  AND qual ILIKE '%enabled%'
+                  AND qual ILIKE '%current_profile_role%'
+            )
+            AND EXISTS (
+                SELECT 1
+                FROM pg_policies
+                WHERE schemaname = 'public'
+                  AND tablename = 'marketplace_payment_destinations'
+                  AND policyname = 'marketplace_payment_destination_admin_manage'
+                  AND cmd = 'ALL'
+                  AND qual ILIKE '%current_profile_role%'
+                  AND with_check ILIKE '%current_profile_role%'
+            )
+        END
+    UNION ALL
+    SELECT
+        'manual-payment confirmations remain server and RPC only',
+        CASE
+            WHEN to_regclass('public.order_manual_payment_confirmations') IS NULL
+                THEN false
+            ELSE (
+                SELECT relrowsecurity
+                FROM pg_class
+                WHERE oid = to_regclass('public.order_manual_payment_confirmations')
+            )
+            AND NOT has_table_privilege('anon', 'public.order_manual_payment_confirmations', 'SELECT')
+            AND NOT has_table_privilege('anon', 'public.order_manual_payment_confirmations', 'INSERT')
+            AND NOT has_table_privilege('anon', 'public.order_manual_payment_confirmations', 'UPDATE')
+            AND NOT has_table_privilege('anon', 'public.order_manual_payment_confirmations', 'DELETE')
+            AND NOT has_table_privilege('authenticated', 'public.order_manual_payment_confirmations', 'SELECT')
+            AND NOT has_table_privilege('authenticated', 'public.order_manual_payment_confirmations', 'INSERT')
+            AND NOT has_table_privilege('authenticated', 'public.order_manual_payment_confirmations', 'UPDATE')
+            AND NOT has_table_privilege('authenticated', 'public.order_manual_payment_confirmations', 'DELETE')
+        END
+    UNION ALL
+    SELECT
+        'manual-payment RPCs have the expected role grants',
+        CASE
+            WHEN to_regprocedure('public.admin_save_marketplace_payment_destination(text,boolean,text,text,text,text,text)') IS NULL
+              OR to_regprocedure('public.shop_owner_save_manual_payment_preferences(uuid,text,text,text)') IS NULL
+              OR to_regprocedure('public.get_order_manual_payment_details(uuid)') IS NULL
+              OR to_regprocedure('public.admin_list_pending_platform_manual_payments()') IS NULL
+              OR to_regprocedure('public.admin_confirm_platform_manual_payment(uuid)') IS NULL
+              OR to_regprocedure('public.shop_owner_list_pending_manual_payment_orders(uuid)') IS NULL
+              OR to_regprocedure('public.shop_owner_confirm_manual_payment_receipt(uuid)') IS NULL
+                THEN false
+            ELSE has_function_privilege(
+                     'authenticated',
+                     to_regprocedure('public.admin_save_marketplace_payment_destination(text,boolean,text,text,text,text,text)'),
+                     'EXECUTE'
+                 )
+                 AND NOT has_function_privilege(
+                     'anon',
+                     to_regprocedure('public.admin_save_marketplace_payment_destination(text,boolean,text,text,text,text,text)'),
+                     'EXECUTE'
+                 )
+                 AND has_function_privilege(
+                     'authenticated',
+                     to_regprocedure('public.shop_owner_save_manual_payment_preferences(uuid,text,text,text)'),
+                     'EXECUTE'
+                 )
+                 AND NOT has_function_privilege(
+                     'anon',
+                     to_regprocedure('public.shop_owner_save_manual_payment_preferences(uuid,text,text,text)'),
+                     'EXECUTE'
+                 )
+                 AND has_function_privilege(
+                     'anon',
+                     to_regprocedure('public.get_order_manual_payment_details(uuid)'),
+                     'EXECUTE'
+                 )
+                 AND has_function_privilege(
+                     'authenticated',
+                     to_regprocedure('public.get_order_manual_payment_details(uuid)'),
+                     'EXECUTE'
+                 )
+                 AND has_function_privilege(
+                     'authenticated',
+                     to_regprocedure('public.admin_list_pending_platform_manual_payments()'),
+                     'EXECUTE'
+                 )
+                 AND NOT has_function_privilege(
+                     'anon',
+                     to_regprocedure('public.admin_list_pending_platform_manual_payments()'),
+                     'EXECUTE'
+                 )
+                 AND has_function_privilege(
+                     'authenticated',
+                     to_regprocedure('public.admin_confirm_platform_manual_payment(uuid)'),
+                     'EXECUTE'
+                 )
+                 AND NOT has_function_privilege(
+                     'anon',
+                     to_regprocedure('public.admin_confirm_platform_manual_payment(uuid)'),
+                     'EXECUTE'
+                 )
+                 AND has_function_privilege(
+                     'authenticated',
+                     to_regprocedure('public.shop_owner_list_pending_manual_payment_orders(uuid)'),
+                     'EXECUTE'
+                 )
+                 AND NOT has_function_privilege(
+                     'anon',
+                     to_regprocedure('public.shop_owner_list_pending_manual_payment_orders(uuid)'),
+                     'EXECUTE'
+                 )
+                 AND has_function_privilege(
+                     'authenticated',
+                     to_regprocedure('public.shop_owner_confirm_manual_payment_receipt(uuid)'),
+                     'EXECUTE'
+                 )
+                 AND NOT has_function_privilege(
+                     'anon',
+                     to_regprocedure('public.shop_owner_confirm_manual_payment_receipt(uuid)'),
+                     'EXECUTE'
+                 )
+        END
 )
 SELECT check_name, passed
 FROM checks

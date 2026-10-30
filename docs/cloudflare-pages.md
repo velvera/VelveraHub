@@ -161,13 +161,15 @@ The base RLS migration:
 The product row must exist before its images are uploaded. This allows the
 Storage insert policy to verify the product UUID and its owning shop.
 
-### Production upload-policy acceptance
+### Staging upload-policy acceptance
 
-After applying `database/supabase-rls.sql` in the Supabase SQL editor, check that
-the production bucket, the permissive student upload policy, the restrictive
-upload validator, the listing-image metadata policy, and both quota triggers
-are present. Storage uploads need both the permissive insert policy and the
-restrictive validator; a public bucket by itself does not grant upload access.
+Run this procedure only in a dedicated non-production Supabase staging project
+with disposable seller accounts and listings. After applying
+`database/supabase-rls.sql` there, check that the staging buckets, the
+permissive seller upload policies, the restrictive upload validator, the
+listing-image metadata policy, and both quota triggers are present. Storage
+uploads need both the permissive insert policy and the restrictive validator;
+a public bucket by itself does not grant upload access.
 
 ```sql
 SELECT id, public, file_size_limit, allowed_mime_types
@@ -219,14 +221,15 @@ Removing the broad `SELECT` policies blocks `storage.objects` listing; it does
 not disable public downloads through known public URLs. The application uses
 upload, public URL, and delete operations for these buckets, not bucket listing.
 
-Then, using an authenticated test seller and a disposable listing they own,
+Then, using an authenticated staging seller and a disposable listing they own,
 send direct Storage API requests (not the marketplace upload form) with seven
 distinct, valid image/video paths at the same time. Exactly six combined
 uploads should succeed and at least one should be rejected. Repeat with an
 invalid filename and with another seller's listing; both must be rejected.
 Also confirm the bucket still rejects unsupported MIME types and oversized
-objects. Remove the test objects and listing afterward. Do not mark Upload
-Limits complete until these checks have been run against production.
+objects. Remove the staging test objects and listing afterward. Never run these
+write tests against production. Do not mark Upload Limits complete until these
+checks have passed in staging and the evidence has been reviewed.
 
 For operator role setup, `database/admin.sql` and `database/seller.sql` only
 expose role-promotion functions to `service_role`; they do not create browser
