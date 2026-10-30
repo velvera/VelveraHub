@@ -314,14 +314,22 @@ WITH checks AS (
         )
     UNION ALL
     SELECT
-        'product image bucket enforces WebP and 5 MiB',
+        'product media buckets enforce platform ceilings and MIME types',
         EXISTS (
             SELECT 1
             FROM storage.buckets
             WHERE id = 'product-images'
               AND public IS TRUE
-              AND file_size_limit = 5242880
+              AND file_size_limit = 20971520
               AND allowed_mime_types = ARRAY['image/webp']::text[]
+        )
+        AND EXISTS (
+            SELECT 1
+            FROM storage.buckets
+            WHERE id = 'product-videos'
+              AND public IS TRUE
+              AND file_size_limit = 209715200
+              AND allowed_mime_types = ARRAY['video/mp4', 'video/webm', 'video/quicktime']::text[]
         )
     UNION ALL
     SELECT
@@ -658,6 +666,70 @@ WITH checks AS (
                      'EXECUTE'
                  )
         END
+    UNION ALL
+    SELECT
+        'marketplace media settings are protected and complete',
+        to_regclass('public.marketplace_settings') IS NOT NULL
+        AND (
+            SELECT count(*) = 4
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'marketplace_settings'
+              AND column_name IN (
+                  'product_image_limit',
+                  'student_listing_media_limit',
+                  'product_image_max_bytes',
+                  'product_video_max_bytes'
+              )
+        )
+        AND coalesce((
+            SELECT relrowsecurity
+            FROM pg_class
+            WHERE oid = to_regclass('public.marketplace_settings')
+        ), false)
+        AND NOT has_table_privilege('anon', 'public.marketplace_settings', 'SELECT')
+        AND NOT has_table_privilege('authenticated', 'public.marketplace_settings', 'SELECT')
+        AND NOT has_table_privilege('anon', 'public.marketplace_settings', 'UPDATE')
+        AND NOT has_table_privilege('authenticated', 'public.marketplace_settings', 'UPDATE')
+    UNION ALL
+    SELECT
+        'marketplace media settings RPCs have restricted write access',
+        CASE
+            WHEN to_regprocedure('public.get_marketplace_media_limits()') IS NULL
+              OR to_regprocedure('public.admin_update_marketplace_media_limits(integer,integer,integer,integer)') IS NULL
+                THEN false
+            ELSE has_function_privilege(
+                     'anon',
+                     to_regprocedure('public.get_marketplace_media_limits()'),
+                     'EXECUTE'
+                 )
+                 AND has_function_privilege(
+                     'authenticated',
+                     to_regprocedure('public.get_marketplace_media_limits()'),
+                     'EXECUTE'
+                 )
+                 AND has_function_privilege(
+                     'authenticated',
+                     to_regprocedure('public.admin_update_marketplace_media_limits(integer,integer,integer,integer)'),
+                     'EXECUTE'
+                 )
+                 AND NOT has_function_privilege(
+                     'anon',
+                     to_regprocedure('public.admin_update_marketplace_media_limits(integer,integer,integer,integer)'),
+                     'EXECUTE'
+                 )
+        END
+    UNION ALL
+    SELECT
+        'marketplace media size guard is installed',
+        to_regprocedure('public.enforce_marketplace_product_media_size()') IS NOT NULL
+        AND EXISTS (
+            SELECT 1
+            FROM pg_trigger
+            WHERE tgrelid = to_regclass('storage.objects')
+              AND tgname = 'enforce_marketplace_product_media_size'
+              AND NOT tgisinternal
+        )
 )
 SELECT check_name, passed
 FROM checks

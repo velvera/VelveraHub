@@ -4,6 +4,7 @@ import vm from 'node:vm';
 
 const read = (path) => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const rls = read('database/supabase-rls.sql');
+const mediaSettingsMigration = read('database/marketplace-media-settings.sql');
 const focusedFix = read('database/storage-public-bucket-list-policy-fix.sql');
 const verification = read('database/safety-verification.sql');
 const studentListing = read('assets/js/pages/student-listing.js');
@@ -58,8 +59,19 @@ assert.doesNotMatch(studentListing, /Apply database\/supabase-rls\.sql/, 'upload
 assert.match(
     rls,
     /'product-images',\s*'product-images',\s*TRUE,\s*5242880,\s*ARRAY\['image\/webp'\]::text\[\]/,
-    'the local bucket configuration must match the WebP/5 MiB uploader constraints',
+    'the base RLS migration must restrict product images to WebP before the final media-settings migration',
 );
+assert.match(
+    mediaSettingsMigration,
+    /'product-images',\s*'product-images',\s*TRUE,\s*20971520,\s*ARRAY\['image\/webp'\]::text\[\]/,
+    'the final image bucket ceiling must allow bounded admin-selected WebP sizes',
+);
+assert.match(
+    mediaSettingsMigration,
+    /'product-videos'[\s\S]*?209715200[\s\S]*?ARRAY\['video\/mp4',\s*'video\/webm',\s*'video\/quicktime'\]::text\[\]/,
+    'the final video bucket must retain fixed supported MIME types and a 200 MiB ceiling',
+);
+assert.match(studentListing, /get_marketplace_media_limits/);
 assert.match(rls, /CREATE POLICY "students can upload listing images"/);
 assert.match(rls, /CREATE POLICY "restrict product media uploads"/);
 assert.match(rls, /public\.can_upload_product_media\(bucket_id, name\)/);

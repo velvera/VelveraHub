@@ -11,6 +11,8 @@
         systemErrorsLoading: false,
         paymentDestinations: [],
         paymentSettingsLoading: false,
+        mediaSettingsLoading: false,
+        mediaLimits: null,
         pendingManualPayments: [],
         manualPaymentsLoading: false,
         activeView: 'verification'
@@ -552,7 +554,8 @@
             deletion: ['deletionPanel', 'deletionTab'],
             listingReviews: ['listingReviewPanel', 'listingReviewTab'],
             systemErrors: ['systemErrorsPanel', 'systemErrorsTab'],
-            paymentSettings: ['paymentSettingsPanel', 'paymentSettingsTab']
+            paymentSettings: ['paymentSettingsPanel', 'paymentSettingsTab'],
+            mediaSettings: ['mediaSettingsPanel', 'mediaSettingsTab']
         };
         if (!views[view]) return;
         state.activeView = view;
@@ -568,6 +571,7 @@
             loadMarketplacePaymentSettings();
             loadPendingManualPayments();
         }
+        else if (view === 'mediaSettings') loadMarketplaceMediaLimits();
         else loadQueue();
     }
 
@@ -651,6 +655,90 @@
                 'Payment settings could not be saved. Confirm the bank details and try again.',
                 'admin-payment-settings-save'
             ) || 'Payment settings could not be saved. Confirm the bank details and try again.';
+            message.classList.add('is-error');
+            message.hidden = false;
+        } finally {
+            button.disabled = false;
+        }
+    }
+
+    function renderMarketplaceMediaLimits() {
+        const limits = state.mediaLimits;
+        if (!limits) return;
+        byId('shopProductImageLimit').value = String(limits.product_image_limit);
+        byId('independentListingMediaLimit').value = String(limits.student_listing_media_limit);
+        byId('productImageMaxMib').value = String(limits.product_image_max_bytes / 1048576);
+        byId('productVideoMaxMib').value = String(limits.product_video_max_bytes / 1048576);
+    }
+
+    async function loadMarketplaceMediaLimits() {
+        if (state.mediaSettingsLoading) return;
+        state.mediaSettingsLoading = true;
+        const message = byId('marketplaceMediaSettingsMessage');
+        message.hidden = true;
+        message.classList.remove('is-error');
+        try {
+            const { data, error } = await state.supabase.rpc('get_marketplace_media_limits');
+            if (error) throw error;
+            if (!data || typeof data !== 'object' || Array.isArray(data)) {
+                throw new Error('The media settings response is invalid.');
+            }
+            const limits = {
+                product_image_limit: Number(data.product_image_limit),
+                student_listing_media_limit: Number(data.student_listing_media_limit),
+                product_image_max_bytes: Number(data.product_image_max_bytes),
+                product_video_max_bytes: Number(data.product_video_max_bytes)
+            };
+            if (
+                !Number.isInteger(limits.product_image_limit) ||
+                !Number.isInteger(limits.student_listing_media_limit) ||
+                !Number.isInteger(limits.product_image_max_bytes) ||
+                !Number.isInteger(limits.product_video_max_bytes) ||
+                limits.product_image_max_bytes % 1048576 !== 0 ||
+                limits.product_video_max_bytes % 1048576 !== 0
+            ) {
+                throw new Error('The media settings response is incomplete.');
+            }
+            state.mediaLimits = limits;
+            renderMarketplaceMediaLimits();
+        } catch (error) {
+            message.textContent = /does not exist|schema cache|function/i.test(error?.message || '')
+                ? 'Media settings are not installed yet. Apply database/marketplace-media-settings.sql, then refresh this page.'
+                : window.AsyncFeedback?.errorMessage(error, 'Media limits could not be loaded. Please try again.', 'admin-media-settings-load') || 'Media limits could not be loaded. Please try again.';
+            message.classList.add('is-error');
+            message.hidden = false;
+        } finally {
+            state.mediaSettingsLoading = false;
+        }
+    }
+
+    async function saveMarketplaceMediaLimits(event) {
+        event.preventDefault();
+        const form = event.currentTarget;
+        if (!form.reportValidity()) return;
+        const button = byId('saveMarketplaceMediaSettings');
+        const message = byId('marketplaceMediaSettingsMessage');
+        button.disabled = true;
+        message.hidden = true;
+        message.classList.remove('is-error');
+        try {
+            const { data, error } = await state.supabase.rpc('admin_update_marketplace_media_limits', {
+                p_product_image_limit: Number(byId('shopProductImageLimit').value),
+                p_student_listing_media_limit: Number(byId('independentListingMediaLimit').value),
+                p_product_image_max_mib: Number(byId('productImageMaxMib').value),
+                p_product_video_max_mib: Number(byId('productVideoMaxMib').value)
+            });
+            if (error) throw error;
+            state.mediaLimits = data;
+            renderMarketplaceMediaLimits();
+            message.textContent = 'Media limits saved. The new limits apply to uploads started after this change.';
+            message.hidden = false;
+        } catch (error) {
+            message.textContent = window.AsyncFeedback?.errorMessage(
+                error,
+                'Media limits could not be saved. Check the values and try again.',
+                'admin-media-settings-save'
+            ) || 'Media limits could not be saved. Check the values and try again.';
             message.classList.add('is-error');
             message.hidden = false;
         } finally {
@@ -899,6 +987,7 @@
                 loadMarketplacePaymentSettings();
                 loadPendingManualPayments();
             }
+            else if (state.activeView === 'mediaSettings') loadMarketplaceMediaLimits();
             else loadQueue();
         });
         byId('refreshSystemErrors').addEventListener('click', loadSystemErrors);
@@ -906,6 +995,7 @@
         byId('deletionStatus').addEventListener('change', loadDeletionQueue);
         byId('listingReviewStatus').addEventListener('change', loadProductReviewQueue);
         byId('marketplacePaymentSettingsForm').addEventListener('submit', saveMarketplacePaymentSettings);
+        byId('marketplaceMediaSettingsForm').addEventListener('submit', saveMarketplaceMediaLimits);
         byId('marketplacePaymentRegion').addEventListener('change', renderMarketplacePaymentSettings);
         byId('marketplacePaymentEnabled').addEventListener('change', setPaymentFieldRequirements);
         byId('refreshManualPaymentOrders').addEventListener('click', loadPendingManualPayments);

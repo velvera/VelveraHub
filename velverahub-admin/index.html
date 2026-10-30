@@ -70,6 +70,7 @@
                 <button class="admin-tab" id="listingReviewTab" type="button" aria-pressed="false" aria-controls="listingReviewPanel" data-admin-view="listingReviews">Product listings</button>
                 <button class="admin-tab" id="systemErrorsTab" type="button" aria-pressed="false" aria-controls="systemErrorsPanel" data-admin-view="systemErrors">System errors</button>
                 <button class="admin-tab" id="paymentSettingsTab" type="button" aria-pressed="false" aria-controls="paymentSettingsPanel" data-admin-view="paymentSettings">Payment settings</button>
+                <button class="admin-tab" id="mediaSettingsTab" type="button" aria-pressed="false" aria-controls="mediaSettingsPanel" data-admin-view="mediaSettings">Media limits</button>
             </div>
 
             <p class="admin-global-message" id="adminGlobalMessage" role="status" aria-live="polite" hidden></p>
@@ -201,6 +202,39 @@
                     </div>
                     <div class="verification-list" id="pendingManualPaymentOrders" aria-live="polite"></div>
                 </section>
+            </section>
+            <section id="mediaSettingsPanel" aria-labelledby="mediaSettingsTab" hidden>
+                <div class="deletion-review-note">
+                    <strong>Seller-friendly upload limits</strong>
+                    <span>Adjust listing media counts and file-size limits. Photo and video formats remain fixed for security. Existing files are not changed when settings are updated.</span>
+                </div>
+                <form class="marketplace-payment-form marketplace-media-form" id="marketplaceMediaSettingsForm">
+                    <div class="marketplace-payment-form-heading">
+                        <h2>Marketplace media settings</h2>
+                        <p>Default limits are 10 photos per shop product, 10 media files per independent listing, 10 MiB per compressed photo, and 100 MiB per video.</p>
+                    </div>
+                    <div class="marketplace-payment-fields">
+                        <div class="marketplace-payment-field">
+                            <label for="shopProductImageLimit">Shop product images per listing</label>
+                            <input id="shopProductImageLimit" name="product_image_limit" type="number" min="1" max="100" step="1" required>
+                        </div>
+                        <div class="marketplace-payment-field">
+                            <label for="independentListingMediaLimit">Independent listing media files</label>
+                            <input id="independentListingMediaLimit" name="student_listing_media_limit" type="number" min="1" max="100" step="1" required>
+                        </div>
+                        <div class="marketplace-payment-field">
+                            <label for="productImageMaxMib">Compressed photo limit (MiB)</label>
+                            <input id="productImageMaxMib" name="product_image_max_mib" type="number" min="5" max="20" step="1" required>
+                        </div>
+                        <div class="marketplace-payment-field">
+                            <label for="productVideoMaxMib">Video limit (MiB)</label>
+                            <input id="productVideoMaxMib" name="product_video_max_mib" type="number" min="50" max="200" step="1" required>
+                        </div>
+                    </div>
+                    <p class="marketplace-media-note">Safe ranges: 1–100 media files per listing, 5–20 MiB per compressed photo, and 50–200 MiB per video. Original photos up to 20 MiB are accepted and compressed before upload. Uploads accept JPEG, PNG, or WebP photos and MP4, WebM, or QuickTime videos.</p>
+                    <p class="admin-global-message" id="marketplaceMediaSettingsMessage" role="status" aria-live="polite" hidden></p>
+                    <button class="admin-primary-button" id="saveMarketplaceMediaSettings" type="submit">Save media limits</button>
+                </form>
             </section>
         </section>
     </main>

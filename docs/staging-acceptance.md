@@ -22,7 +22,7 @@ the authenticated behavior tests.
 
 ## Supabase migrations and read-only preflight
 
-1. Apply the numbered migrations from `database/run-schema.txt` in order, using
+1. Apply the 15 numbered migrations from `database/run-schema.txt` in order, using
    the Supabase migration workflow chosen by the operator. Record each migration
    and the result before moving to the next. Do not infer that a migration ran
    from a local file or a passing source test.
@@ -35,6 +35,17 @@ the authenticated behavior tests.
    the behavior of a signed-in browser role.
 4. Stop and investigate any `passed = false` result before running write tests.
 
+## Admin-controlled media settings
+
+After migration 15, use the authenticated staging admin workspace to verify the
+defaults: 10 shop photos per product, 10 media files per independent listing,
+10 MiB per compressed WebP photo, and 100 MiB per video. Original photos up to
+20 MiB are compressed by the upload form. Temporarily set both listing counts
+to 7, the photo limit to 6 MiB, and the video limit to 70 MiB; verify the admin
+form saves, both listing flows reflect the new count, and Storage rejects
+objects above the selected size. Restore the recommended defaults. MIME types
+must remain fixed regardless of these settings.
+
 ## Storage ownership, validation, and quota
 
 Use owner A’s test listing and two seller accounts. Generate unique UUIDv4
@@ -42,12 +53,12 @@ filenames under the test listing UUID folder.
 
 | Case | Action | Expected result |
 | --- | --- | --- |
-| Owner access | Owner A uploads one valid WebP image, no larger than 5 MiB | Accepted |
+| Owner access | Owner A uploads one valid WebP image, no larger than the configured 10 MiB default | Accepted |
 | Cross-owner access | Owner B uploads to owner A’s listing path | Rejected |
 | Invalid path | Owner A uses a non-UUID listing folder or non-UUIDv4 filename | Rejected |
 | Invalid type | Owner A sends an unsupported MIME type such as `image/jpeg` | Rejected |
-| Invalid size | Owner A sends an image of 5 MiB plus one byte | Rejected |
-| Concurrent quota | Owner A concurrently uploads seven distinct valid images to a fresh student listing | Exactly six accepted; at least one rejected |
+| Invalid size | Owner A sends an image of 10 MiB plus one byte at the default setting | Rejected |
+| Concurrent quota | Owner A concurrently uploads eleven distinct valid media files to a fresh student listing | Exactly ten accepted at the default; at least one rejected |
 
 Capture only statuses and sanitized references. Delete successful test objects
 with owner A and confirm quota usage returns to its pre-test level. Do not use
@@ -106,8 +117,10 @@ migrations, authenticated safety checks, or payment-confirmation checks have
 been run. The manual-payment schema was applied to production on 29 October;
 read-only checks confirmed its tables, RLS, grants, and that no regional
 receiving destinations exist or are enabled. A 30 October read-only production
-preflight passed 46 of 47 checks; product-media bucket size and MIME limits are
-unset. This verifies metadata only, not checkout, order snapshots, uploads, or
+preflight, before the media-settings checks were added, passed 46 of 47 checks;
+both product-media buckets had size and MIME limits unset. Migration 15 and the
+admin controls are implemented locally but have not been applied to production.
+This verifies metadata only, not checkout, order snapshots, uploads, or
 receipt-confirmation behavior. No customer rows were queried and no writes
 were made.
 The local checks `npm run test:manual-payments` and

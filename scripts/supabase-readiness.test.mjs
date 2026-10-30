@@ -9,14 +9,19 @@ const deletionPolicies = read('database/cloudflare-supabase-direct.sql');
 const checkoutMigration = read('database/production-hardening.sql');
 const paymentsMigration = read('database/shop-owner-payments.sql');
 const manualPaymentsMigration = read('database/marketplace-manual-payments.sql');
+const mediaSettingsMigration = read('database/marketplace-media-settings.sql');
+const adminWorkspace = read('admin-workspace/index.html');
+const adminWorkspaceJs = read('admin-workspace/admin.js');
+const sellerDashboard = read('assets/js/pages/seller-dashboard.js');
+const studentListing = read('assets/js/pages/student-listing.js');
 const server = read('server.js');
 const stagingGuide = read('docs/staging-acceptance.md');
 const cloudflareGuide = read('docs/cloudflare-pages.md');
 
 const migrations = [...migrationGuide.matchAll(/^\s*(\d+)\.\s+(database\/[^\s—]+)/gm)]
     .map((match) => ({ order: Number(match[1]), path: match[2] }));
-assert.equal(migrations.length, 14, 'the migration guide must list the full numbered migration set');
-assert.deepEqual(migrations.map(({ order }) => order), Array.from({ length: 14 }, (_, index) => index + 1));
+assert.equal(migrations.length, 15, 'the migration guide must list the full numbered migration set');
+assert.deepEqual(migrations.map(({ order }) => order), Array.from({ length: 15 }, (_, index) => index + 1));
 assert.equal(new Set(migrations.map(({ path }) => path)).size, migrations.length, 'migration files must not be duplicated');
 for (const { path } of migrations) assert.ok(fs.existsSync(new URL(`../${path}`, import.meta.url)), `${path} must exist`);
 const sqlFiles = fs.readdirSync(new URL('../database/', import.meta.url)).filter((name) => name.endsWith('.sql'));
@@ -29,7 +34,7 @@ assert.match(migrationGuide, /docs\/staging-acceptance\.md/);
 const readOnlySql = verificationSql.replace(/--.*$/gm, '');
 assert.doesNotMatch(readOnlySql, /^\s*(INSERT|UPDATE|DELETE|ALTER|DROP|CREATE|GRANT|REVOKE|TRUNCATE)\b/gim);
 for (const check of [
-    'product image bucket enforces WebP and 5 MiB',
+    'product media buckets enforce platform ceilings and MIME types',
     'product media uploads require owner policies and restrictive validation',
     'atomic product media quota tables and storage triggers exist',
     'product media quota state is private to server-side policies',
@@ -42,6 +47,9 @@ for (const check of [
     'manual-payment destinations have scoped read and admin-only writes',
     'manual-payment confirmations remain server and RPC only',
     'manual-payment RPCs have the expected role grants',
+    'marketplace media settings are protected and complete',
+    'marketplace media settings RPCs have restricted write access',
+    'marketplace media size guard is installed',
 ]) {
     assert.ok(verificationSql.includes(check), `read-only preflight must report: ${check}`);
 }
@@ -58,6 +66,16 @@ assert.match(server, /if \(!\['cash_on_delivery', 'bank_transfer'\]\.includes\(p
 assert.match(paymentsMigration, /provider IN \('paystack', 'stripe'\)/);
 assert.match(manualPaymentsMigration, /CREATE TABLE IF NOT EXISTS public\.marketplace_payment_destinations/i);
 assert.match(manualPaymentsMigration, /REVOKE ALL ON public\.order_manual_payment_confirmations FROM PUBLIC, anon, authenticated/i);
+assert.match(mediaSettingsMigration, /product_image_max_bytes BIGINT NOT NULL DEFAULT 10485760/i);
+assert.match(mediaSettingsMigration, /product_video_max_bytes BIGINT NOT NULL DEFAULT 104857600/i);
+assert.match(mediaSettingsMigration, /CREATE TRIGGER enforce_marketplace_product_media_size/i);
+assert.match(mediaSettingsMigration, /admin_update_marketplace_media_limits/i);
+assert.match(adminWorkspace, /id="mediaSettingsPanel"/);
+assert.match(adminWorkspaceJs, /get_marketplace_media_limits/);
+assert.match(adminWorkspaceJs, /admin_update_marketplace_media_limits/);
+assert.match(sellerDashboard, /loadSellerMediaLimits/);
+assert.match(studentListing, /loadMarketplaceMediaLimits/);
+assert.match(studentListing, /product_video_max_bytes/);
 assert.match(stagingGuide, /Do not run the write tests against production/);
 assert.match(cloudflareGuide, /Staging upload-policy acceptance/);
 assert.match(cloudflareGuide, /Never run these\s+write tests against production/);

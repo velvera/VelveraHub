@@ -164,8 +164,8 @@ Storage insert policy to verify the product UUID and its owning shop.
 ### Staging upload-policy acceptance
 
 Run this procedure only in a dedicated non-production Supabase staging project
-with disposable seller accounts and listings. After applying
-`database/supabase-rls.sql` there, check that the staging buckets, the
+with disposable seller accounts and listings. After applying the ordered
+migrations in `database/run-schema.txt` there, including step 15, check that the staging buckets, the
 permissive seller upload policies, the restrictive upload validator, the
 listing-image metadata policy, and both quota triggers are present. Storage
 uploads need both the permissive insert policy and the restrictive validator;
@@ -208,9 +208,11 @@ WHERE tgrelid = 'storage.objects'::regclass
   AND tgname IN ('enforce_product_media_object_quota', 'release_product_media_quota');
 ```
 
-The image bucket should be public, capped at `5242880` bytes, and restricted to
-`image/webp`. The video bucket should be public, capped at `52428800` bytes, and
-restricted to MP4, WebM, and QuickTime. Student upload policies should be
+The image bucket should be public, capped at `20971520` bytes, and restricted to
+`image/webp`. The video bucket should be public, capped at `209715200` bytes,
+and restricted to MP4, WebM, and QuickTime. The database media-size trigger
+enforces the current admin-selected limits below these fixed Storage ceilings.
+Student upload policies should be
 `PERMISSIVE` `INSERT` policies for `authenticated`; the upload validator should
 be `RESTRICTIVE` for `INSERT`. The query for broad public read policies should
 return no rows. If either is present, apply
@@ -221,11 +223,18 @@ Removing the broad `SELECT` policies blocks `storage.objects` listing; it does
 not disable public downloads through known public URLs. The application uses
 upload, public URL, and delete operations for these buckets, not bucket listing.
 
+Use the authenticated admin workspace to temporarily change the per-listing
+counts and photo/video limits within the supported ranges. Confirm both upload
+forms show the new count and direct Storage requests above a selected size are
+rejected. Restore the defaults after the test: 10 shop photos per product, 10
+media files per independent listing, 10 MiB per compressed WebP photo, and
+100 MiB per video. Original photos may be up to 20 MiB before compression.
+
 Then, using an authenticated staging seller and a disposable listing they own,
-send direct Storage API requests (not the marketplace upload form) with seven
-distinct, valid image/video paths at the same time. Exactly six combined
-uploads should succeed and at least one should be rejected. Repeat with an
-invalid filename and with another seller's listing; both must be rejected.
+send direct Storage API requests (not the marketplace upload form) with eleven
+distinct, valid image/video paths at the same time. At the default limit,
+exactly ten combined uploads should succeed and at least one should be
+rejected. Repeat with an invalid filename and with another seller's listing; both must be rejected.
 Also confirm the bucket still rejects unsupported MIME types and oversized
 objects. Remove the staging test objects and listing afterward. Never run these
 write tests against production. Do not mark Upload Limits complete until these

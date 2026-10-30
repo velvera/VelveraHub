@@ -14,22 +14,60 @@
     const boostPayment = $('listingBoostPayment');
     const adReferenceWrap = $('listingAdReferenceWrap');
     const adReference = $('listingAdReference');
-    const MAX_MEDIA_FILES = 6;
-    const MAX_IMAGE_INPUT_BYTES = 8 * 1024 * 1024;
-    const MAX_IMAGE_UPLOAD_BYTES = 5 * 1024 * 1024;
-    const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
+    const MAX_IMAGE_INPUT_BYTES = 20 * 1024 * 1024;
     const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
     const VIDEO_TYPES = new Set(['video/mp4', 'video/webm', 'video/quicktime']);
+    let marketplaceMediaLimitsPromise = null;
 
-    function mediaSelectionError(files) {
-        if (files.length > MAX_MEDIA_FILES) return 'Choose no more than six photos or videos for one listing.';
+    async function loadMarketplaceMediaLimits(supabase) {
+        if (!supabase) throw new Error('Marketplace upload settings are unavailable.');
+        if (!marketplaceMediaLimitsPromise) {
+            marketplaceMediaLimitsPromise = (async () => {
+                const { data, error } = await supabase.rpc('get_marketplace_media_limits');
+                if (error) throw error;
+                const limits = {
+                    student_listing_media_limit: Number(data?.student_listing_media_limit),
+                    product_image_max_bytes: Number(data?.product_image_max_bytes),
+                    product_video_max_bytes: Number(data?.product_video_max_bytes)
+                };
+                if (
+                    !Number.isInteger(limits.student_listing_media_limit) ||
+                    limits.student_listing_media_limit < 1 ||
+                    limits.student_listing_media_limit > 100 ||
+                    !Number.isSafeInteger(limits.product_image_max_bytes) ||
+                    limits.product_image_max_bytes < 5 * 1024 * 1024 ||
+                    limits.product_image_max_bytes > 20 * 1024 * 1024 ||
+                    !Number.isSafeInteger(limits.product_video_max_bytes) ||
+                    limits.product_video_max_bytes < 50 * 1024 * 1024 ||
+                    limits.product_video_max_bytes > 200 * 1024 * 1024
+                ) {
+                    throw new Error('Marketplace upload settings are invalid. Contact the administrator.');
+                }
+                return limits;
+            })();
+        }
+        const request = marketplaceMediaLimitsPromise;
+        try {
+            return await request;
+        } finally {
+            if (marketplaceMediaLimitsPromise === request) marketplaceMediaLimitsPromise = null;
+        }
+    }
+
+    function mediaSelectionError(files, limits) {
+        if (!limits) return 'Marketplace upload settings are unavailable. Refresh and try again.';
+        if (files.length > limits.student_listing_media_limit) {
+            return `Choose no more than ${limits.student_listing_media_limit} photos or videos for one listing.`;
+        }
         for (const file of files) {
             if (IMAGE_TYPES.has(file.type)) {
                 if (!file.size) return 'Selected images cannot be empty files.';
-                if (file.size > MAX_IMAGE_INPUT_BYTES) return 'Each photo must be 8 MB or smaller before compression.';
+                if (file.size > MAX_IMAGE_INPUT_BYTES) return 'Each original photo must be 20 MiB or smaller before compression.';
             } else if (VIDEO_TYPES.has(file.type)) {
                 if (!file.size) return 'Selected videos cannot be empty files.';
-                if (file.size > MAX_VIDEO_BYTES) return 'Each video must be 50 MB or smaller.';
+                if (file.size > limits.product_video_max_bytes) {
+                    return `Each video must be ${Math.floor(limits.product_video_max_bytes / 1048576)} MiB or smaller.`;
+                }
             } else {
                 return 'Use JPEG, PNG, or WebP photos, or MP4, WebM, or QuickTime videos.';
             }
@@ -51,10 +89,10 @@
         window.CustomSelect?.refresh(schoolSelect);
     }
 
-    function compressImage(file) {
+    function compressImage(file, limits) {
         return new Promise((resolve, reject) => {
             if (!IMAGE_TYPES.has(file.type) || file.size > MAX_IMAGE_INPUT_BYTES) {
-                reject(new Error('Choose a JPEG, PNG, or WebP photo up to 8 MB.'));
+                reject(new Error('Choose a JPEG, PNG, or WebP photo up to 20 MiB.'));
                 return;
             }
             const reader = new FileReader();
@@ -85,7 +123,7 @@
                             for (const quality of [0.82, 0.7, 0.58, 0.46, 0.34]) {
                                 const blob = await encode(quality);
                                 if ((!blob || blob.type !== 'image/webp') &&
-                                    file.type === 'image/webp' && file.size <= MAX_IMAGE_UPLOAD_BYTES) {
+                                    file.type === 'image/webp' && file.size <= limits.product_image_max_bytes) {
                                     resolve(file);
                                     return;
                                 }
@@ -93,14 +131,14 @@
                                     reject(new Error('This browser cannot convert photos to WebP. Update your browser and try again.'));
                                     return;
                                 }
-                                if (blob.size <= MAX_IMAGE_UPLOAD_BYTES) {
+                                if (blob.size <= limits.product_image_max_bytes) {
                                     resolve(blob);
                                     return;
                                 }
                             }
                             maxDimension = Math.max(320, Math.floor(maxDimension * 0.8));
                         }
-                        reject(new Error('This photo remains larger than the 5 MB upload limit after compression.'));
+                        reject(new Error(`This photo remains larger than the ${Math.floor(limits.product_image_max_bytes / 1048576)} MiB upload limit after compression.`));
                     })().catch(reject);
                 };
                 image.src = reader.result;
@@ -109,18 +147,18 @@
         });
     }
 
-    function readVideo(file) {
-        if (!VIDEO_TYPES.has(file.type) || !file.size || file.size > MAX_VIDEO_BYTES) {
-            throw new Error('Choose an MP4, WebM, or QuickTime video between 1 byte and 50 MB.');
+    function readVideo(file, limits) {
+        if (!VIDEO_TYPES.has(file.type) || !file.size || file.size > limits.product_video_max_bytes) {
+            throw new Error(`Choose an MP4, WebM, or QuickTime video no larger than ${Math.floor(limits.product_video_max_bytes / 1048576)} MiB.`);
         }
         // Upload the File directly instead of expanding large videos into base64
         // strings, which uses substantially more memory on mobile devices.
         return file;
     }
 
-    async function uploadMedia(supabase, blob, productId, mediaType, mediaCount = 1) {
+    async function uploadMedia(supabase, blob, productId, mediaType, mediaCount = 1, limits) {
         const allowedTypes = mediaType === 'video' ? VIDEO_TYPES : new Set(['image/webp']);
-        const maxBytes = mediaType === 'video' ? MAX_VIDEO_BYTES : MAX_IMAGE_UPLOAD_BYTES;
+        const maxBytes = mediaType === 'video' ? limits.product_video_max_bytes : limits.product_image_max_bytes;
         if (!allowedTypes.has(blob.type) || !blob.size || blob.size > maxBytes) {
             throw new Error('This file does not meet the marketplace upload limits.');
         }
@@ -317,13 +355,32 @@
                 }
             }
         });
-        imageInput.addEventListener('change', () => {
+        imageInput.addEventListener('change', async () => {
             const files = Array.from(imageInput.files || []);
-            const validationError = mediaSelectionError(files);
-            if (validationError) {
+            if (!files.length) return;
+            setStatus('Checking current upload limits…');
+            try {
+                const limits = await loadMarketplaceMediaLimits(window.SupabaseClient?.get());
+                const mediaHelp = $('listingMediaLimitHelp');
+                if (mediaHelp) {
+                    mediaHelp.textContent = `Current limit: ${limits.student_listing_media_limit} files per listing; compressed photos up to ${Math.floor(limits.product_image_max_bytes / 1048576)} MiB; videos up to ${Math.floor(limits.product_video_max_bytes / 1048576)} MiB. Original photos may be up to 20 MiB.`;
+                }
+                const validationError = mediaSelectionError(files, limits);
+                if (validationError) {
+                    preview.hidden = true;
+                    preview.innerHTML = '';
+                    setStatus(validationError, 'error');
+                    imageInput.value = '';
+                    return;
+                }
+            } catch (error) {
                 preview.hidden = true;
                 preview.innerHTML = '';
-                setStatus(validationError, 'error');
+                setStatus(window.AsyncFeedback?.errorMessage(
+                    error,
+                    'Marketplace upload settings could not be loaded. Refresh and try again.',
+                    'student-listing-media-settings'
+                ) || 'Marketplace upload settings could not be loaded. Refresh and try again.', 'error');
                 imageInput.value = '';
                 return;
             }
@@ -354,6 +411,8 @@
             let failureMediaCount = 0;
             const uploadedMedia = [];
             try {
+                failureStage = 'media settings';
+                const mediaLimits = await loadMarketplaceMediaLimits(supabase);
                 const profile = window.AuthService?.getProfile() || {};
                 const data = new FormData(form);
                 const price = Number(data.get('price'));
@@ -361,17 +420,17 @@
                 if (!Number.isFinite(price) || price < 0 || !Number.isInteger(stock) || stock < 1) throw new Error('Enter a valid price and available quantity.');
                 const selectedFiles = Array.from(imageInput.files || []);
                 failureMediaCount = selectedFiles.length;
-                const selectionError = mediaSelectionError(selectedFiles);
+                const selectionError = mediaSelectionError(selectedFiles, mediaLimits);
                 if (selectionError) throw new Error(selectionError);
                 const preparedMedia = [];
                 failureStage = 'media preparation';
                 for (const file of selectedFiles) {
                     if (IMAGE_TYPES.has(file.type)) {
                         failureMediaType = 'image';
-                        preparedMedia.push({ blob: await compressImage(file), mediaType: 'image' });
+                        preparedMedia.push({ blob: await compressImage(file, mediaLimits), mediaType: 'image' });
                     } else {
                         failureMediaType = 'video';
-                        preparedMedia.push({ blob: readVideo(file), mediaType: 'video' });
+                        preparedMedia.push({ blob: readVideo(file, mediaLimits), mediaType: 'video' });
                     }
                 }
                 failureMediaType = [...new Set(preparedMedia.map((item) => item.mediaType))].join(',') || failureMediaType;
@@ -413,7 +472,7 @@
                 failureStage = 'media upload';
                 for (const item of preparedMedia) {
                     failureMediaType = item.mediaType;
-                    uploadedMedia.push(await uploadMedia(supabase, item.blob, productId, item.mediaType, failureMediaCount));
+                    uploadedMedia.push(await uploadMedia(supabase, item.blob, productId, item.mediaType, failureMediaCount, mediaLimits));
                 }
                 if (uploadedMedia.length) {
                     failureStage = 'media metadata';

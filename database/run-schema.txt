@@ -4,7 +4,7 @@ This directory contains ordered migrations, conditional legacy/repair scripts,
 one read-only verification script, and one operator-only role-promotion script.
 Do not run every `.sql` file as one batch.
 
-For a new Supabase project, apply migrations 1–14 in order using a trusted
+For a new Supabase project, apply migrations 1–15 in order using a trusted
 Supabase SQL Editor session with a privileged database role. For an existing
 project, inspect its schema and migration history, then apply only the missing
 ordered migrations in this sequence. Do not put database credentials in browser
@@ -25,11 +25,13 @@ code or run schema changes from a storefront.
 11. database/seller-contact-safety.sql — opt-in public seller contact and offline checkout safeguards; requires schema, RLS, production-hardening, shop-owner-payments, and shop-verification-compliance.
 12. database/product-delivery-options.sql — seller-provided delivery options; requires schema.sql.
 13. database/client-error-logging.sql — sanitized operational-event types and server-only event access; requires operational_events from schema.sql.
-14. database/marketplace-manual-payments.sql — KYC-gated manual payment preferences, regional destination settings, order instruction snapshots, and recipient-specific confirmations; requires the preceding migrations.
+14. database/marketplace-manual-payments.sql — KYC-gated manual payment preferences, regional destination settings, order instruction snapshots, and recipient-specific confirmations; requires migrations 1–13.
+15. database/marketplace-media-settings.sql — seller-friendly, admin-controlled listing counts and media sizes with database enforcement and fixed Storage ceilings; requires migrations 1–14.
 
 The order keeps the security helpers ahead of dashboard RPCs, checkout
 hardening ahead of shop-owner payment functions, verification before seller
-contact/payment preferences, and all manual-payment dependencies before step 14.
+contact/payment preferences, and the media-settings migration after the
+manual-payment dependencies it requires.
 Steps with only a schema.sql dependency are kept in this sequence so fresh
 projects have one consistent run order.
 
