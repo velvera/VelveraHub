@@ -2,3 +2,4 @@
 - [Category subcategory image coverage](category-subcategory-images.md) — track supplied parent and child image coverage; only map images the user has provided.
 - [Multi-root change coverage](multi-root-change-coverage.md) — check and update relevant pages across the root, UK, NG, shop, and admin app folders.
 - [Password toggle alignment](password-toggle-alignment.md) — keep the visible eye centered within each password field with no button background.
+- [Seller-friendly upload limits](seller-friendly-upload-limits.md) — keep media caps reasonable and make upload thresholds admin-controllable.
