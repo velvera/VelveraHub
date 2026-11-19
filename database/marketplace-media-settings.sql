@@ -1,12 +1,14 @@
 -- Admin-controlled seller media limits with fixed Storage safety ceilings.
 -- Apply after database/marketplace-manual-payments.sql.
+-- Before applying to any target, verify its Supabase plan and Storage global
+-- file-size limit are at least 40 MiB (41,943,040 bytes).
 
 BEGIN;
 
 ALTER TABLE public.marketplace_settings
     ADD COLUMN IF NOT EXISTS student_listing_media_limit INTEGER NOT NULL DEFAULT 10,
-    ADD COLUMN IF NOT EXISTS product_image_max_bytes BIGINT NOT NULL DEFAULT 10485760,
-    ADD COLUMN IF NOT EXISTS product_video_max_bytes BIGINT NOT NULL DEFAULT 104857600;
+    ADD COLUMN IF NOT EXISTS product_image_max_bytes BIGINT NOT NULL DEFAULT 41943040,
+    ADD COLUMN IF NOT EXISTS product_video_max_bytes BIGINT NOT NULL DEFAULT 41943040;
 
 ALTER TABLE public.marketplace_settings
     DROP CONSTRAINT IF EXISTS marketplace_settings_student_listing_media_limit_check,
@@ -14,10 +16,10 @@ ALTER TABLE public.marketplace_settings
         CHECK (student_listing_media_limit BETWEEN 1 AND 100),
     DROP CONSTRAINT IF EXISTS marketplace_settings_product_image_max_bytes_check,
     ADD CONSTRAINT marketplace_settings_product_image_max_bytes_check
-        CHECK (product_image_max_bytes BETWEEN 5242880 AND 20971520),
+        CHECK (product_image_max_bytes BETWEEN 5242880 AND 41943040),
     DROP CONSTRAINT IF EXISTS marketplace_settings_product_video_max_bytes_check,
     ADD CONSTRAINT marketplace_settings_product_video_max_bytes_check
-        CHECK (product_video_max_bytes BETWEEN 52428800 AND 209715200);
+        CHECK (product_video_max_bytes BETWEEN 5242880 AND 41943040);
 
 INSERT INTO public.marketplace_settings (
     id,
@@ -26,13 +28,13 @@ INSERT INTO public.marketplace_settings (
     product_image_max_bytes,
     product_video_max_bytes
 )
-VALUES (1, 10, 10, 10485760, 104857600)
+VALUES (1, 10, 10, 41943040, 41943040)
 ON CONFLICT (id) DO NOTHING;
 
 -- Storage ceilings allow bounded admin adjustments. The database trigger below
 -- enforces each current admin-selected size within these fixed maxima.
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES ('product-images', 'product-images', TRUE, 20971520, ARRAY['image/webp']::text[])
+VALUES ('product-images', 'product-images', TRUE, 41943040, ARRAY['image/webp']::text[])
 ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
     public = EXCLUDED.public,
@@ -44,7 +46,7 @@ VALUES (
     'product-videos',
     'product-videos',
     TRUE,
-    209715200,
+    41943040,
     ARRAY['video/mp4', 'video/webm', 'video/quicktime']::text[]
 )
 ON CONFLICT (id) DO UPDATE SET
@@ -133,8 +135,8 @@ BEGIN
 
     IF p_product_image_limit IS NULL OR p_product_image_limit NOT BETWEEN 1 AND 100
        OR p_student_listing_media_limit IS NULL OR p_student_listing_media_limit NOT BETWEEN 1 AND 100
-       OR p_product_image_max_mib IS NULL OR p_product_image_max_mib NOT BETWEEN 5 AND 20
-       OR p_product_video_max_mib IS NULL OR p_product_video_max_mib NOT BETWEEN 50 AND 200 THEN
+       OR p_product_image_max_mib IS NULL OR p_product_image_max_mib NOT BETWEEN 5 AND 40
+       OR p_product_video_max_mib IS NULL OR p_product_video_max_mib NOT BETWEEN 5 AND 40 THEN
         RAISE EXCEPTION 'Media settings are outside the supported ranges'
             USING ERRCODE = '22023';
     END IF;

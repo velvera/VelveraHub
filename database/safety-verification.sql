@@ -320,7 +320,7 @@ WITH checks AS (
             FROM storage.buckets
             WHERE id = 'product-images'
               AND public IS TRUE
-              AND file_size_limit = 20971520
+              AND file_size_limit = 41943040
               AND allowed_mime_types = ARRAY['image/webp']::text[]
         )
         AND EXISTS (
@@ -328,7 +328,7 @@ WITH checks AS (
             FROM storage.buckets
             WHERE id = 'product-videos'
               AND public IS TRUE
-              AND file_size_limit = 209715200
+              AND file_size_limit = 41943040
               AND allowed_mime_types = ARRAY['video/mp4', 'video/webm', 'video/quicktime']::text[]
         )
     UNION ALL

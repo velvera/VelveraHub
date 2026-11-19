@@ -695,7 +695,11 @@
                 !Number.isInteger(limits.product_image_max_bytes) ||
                 !Number.isInteger(limits.product_video_max_bytes) ||
                 limits.product_image_max_bytes % 1048576 !== 0 ||
-                limits.product_video_max_bytes % 1048576 !== 0
+                limits.product_video_max_bytes % 1048576 !== 0 ||
+                limits.product_image_max_bytes < 5 * 1048576 ||
+                limits.product_image_max_bytes > 40 * 1048576 ||
+                limits.product_video_max_bytes < 5 * 1048576 ||
+                limits.product_video_max_bytes > 40 * 1048576
             ) {
                 throw new Error('The media settings response is incomplete.');
             }

@@ -63,13 +63,13 @@ assert.match(
 );
 assert.match(
     mediaSettingsMigration,
-    /'product-images',\s*'product-images',\s*TRUE,\s*20971520,\s*ARRAY\['image\/webp'\]::text\[\]/,
-    'the final image bucket ceiling must allow bounded admin-selected WebP sizes',
+    /'product-images',\s*'product-images',\s*TRUE,\s*41943040,\s*ARRAY\['image\/webp'\]::text\[\]/,
+    'the final image bucket ceiling must allow the 40 MiB limit and fixed WebP MIME type',
 );
 assert.match(
     mediaSettingsMigration,
-    /'product-videos'[\s\S]*?209715200[\s\S]*?ARRAY\['video\/mp4',\s*'video\/webm',\s*'video\/quicktime'\]::text\[\]/,
-    'the final video bucket must retain fixed supported MIME types and a 200 MiB ceiling',
+    /'product-videos'[\s\S]*?41943040[\s\S]*?ARRAY\['video\/mp4',\s*'video\/webm',\s*'video\/quicktime'\]::text\[\]/,
+    'the final video bucket must enforce the 40 MiB ceiling and fixed supported MIME types',
 );
 assert.match(studentListing, /get_marketplace_media_limits/);
 assert.match(rls, /CREATE POLICY "students can upload listing images"/);

@@ -66,8 +66,8 @@ assert.match(server, /if \(!\['cash_on_delivery', 'bank_transfer'\]\.includes\(p
 assert.match(paymentsMigration, /provider IN \('paystack', 'stripe'\)/);
 assert.match(manualPaymentsMigration, /CREATE TABLE IF NOT EXISTS public\.marketplace_payment_destinations/i);
 assert.match(manualPaymentsMigration, /REVOKE ALL ON public\.order_manual_payment_confirmations FROM PUBLIC, anon, authenticated/i);
-assert.match(mediaSettingsMigration, /product_image_max_bytes BIGINT NOT NULL DEFAULT 10485760/i);
-assert.match(mediaSettingsMigration, /product_video_max_bytes BIGINT NOT NULL DEFAULT 104857600/i);
+assert.match(mediaSettingsMigration, /product_image_max_bytes BIGINT NOT NULL DEFAULT 41943040/i);
+assert.match(mediaSettingsMigration, /product_video_max_bytes BIGINT NOT NULL DEFAULT 41943040/i);
 assert.match(mediaSettingsMigration, /CREATE TRIGGER enforce_marketplace_product_media_size/i);
 assert.match(mediaSettingsMigration, /admin_update_marketplace_media_limits/i);
 assert.match(adminWorkspace, /id="mediaSettingsPanel"/);

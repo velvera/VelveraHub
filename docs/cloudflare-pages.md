@@ -208,10 +208,13 @@ WHERE tgrelid = 'storage.objects'::regclass
   AND tgname IN ('enforce_product_media_object_quota', 'release_product_media_quota');
 ```
 
-The image bucket should be public, capped at `20971520` bytes, and restricted to
-`image/webp`. The video bucket should be public, capped at `209715200` bytes,
-and restricted to MP4, WebM, and QuickTime. The database media-size trigger
-enforces the current admin-selected limits below these fixed Storage ceilings.
+Before applying migration 15, verify in the Supabase dashboard that the target
+project's plan permits at least 40 MiB and that Storage Settings has a global
+file-size limit of at least `41943040` bytes. The image and video buckets should
+then each be capped at `41943040` bytes; images are restricted to `image/webp`
+and videos to MP4, WebM, and QuickTime. The database media-size trigger enforces
+the current admin-selected limits below these fixed Storage ceilings. A
+documented plan maximum is not proof of the target project's current setting.
 Student upload policies should be
 `PERMISSIVE` `INSERT` policies for `authenticated`; the upload validator should
 be `RESTRICTIVE` for `INSERT`. The query for broad public read policies should
@@ -227,8 +230,8 @@ Use the authenticated admin workspace to temporarily change the per-listing
 counts and photo/video limits within the supported ranges. Confirm both upload
 forms show the new count and direct Storage requests above a selected size are
 rejected. Restore the defaults after the test: 10 shop photos per product, 10
-media files per independent listing, 10 MiB per compressed WebP photo, and
-100 MiB per video. Original photos may be up to 20 MiB before compression.
+media files per independent listing, and 40 MiB per product photo or video.
+Original photos may be up to 40 MiB before compression.
 
 Then, using an authenticated staging seller and a disposable listing they own,
 send direct Storage API requests (not the marketplace upload form) with eleven

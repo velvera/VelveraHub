@@ -685,8 +685,9 @@ function sellerListingLabel(context) {
 }
 
 const SELLER_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
-const MAX_SELLER_IMAGE_INPUT_BYTES = 8 * 1024 * 1024;
-const MAX_SELLER_IMAGE_UPLOAD_BYTES = 5 * 1024 * 1024;
+const MAX_SELLER_IMAGE_INPUT_BYTES = 40 * 1024 * 1024;
+const MAX_SELLER_IMAGE_UPLOAD_BYTES = 40 * 1024 * 1024;
+const sellerImageBlobsByPreviewUrl = new Map();
 const UUID_PATH_SEGMENT = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 const UUID_V4_PATH_SEGMENT = '[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}';
 
@@ -697,15 +698,17 @@ async function compressImage(file) {
             return;
         }
         if (file.size > MAX_SELLER_IMAGE_INPUT_BYTES) {
-            reject(new Error('Images must be 8 MB or smaller.'));
+            reject(new Error('Images must be 40 MiB or smaller before compression.'));
             return;
         }
-        const reader = new FileReader();
-        reader.onerror = () => reject(new Error('Could not read image'));
-        reader.onload = () => {
-            const image = new Image();
-            image.onerror = () => reject(new Error('Could not process image'));
-            image.onload = () => {
+        const image = new Image();
+        const sourceUrl = URL.createObjectURL(file);
+        image.onerror = () => {
+            URL.revokeObjectURL(sourceUrl);
+            reject(new Error('Could not process image'));
+        };
+        image.onload = () => {
+                URL.revokeObjectURL(sourceUrl);
                 const maxDimension = 1200;
                 const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
                 const canvas = document.createElement('canvas');
@@ -723,46 +726,67 @@ async function compressImage(file) {
                         return;
                     }
                     if (blob.size > MAX_SELLER_IMAGE_UPLOAD_BYTES) {
-                        reject(new Error('This image is still over the 5 MB upload limit after compression.'));
+                        reject(new Error('This image is still over the 40 MiB upload limit after compression.'));
                         return;
                     }
-                    const compressedReader = new FileReader();
-                    compressedReader.onerror = () => reject(new Error('Could not prepare the compressed image.'));
-                    compressedReader.onload = () => resolve(compressedReader.result);
-                    compressedReader.readAsDataURL(blob);
+                    resolve(blob);
                 }, 'image/webp', 0.82);
-            };
-            image.src = reader.result;
         };
-        reader.readAsDataURL(file);
+        image.src = sourceUrl;
     });
 }
 
-async function uploadProductImage(supabase, imageData, productId) {
-    if (!imageData || !imageData.startsWith('data:')) return imageData || null;
-    if (!(new RegExp(`^${UUID_PATH_SEGMENT}$`)).test(String(productId || ''))) {
-        throw new Error('This product is missing a valid listing ID for its images.');
+function uploadProductImage(supabase, imagePreviewUrl, productId, onProgress, maxBytes = MAX_SELLER_IMAGE_UPLOAD_BYTES) {
+    if (!imagePreviewUrl || (!sellerImageBlobsByPreviewUrl.has(imagePreviewUrl) && !imagePreviewUrl.startsWith('data:'))) {
+        return { promise: Promise.resolve(imagePreviewUrl || null), cancel() {} };
     }
-    const response = await fetch(imageData);
-    const blob = await response.blob();
-    if (blob.type !== 'image/webp' || !blob.size || blob.size > MAX_SELLER_IMAGE_UPLOAD_BYTES) {
-        throw new Error('This image must be a WebP file no larger than 5 MB.');
+    if (!(new RegExp(`^${UUID_PATH_SEGMENT}$`)).test(String(productId || ''))) {
+        return { promise: Promise.reject(new Error('This product is missing a valid listing ID for its images.')), cancel() {} };
     }
     if (!window.crypto?.randomUUID) {
-        throw new Error('Secure image filenames are unavailable in this browser.');
+        return { promise: Promise.reject(new Error('Secure image filenames are unavailable in this browser.')), cancel() {} };
     }
     const path = `${productId}/${window.crypto.randomUUID()}.webp`;
     if (!(new RegExp(`^${UUID_PATH_SEGMENT}/${UUID_V4_PATH_SEGMENT}\\.webp$`)).test(path)) {
-        throw new Error('Could not create a valid image filename.');
+        return { promise: Promise.reject(new Error('Could not create a valid image filename.')), cancel() {} };
     }
-    const { error } = await supabase.storage.from('product-images').upload(path, blob, {
-        contentType: 'image/webp',
-        upsert: false
-    });
-    if (error) throw error;
+    let storageTask = null;
+    let cancelled = false;
+    const promise = (async () => {
+        let blob = sellerImageBlobsByPreviewUrl.get(imagePreviewUrl);
+        if (!blob && imagePreviewUrl.startsWith('data:')) {
+            const response = await fetch(imagePreviewUrl);
+            blob = await response.blob();
+        }
+        if (cancelled) {
+            const error = new Error('Upload cancelled.');
+            error.name = 'AbortError';
+            throw error;
+        }
+        if (blob.type !== 'image/webp' || !blob.size || blob.size > maxBytes) {
+            throw new Error(`This image must be a WebP file no larger than ${Math.floor(maxBytes / 1048576)} MiB.`);
+        }
+        if (!window.StorageUploadService?.upload) {
+            throw new Error('The secure upload service is unavailable. Refresh and try again.');
+        }
+        storageTask = window.StorageUploadService.upload(supabase, 'product-images', path, blob, {
+            contentType: 'image/webp',
+            upsert: false,
+            onProgress
+        });
+        const { error } = await storageTask.promise;
+        if (error) throw error;
+        return {
+            path,
+            url: supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl
+        };
+    })();
     return {
-        path,
-        url: supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl
+        promise,
+        cancel() {
+            cancelled = true;
+            storageTask?.cancel();
+        }
     };
 }
 
@@ -1774,9 +1798,119 @@ function initProductForm() {
     const imageUploadArea = document.getElementById('imageUploadArea');
     const imageInput = document.getElementById('productImages');
     const uploadedImages = document.getElementById('uploadedImages');
+    const uploadProgress = document.getElementById('productImageUploadProgress');
+    const cancelUploadsButton = document.getElementById('cancelProductImageUploads');
+    let sellerImageProgressRows = [];
+    let activeSellerImageTasks = [];
     const locationSelect = document.getElementById('productLocation');
     const schoolSelect = document.getElementById('productSchool');
     const promotionButton = document.getElementById('promoteCurrentProduct');
+    cancelUploadsButton?.addEventListener('click', () => {
+        activeSellerImageTasks.forEach((task) => task.cancel());
+        showToast('Cancelling image uploads…', 'info');
+    });
+
+    function renderSellerImageProgress(files) {
+        if (!uploadProgress) return;
+        uploadProgress.replaceChildren();
+        sellerImageProgressRows = [];
+        uploadProgress.hidden = !files.length;
+        files.forEach((file) => {
+            const row = document.createElement('li');
+            const name = document.createElement('span');
+            name.textContent = file.name || 'Product photo';
+            const progress = document.createElement('progress');
+            progress.max = 100;
+            progress.value = 0;
+            progress.setAttribute('aria-label', `Upload progress for ${file.name || 'product photo'}`);
+            const state = document.createElement('span');
+            state.textContent = 'Ready to upload';
+            row.append(name, progress, state);
+            uploadProgress.appendChild(row);
+            sellerImageProgressRows.push({ progress, state });
+        });
+    }
+
+    function updateSellerImageProgress(index, percent, label) {
+        const row = sellerImageProgressRows[index];
+        if (!row) return;
+        row.progress.value = Math.max(0, Math.min(100, Number(percent) || 0));
+        row.state.textContent = label || `${Math.round(row.progress.value)}%`;
+    }
+
+    function releaseImagePreviews() {
+        uploadedImages?.querySelectorAll('img').forEach((image) => {
+            if (sellerImageBlobsByPreviewUrl.has(image.src)) {
+                sellerImageBlobsByPreviewUrl.delete(image.src);
+                URL.revokeObjectURL(image.src);
+            }
+        });
+    }
+
+    async function loadSellerMediaLimits(supabase) {
+        const { data, error } = await supabase.rpc('get_marketplace_media_limits');
+        if (error) throw error;
+        const limits = {
+            product_image_limit: Number(data?.product_image_limit),
+            product_image_max_bytes: Number(data?.product_image_max_bytes)
+        };
+        if (
+            !Number.isInteger(limits.product_image_limit) ||
+            limits.product_image_limit < 1 ||
+            limits.product_image_limit > 100 ||
+            !Number.isSafeInteger(limits.product_image_max_bytes) ||
+            limits.product_image_max_bytes < 5 * 1048576 ||
+            limits.product_image_max_bytes > 40 * 1048576
+        ) {
+            throw new Error('The marketplace photo limits are unavailable. Refresh and try again.');
+        }
+        return limits;
+    }
+
+    async function uploadSelectedImages(supabase, productId, selectedImages) {
+        const newImages = selectedImages
+            .map((url) => {
+                const image = Array.from(uploadedImages?.querySelectorAll('img') || []).find((item) => item.src === url);
+                return { url, name: image?.dataset.uploadFileName || 'Product photo' };
+            })
+            .filter((image) => sellerImageBlobsByPreviewUrl.has(image.url) || image.url.startsWith('data:'));
+        if (!newImages.length) return [];
+        const limits = await loadSellerMediaLimits(supabase);
+        if (selectedImages.length > limits.product_image_limit) {
+            throw new Error(`A listing can have no more than ${limits.product_image_limit} photos.`);
+        }
+        renderSellerImageProgress(newImages);
+        const uploaded = [];
+        cancelUploadsButton.hidden = !newImages.length;
+        activeSellerImageTasks = [];
+        try {
+            for (let index = 0; index < newImages.length; index += 1) {
+                const image = newImages[index];
+                updateSellerImageProgress(index, 0, 'Starting upload');
+                const task = uploadProductImage(
+                    supabase,
+                    image.url,
+                    productId,
+                    (percent) => updateSellerImageProgress(index, percent, `Uploading ${percent}%`),
+                    limits.product_image_max_bytes
+                );
+                activeSellerImageTasks.push(task);
+                try {
+                    uploaded.push(await task.promise);
+                    updateSellerImageProgress(index, 100, 'Uploaded');
+                } catch (error) {
+                    updateSellerImageProgress(index, 0, error?.name === 'AbortError' ? 'Cancelled' : 'Upload failed');
+                    throw error;
+                } finally {
+                    activeSellerImageTasks = activeSellerImageTasks.filter((activeTask) => activeTask !== task);
+                }
+            }
+            return uploaded;
+        } finally {
+            cancelUploadsButton.hidden = true;
+            activeSellerImageTasks = [];
+        }
+    }
     promotionButton?.addEventListener('click', () => {
         if (!editingProductId) return;
         const isShopOwner = window.VELVERAHUB_CONFIG?.APP_TYPE === 'shop-owner';
@@ -1835,9 +1969,9 @@ function initProductForm() {
             showToast('Choose one or more product images.', 'error');
             return;
         }
-        if (selectedFiles.length > 6) {
+        if (selectedFiles.length > 10) {
             imageInput.value = '';
-            showToast('Choose no more than six images for one listing.', 'error');
+            showToast('Choose no more than 10 images for one listing.', 'error');
             return;
         }
         const invalidFile = selectedFiles.find(candidate =>
@@ -1847,26 +1981,43 @@ function initProductForm() {
         );
         if (invalidFile) {
             imageInput.value = '';
-            showToast('Use non-empty JPEG, PNG, or WebP images up to 8 MB each.', 'error');
+            showToast('Use non-empty JPEG, PNG, or WebP images up to 40 MiB each.', 'error');
             return;
         }
         try {
-            const compressedImages = await Promise.all(selectedFiles.map(compressImage));
-            uploadedImages.innerHTML = '';
+            const compressedImages = [];
+            for (const file of selectedFiles) compressedImages.push(await compressImage(file));
+            releaseImagePreviews();
+            uploadedImages.replaceChildren();
+            const progressFiles = [];
             compressedImages.forEach((compressedImage, index) => {
             const div = document.createElement('div');
             div.className = 'uploaded-image';
-            div.innerHTML = `
-                <img src="${compressedImage}" alt="Product image preview ${index + 1}">
-                <span class="image-label">${index === 0 ? 'Primary image' : `Image ${index + 1}`}</span>
-                <button type="button" class="remove-btn" aria-label="Remove selected image"><i class="fas fa-times"></i></button>
-            `;
-            div.querySelector('.remove-btn').addEventListener('click', () => {
+            const previewUrl = URL.createObjectURL(compressedImage);
+            sellerImageBlobsByPreviewUrl.set(previewUrl, compressedImage);
+            progressFiles.push({ name: selectedFiles[index].name || `Image ${index + 1}` });
+            const image = document.createElement('img');
+            image.src = previewUrl;
+            image.alt = `Product image preview ${index + 1}`;
+            image.dataset.uploadFileName = selectedFiles[index].name || `Image ${index + 1}`;
+            const label = document.createElement('span');
+            label.className = 'image-label';
+            label.textContent = index === 0 ? 'Primary image' : `Image ${index + 1}`;
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.className = 'remove-btn';
+            remove.setAttribute('aria-label', 'Remove selected image');
+            remove.innerHTML = '<i class="fas fa-times" aria-hidden="true"></i>';
+            div.append(image, label, remove);
+            remove.addEventListener('click', () => {
+                sellerImageBlobsByPreviewUrl.delete(previewUrl);
+                URL.revokeObjectURL(previewUrl);
                 div.remove();
                 imageInput.value = '';
             });
             uploadedImages.appendChild(div);
             });
+            renderSellerImageProgress(progressFiles);
         } catch (error) {
             showToast(window.AsyncFeedback?.errorMessage(error, 'One of these images could not be processed. Choose another image and try again.', 'seller-image-process') || 'One of these images could not be processed. Choose another image and try again.', 'error');
         }
@@ -1901,11 +2052,11 @@ function initProductForm() {
         }
 
         const selectedImages = Array.from(uploadedImages?.querySelectorAll('img') || []).map(image => image.src);
-        if (selectedImages.length > 6) {
-            showToast('A listing can have no more than six images.', 'error');
+        if (selectedImages.length > 10) {
+            showToast('A listing can have no more than 10 images.', 'error');
             return;
         }
-        const hasNewImages = selectedImages.some(image => image.startsWith('data:'));
+        const hasNewImages = selectedImages.some(image => sellerImageBlobsByPreviewUrl.has(image) || image.startsWith('data:'));
         const existingImageUrls = Array.from(uploadedImages?.querySelectorAll('.existing-image img') || [])
             .map(image => image.src)
             .filter(Boolean);
@@ -1954,9 +2105,7 @@ function initProductForm() {
                 const { supabase, shop } = supabaseContext;
 
                 if (isEditing) {
-                    for (const imageData of selectedImages.filter(image => image.startsWith('data:'))) {
-                        uploadedImageResults.push(await uploadProductImage(supabase, imageData, editingProductId));
-                    }
+                    uploadedImageResults = await uploadSelectedImages(supabase, editingProductId, selectedImages);
                     const trustFields = {
                         specifications,
                         provenance_documents: provenanceUrl ? [{ url: provenanceUrl, type: 'reference' }] : [],
@@ -2065,9 +2214,7 @@ function initProductForm() {
                     }
                     if (insertResult.error) throw insertResult.error;
                     const product = insertResult.data;
-                    for (const imageData of selectedImages.filter(image => image.startsWith('data:'))) {
-                        uploadedImageResults.push(await uploadProductImage(supabase, imageData, product.id));
-                    }
+                    uploadedImageResults = await uploadSelectedImages(supabase, product.id, selectedImages);
                     const imageRows = uploadedImageResults.map((image, index) => ({
                         product_id: product.id,
                         url: image.url,
@@ -2117,7 +2264,10 @@ function initProductForm() {
 
         document.getElementById('addProductModal').classList.remove('active');
         form.reset();
-        uploadedImages.innerHTML = '';
+        releaseImagePreviews();
+        uploadedImages.replaceChildren();
+        uploadProgress.replaceChildren();
+        uploadProgress.hidden = true;
         imageInput.value = '';
         if (submitBtn) {
             submitBtn.disabled = false;

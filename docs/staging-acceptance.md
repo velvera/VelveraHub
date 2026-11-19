@@ -37,14 +37,15 @@ the authenticated behavior tests.
 
 ## Admin-controlled media settings
 
-After migration 15, use the authenticated staging admin workspace to verify the
-defaults: 10 shop photos per product, 10 media files per independent listing,
-10 MiB per compressed WebP photo, and 100 MiB per video. Original photos up to
-20 MiB are compressed by the upload form. Temporarily set both listing counts
-to 7, the photo limit to 6 MiB, and the video limit to 70 MiB; verify the admin
-form saves, both listing flows reflect the new count, and Storage rejects
-objects above the selected size. Restore the recommended defaults. MIME types
-must remain fixed regardless of these settings.
+Before applying migration 15 to staging, confirm the project's plan and global
+Storage file-size limit are at least 40 MiB (41,943,040 bytes). Then use the
+authenticated staging admin workspace to verify the defaults: 10 shop photos
+per product, 10 media files per independent listing, and 40 MiB per product
+photo or video. Original photos up to 40 MiB are compressed by the upload form.
+Temporarily set both listing counts to 7 and both size limits to 6 MiB; verify
+the admin form saves, both listing flows reflect the changed count, and Storage
+rejects objects above the selected size. Restore the defaults. MIME types must
+remain fixed regardless of these settings.
 
 ## Storage ownership, validation, and quota
 
@@ -53,11 +54,14 @@ filenames under the test listing UUID folder.
 
 | Case | Action | Expected result |
 | --- | --- | --- |
-| Owner access | Owner A uploads one valid WebP image, no larger than the configured 10 MiB default | Accepted |
+| Owner access | Owner A uploads one valid WebP image, no larger than the configured 40 MiB default | Accepted |
 | Cross-owner access | Owner B uploads to owner A’s listing path | Rejected |
 | Invalid path | Owner A uses a non-UUID listing folder or non-UUIDv4 filename | Rejected |
 | Invalid type | Owner A sends an unsupported MIME type such as `image/jpeg` | Rejected |
-| Invalid size | Owner A sends an image of 10 MiB plus one byte at the default setting | Rejected |
+| Invalid size | Owner A sends an image of 40 MiB plus one byte at the default setting | Rejected |
+| Small upload | Upload a valid file smaller than 6 MiB | Accepted through the standard upload path |
+| Resumable upload | Upload a valid file larger than 6 MiB and one close to 40 MiB | Accepted; TUS progress, retry, and resume work |
+| Cancel and recover | Cancel one upload, then separately interrupt and restore network access during TUS | Cancellation stops the upload; network recovery resumes the same upload without duplicate objects |
 | Concurrent quota | Owner A concurrently uploads eleven distinct valid media files to a fresh student listing | Exactly ten accepted at the default; at least one rejected |
 
 Capture only statuses and sanitized references. Delete successful test objects

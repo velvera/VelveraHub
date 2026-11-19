@@ -1285,7 +1285,7 @@ async function assertSellerDynamicForm(page, root, width) {
         throw new Error(`${root.name} ${width}px seller upload picker does not match its supported image types`);
     }
     const uploadGuidance = await modal.locator('#imageUploadArea').innerText();
-    if (!uploadGuidance.toLowerCase().includes('administrator') || !uploadGuidance.includes('20 MiB')) {
+    if (!uploadGuidance.toLowerCase().includes('administrator') || !uploadGuidance.includes('40 MiB')) {
         throw new Error(`${root.name} ${width}px seller upload limits are not disclosed next to the picker`);
     }
     for (let index = 0; index < await triggers.count(); index += 1) {
