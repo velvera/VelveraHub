@@ -1,12 +1,12 @@
 /*
  * Supabase Storage uploads shared by the independent-listing and seller flows.
- * Files larger than 6 MB (6,000,000 bytes) use TUS with 6 MiB chunks.
+ * Files larger than 6 MiB (6,291,456 bytes) use TUS with 6 MiB chunks.
  * The tus-js-client dependency is loaded on demand and pinned to a fixed version.
  */
 (function (global) {
     'use strict';
 
-    const STANDARD_UPLOAD_LIMIT_BYTES = 6_000_000;
+    const STANDARD_UPLOAD_LIMIT_BYTES = 6 * 1024 * 1024;
     const TUS_CHUNK_BYTES = 6 * 1024 * 1024;
     const TUS_CLIENT_URL = 'https://cdn.jsdelivr.net/npm/tus-js-client@4.3.1/dist/tus.min.js';
     let tusClientPromise = null;

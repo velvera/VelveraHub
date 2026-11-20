@@ -15,6 +15,7 @@ assert.match(cookieStyles, /@media \(max-width: 360px\)/);
 assert.match(cookieScript, /We use essential storage to keep VelveraHub working\. Optional analytics and browsing-based recommendations are off unless you accept\./);
 assert.match(cookieScript, /data-cookie-choice="rejected">Decline/);
 assert.match(cookieScript, /data-cookie-choice="granted">Accept/);
+assert.match(legalPage, /data-cookie-consent-manage/);
 
 function createHarness(initialChoice = null) {
     const values = new Map(initialChoice ? [['velverahub_cookie_consent', initialChoice]] : []);
@@ -161,6 +162,7 @@ assert.deepEqual(choices, [
     { value: 'granted', label: 'Accept' },
 ]);
 assert.equal(typeof fresh.window.CookieConsent.showSettings, 'undefined');
+assert.equal(typeof fresh.window.CookieConsent.showBanner, 'function');
 
 const acceptButton = { dataset: { cookieChoice: 'granted' } };
 fresh.banner().acceptButton = acceptButton;
@@ -174,6 +176,10 @@ assert.ok(fresh.events.some((event) => (
 assert.ok(fresh.events.some((event) => (
     event.type === 'velverahub:cookie-consent-ready' && event.detail.value === 'unset'
 )));
+assert.equal(fresh.window.CookieConsent.showBanner(), true, 'users can reopen the same two-choice banner');
+assert.equal(fresh.window.CookieConsent.getStatus(), 'unset');
+assert.equal(fresh.values.has('velverahub_cookie_consent'), false);
+assert.ok(fresh.banner(), 'reopening consent does not add an extra choice or settings dialog');
 
 const decline = createHarness();
 const declineButton = { dataset: { cookieChoice: 'rejected' } };

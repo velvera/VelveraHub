@@ -1,6 +1,6 @@
 # VelveraHub — Required Owner Information and Staging Access
 
-**Updated:** 19 November 2026  
+**Updated:** 20 November 2026  
 **Purpose:** Gather the owner decisions and non-production access needed to finish legal approval and genuine staging acceptance. This is not a launch approval.
 
 ## Keep credentials and payment details out of this file
@@ -27,7 +27,7 @@ Do not put passwords, API keys, Supabase service-role keys, database URLs, webho
 
 - [Storage file-size limits](https://supabase.com/docs/guides/storage/uploads/file-limits) — plan maximums, global limit, and bucket limits.
 - [Resumable uploads](https://supabase.com/docs/guides/storage/uploads/resumable-uploads) — TUS, resume behavior, direct Storage hostname, and 6 MiB chunks.
-- [Standard uploads](https://supabase.com/docs/guides/storage/uploads/standard-uploads) — recommended for files up to 6 MB; TUS is recommended above that size.
+- [Standard uploads](https://supabase.com/docs/guides/storage/uploads/standard-uploads) — Supabase guidance for small files; this project uses standard uploads through exactly 6 MiB and TUS above 6 MiB per the project requirement.
 
 Current documentation says Free projects allow a global maximum of 50 MB and paid plans allow a higher maximum. That general limit does **not** verify this project's plan or configured global limit. Do not change the target project's Storage settings until both are confirmed.
 
@@ -67,13 +67,82 @@ No legal entity, address, minimum age, governing law, fee, tax rate, or regional
 
 ## Current evidence boundary
 
-- No Supabase integration is connected in this workspace, so the actual project plan and global Storage limit have not been inspected.
+- No Supabase integration is connected in this workspace, so the actual Supabase plan and global Storage limit have not been inspected.
 - The roadmap records no dedicated staging project or disposable acceptance accounts.
 - Migration 15 is present locally but has not been verified in production.
 - Production manual-payment schema was applied, but no regional receiving destination is configured or enabled.
 - Paystack and Stripe processing, webhooks, refunds, settlement, and reconciliation are not complete; card/wallet payments must remain disabled.
 - Account-deletion request handling exists, but the complete end-to-end acceptance test and actual Supabase Auth-user deletion have not passed.
 - Passing local automated tests is repository evidence only, not staging or production evidence.
+
+## Current local implementation status
+
+These are repository-level facts only and do not prove deployed or staging
+behavior:
+
+- Product images are converted to WebP by the existing upload flow. Migration
+  15 sets a maximum of 40 MiB per image/video and fixed bucket MIME allowlists;
+  admin settings can lower those limits. Both listing quotas remain 10.
+- Standard upload is used through exactly 6 MiB; a file one byte larger uses
+  TUS with 6 MiB chunks. The client reports progress and retries resumable
+  uploads. A local test checks the boundary, but not actual Supabase acceptance,
+  cross-owner isolation, quota races, or recovery over a real interrupted
+  connection.
+- The cookie banner still offers only Decline and Accept. The policy page now
+  lets users reopen the same two-choice banner to change their optional
+  analytics choice.
+- The public privacy/terms text is a more detailed draft describing known data
+  categories and the actual unsupported payment/deletion states. Legal,
+  operator, retention, and regional details are still unapproved.
+- Manual-payment SQL/UI and order confirmations exist locally. No regional
+  VelveraHub receiving destination is configured; buyer/seller order behavior
+  still needs staging acceptance.
+- Paystack/Stripe provider execution, verified webhooks, refund, payout, and
+  reconciliation flows are not implemented. Keep card/wallet methods disabled.
+- Account deletion queues a request and provides admin review. It does not
+  perform privileged Supabase Auth deletion or complete associated-data
+  cleanup.
+- The current app logic targets Nigeria and the UK. Additional global markets
+  require separate legal, payment, tax, currency, and delivery decisions and
+  implementation.
+
+## Third-party services and asset review
+
+This inventory is based on repository references. It does not establish
+provider contracts, actual production configuration, data-processing terms,
+or commercial licenses.
+
+| Service / dependency | Current use | Data or review requirement |
+|---|---|---|
+| Supabase | Browser auth, database, and Storage. | Confirm project region, retention, access controls, and provider terms. |
+| Cloudflare Pages | Hosts the static regional, seller, and admin roots. | Confirm production account, domains, request-log retention, and transfer terms. |
+| Supabase JS via jsDelivr (`@2`) | Browser API client. | Major-version URL is not an exact pin; verify the deployed file/version and license. |
+| tus-js-client 4.3.1 via jsDelivr | Loaded for large resumable uploads. | Upload metadata/file bytes go to Supabase; verify CDN, license, and version policy. |
+| Google Fonts | Inter and Poppins web fonts. | Font requests disclose ordinary connection metadata; confirm commercial use and privacy terms. |
+| Font Awesome 6.5.1 via cdnjs | UI icons. | Confirm license/attribution obligations and CDN integrity. |
+| Node packages in `package.json` | Local Express preview/API, database access, authentication helpers, and browser regression tooling. | Review licenses and current dependency advisories; do not assume development-only dependencies are absent from deployment. |
+| Analytics and marketing vendors | No distinct production vendor is documented. Optional activity is consent-gated in code. | Verify deployment configuration and event destination; do not collect after decline or claim an analytics provider is active. |
+| Paystack and Stripe | Planned providers; checkout processing is not implemented. | Do not describe them as active processors until onboarding and complete staging acceptance. |
+| Bundled and remotely referenced images, logos, icons, and illustrations | Marketplace and brand presentation. | Repository presence does not prove ownership or commercial rights; record source/license evidence or replace. |
+
+## Next workflow sequence
+
+1. Complete the legal, commercial, monitoring, recovery, and spending decisions
+   above without adding credentials or receiving-account numbers to this file.
+2. Connect a dedicated staging Supabase project and disposable buyer, seller,
+   and admin accounts through secure workspace flows.
+3. Confirm the staging plan and global Storage limit are at least
+   **41,943,040 bytes** before applying migration 15; then complete
+   `docs/staging-acceptance.md`.
+4. Verify manual-payment order and receipt behavior in staging. Enter actual
+   receiving details only through the authenticated admin workspace and only
+   after an authorized decision.
+5. Complete the privileged account-deletion workflow and staging acceptance.
+   Do not mark an account request completed based only on a browser confirmation.
+6. Implement and test Paystack/Stripe only if approved for launch; otherwise
+   keep card/wallet methods disabled.
+7. Return sanitized staging evidence and update `roadmap.md`. Keep the release
+   decision **DO NOT LAUNCH YET** until every required gate passes.
 
 ## Acceptance evidence to return with the next workflow
 

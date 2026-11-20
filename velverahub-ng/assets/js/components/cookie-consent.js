@@ -32,12 +32,21 @@
             banner.remove();
         });
     }
+    function showBanner() {
+        try { localStorage.removeItem(KEY); } catch (_) {}
+        document.getElementById('cookieConsentBanner')?.remove();
+        window.dispatchEvent(new CustomEvent('velverahub:cookie-consent', { detail: { value: 'unset' } }));
+        render();
+        const banner = document.getElementById('cookieConsentBanner');
+        banner?.querySelector?.('[data-cookie-choice="rejected"]')?.focus?.();
+        return Boolean(banner);
+    }
     function init() {
         render();
         window.dispatchEvent(new CustomEvent('velverahub:cookie-consent-ready', {
             detail: { value: read() }
         }));
     }
-    window.CookieConsent = Object.freeze({ getStatus: read, setStatus: write });
+    window.CookieConsent = Object.freeze({ getStatus: read, setStatus: write, showBanner });
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true }); else init();
 })();

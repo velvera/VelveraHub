@@ -41,6 +41,10 @@ The 30 October checklist counts below are a historical snapshot, not the current
 - Re-ran the read-only production preflight on 30 October. Ownership policies, quota triggers, moderation metadata, and manual-payment grants are present; product bucket size/MIME restrictions are not.
 - Corrected the Cloudflare upload-acceptance instructions to require disposable staging accounts and prohibit write tests against production.
 - Added a staging acceptance runbook covering disposable-account checks, evidence handling, and the payment-provider test matrix.
+- Corrected the upload routing boundary to use standard uploads through exactly 6 MiB and TUS above 6 MiB; added a local boundary regression test. This does not establish that Storage accepts 40 MiB in staging or production.
+- Expanded the public privacy/terms draft with the known data categories, current payment/deletion limitations, and explicit owner/legal placeholders; it remains unapproved and must not be treated as final legal advice.
+- Kept the two-choice cookie consent banner and added a way to reopen it from the cookie policy so users can change their optional analytics choice.
+- Expanded [`requiredinformations.md`](requiredinformations.md) with the owner decision form, current local implementation boundary, third-party inventory, and exact next-workflow steps.
 
 ### Previously passed local baseline checks on 30 October
 
@@ -76,6 +80,7 @@ not prove production readiness.
 - `npm run apps:production:check`
 - `npm run smoke`
 - `npm run test:storage-policy-safety` — passed; this is a static repository test, not a live Supabase request.
+- `npm run test:storage-upload-service` — verifies the 6 MiB standard/TUS boundary, direct Storage hostname, chunk size, retry settings, and progress callback behavior; it does not make a Storage request.
 - `npm run test:cookie-consent`
 - `npm run test:supabase-readiness` — validates the local migration manifest and safe-check definitions; it does not connect to Supabase.
 - `npm run apps:check` and `npm run apps:production:check` — both pass after synchronizing all four generated roots.
@@ -120,8 +125,8 @@ not prove production readiness.
 
 | Item | Status | Required next step |
 |---|---|---|
-| Privacy Policy | NEEDS REVIEW | Public copy is now explicitly a draft. Confirm operator, jurisdiction, contacts, data flows, retention, and cross-border processing; obtain counsel review and verify each approved market. |
-| Terms of Service | NEEDS REVIEW | Public copy is now explicitly a draft. Confirm governing law, operator details, marketplace/payment/delivery/dispute terms, and that text matches real workflows. |
+| Privacy Policy | NEEDS REVIEW | Public copy describes known data categories and current limitations but remains a draft. Confirm operator, jurisdiction, contacts, data flows, retention, and cross-border processing; obtain counsel review and verify each approved market. |
+| Terms of Service | NEEDS REVIEW | Public copy now covers the current marketplace/payment model and unresolved regional terms, but remains a draft. Confirm governing law, operator details, fees, delivery, disputes, and statutory consumer protections with counsel. |
 | Business details and real contact address | BLOCKED | Supply the verified legal/operator name, registration details, jurisdiction, and address/contact information. Do not invent these details. |
 | Minimize data collection | NEEDS REVIEW | Public shop-directory reads now request only displayed fields. Finish the wider form, API, database, cookie, log, and analytics audit and remove unnecessary data. |
 | Third-party SDK and asset review | NEEDS REVIEW | TUS is pinned to a specific CDN version; inventory all SDKs, fonts, icons, external images/APIs and their data access, necessity, licensing, and retention before approval. |
@@ -182,6 +187,7 @@ not prove production readiness.
 - Verified legal/operator name, registration jurisdiction and number, business address, and support contact; obtain legal review of privacy, terms, age/eligibility, fees, delivery, returns, and dispute wording.
 - Confirm the first launch markets and seller eligibility/KYC approval process, listing moderation rules, commissions, buyer/seller fees, taxes, delivery responsibilities, and refund/dispute policy.
 - Provide a separate staging Supabase project and disposable buyer, seller, and admin accounts. Keep credentials in workspace Secrets; do not put them in chat.
+- Complete [`requiredinformations.md`](requiredinformations.md) with verified business, market, legal, commercial, monitoring, recovery, and spending decisions. Never enter credentials or receiving-account numbers in the Markdown file.
 - Confirm whether the launch will use manual bank transfer only. After staging tests, an authorized admin should enter verified Nigeria and/or UK receiving details directly in the authenticated admin workspace; keep each market disabled until verified.
 - Supply Paystack/Stripe business onboarding and test-mode access only if card/wallet payments are part of launch. Card/wallet payments must remain disabled until signed webhooks, refunds, settlement, and reconciliation are implemented and tested.
 - Provide access to the existing Cloudflare Pages account and confirm the production domains so the latest static roots, security headers, redirects, and certificates can be checked and deployed.

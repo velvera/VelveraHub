@@ -105,6 +105,10 @@ Run these files in order in the Supabase SQL editor:
 12. `database/product-delivery-options.sql`
 13. `database/client-error-logging.sql`
 14. `database/marketplace-manual-payments.sql`
+15. `database/marketplace-media-settings.sql` — verify the target project's
+    plan and global Storage limit are at least 40 MiB before applying; the
+    migration sets both product-media buckets to a 40 MiB ceiling and retains
+    the 10-item listing quotas.
 
 For an existing database that reports PostgreSQL error `42702` while removing
 or cleaning up failed listing media uploads, apply
@@ -149,8 +153,10 @@ The base RLS migration:
   `product-videos` bucket for independent campus listings;
 - avoids broad `SELECT` policies on `storage.objects`, so public object URLs
   continue to work without allowing clients to list bucket contents;
-- accepts only WebP images up to 5 MiB and MP4/WebM/QuickTime videos up to
-  50 MiB;
+- at the base migration stage, accepts only WebP images up to 5 MiB and
+  MP4/WebM/QuickTime videos up to 50 MiB; after migration 15, both product
+  media buckets have a 40 MiB ceiling and admin-selected limits are enforced
+  by the media-size trigger;
 - requires a product UUID folder and a generated UUIDv4 filename with the
   matching media extension;
 - enforces the campus limit of six images and videos combined with an atomic

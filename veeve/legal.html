@@ -41,27 +41,46 @@
 
         <article class="legal-card" id="privacy">
             <h2>Privacy Policy</h2>
-            <p>This draft describes intended marketplace data categories only. The operator must confirm the data controller, the markets served, the information actually collected, each recipient, and the applicable retention periods before publication. The current storefront architecture targets Nigeria and the United Kingdom; that does not establish approval to operate in either market or worldwide.</p>
-            <h3>Why we use it</h3>
-            <ul><li>Intended purposes include account access, marketplace activity, order support, service security, and legally required records; the owner must confirm the final purposes and data flows.</li><li>Optional analytics must remain consent-gated as implemented, and the owner must verify every analytics provider and event before enabling it.</li></ul>
-            <h3>Legal basis, sharing, and storage</h3>
-            <p>Legal bases, the full provider list, international-transfer safeguards, and controller/processor roles have not been approved. Do not treat the examples in this draft as a completed legal assessment. Add verified details only after owner and counsel review.</p>
-            <h3>Retention and security</h3>
-            <p>Retention periods and deletion exceptions must be set by the owner with counsel. Technical safeguards do not establish legal compliance or guarantee security. Confirm the production controls and provider contracts before relying on any security statement.</p>
-            <h3>Your rights</h3>
-            <p>Available rights, request handling, identity checks, and the responsible contact depend on the approved operating markets and applicable law. Owner: add the verified privacy contact and a tested request process before publication.</p>
+            <p><strong>Draft scope:</strong> The current codebase has separate Nigeria and UK storefronts, a seller portal, and an admin portal. This does not establish that VelveraHub is approved to operate in either market or globally. The controller is <strong>[OWNER: enter the verified legal operator]</strong>, with contact address <strong>[OWNER: enter the registered address]</strong>. Do not publish until those details and the actual production data flows have been verified.</p>
+            <h3>Information the service handles</h3>
+            <ul>
+                <li><strong>Accounts:</strong> email address and authentication data managed by Supabase Auth; profile information may include a name, phone number, region, and seller role. Do not send or store passwords in support requests.</li>
+                <li><strong>Seller applications:</strong> shop and business details, service location, contact details, verification status, submitted verification documents, and administrator review records. Verification documents are intended for restricted seller/admin access, not public listings.</li>
+                <li><strong>Listings and communications:</strong> product descriptions, prices, stock, category, listing images or videos, reviews, and buyer/seller messages where those features are used.</li>
+                <li><strong>Orders:</strong> order items and totals, contact and delivery details supplied at checkout, payment method and status, transaction references, and information needed by the relevant seller to fulfil and support the order. Card numbers are not requested by the current checkout.</li>
+                <li><strong>Service and security events:</strong> consented marketplace events and limited diagnostic information such as event type, route, time, region, request reference, and sanitized error details where an event destination is configured. The operator must confirm what is enabled in each deployed environment.</li>
+                <li><strong>Browser storage:</strong> essential session/authentication state, region and cart preferences, and the cookie-consent choice. Optional analytics and browsing-based recommendations are intended to remain off unless accepted.</li>
+            </ul>
+            <h3>Purposes and legal basis</h3>
+            <p>The service uses account and order information to provide marketplace functions, authenticate users, route orders to sellers, support delivery and customer-service requests, protect the service, moderate listings, and meet legal obligations where applicable. The operator and counsel must document the lawful basis for each purpose in each market; this draft does not select or certify a legal basis.</p>
+            <h3>Who receives information</h3>
+            <p>Relevant sellers receive the buyer and order details needed to fulfil an order. Authorized marketplace administrators can review seller applications, reports, and operational queues. Supabase provides authentication, database, and file storage services; Cloudflare serves the static applications. The browser also loads the Supabase JavaScript client, fonts/icons, and the resumable-upload library from the CDN hosts listed in the owner handoff. Those services may receive ordinary connection metadata such as an IP address and browser headers. Confirm provider contracts, processing locations, and retention before approval.</p>
+            <p>Current checkout does not implement Paystack or Stripe card processing, and the marketplace does not claim escrow or insurance protection. Manual payment availability depends on the relevant seller and administrator settings; a payment instruction or uploaded receipt is not proof that funds cleared. Do not describe a future provider as a current recipient or service.</p>
+            <h3>International processing and retention</h3>
+            <p>Supabase project location, Cloudflare processing, CDN requests, and any cross-border data transfers must be confirmed by the operator. Retention periods for accounts, seller verification, messages, orders, diagnostics, and legal records have not been approved. The operator and counsel must set a schedule, document lawful exceptions, and ensure backups and private files follow it.</p>
+            <h3>Security, deletion, and your choices</h3>
+            <p>Technical controls include authenticated access, role- and ownership-scoped database/storage policies, and restricted administrative screens; these do not guarantee security or establish compliance. The account page currently submits a deletion request for review. It does not itself delete the Supabase Auth user or complete removal/anonymization of related records or files. Do not promise a completion date or complete erasure until an authorized, end-to-end process has passed staging acceptance.</p>
+            <p>Available privacy rights, request identity checks, response timelines, complaint channels, and any regulator contact depend on the approved operating markets. Contact <strong>[OWNER: enter a monitored privacy contact]</strong> to submit a request. The operator must implement and test this process and have counsel confirm this wording before publication.</p>
         </article>
 
         <article class="legal-card" id="terms">
             <h2>Terms of Service</h2>
-            <p>VelveraHub provides a marketplace platform. Buyers are responsible for accurate account, delivery, and payment information. Sellers are responsible for lawful, accurate listings, stock, pricing, fulfilment, customer service, taxes, licences, and any promises made about their goods or services.</p>
-            <h3>Marketplace rules</h3>
-            <p>Do not use VelveraHub for fraud, impersonation, harassment, malware, unlawful goods or services, counterfeit goods, unsafe goods, price manipulation, review manipulation, scraping that harms the service, or attempts to bypass payment or account controls. We may remove content, restrict accounts, hold transactions, or suspend a shop where necessary for safety, law, or these terms.</p>
-            <h3>Listings, payments, delivery, and disputes</h3>
-            <p>Prices, mandatory delivery charges, taxes where applicable, and payment conditions are shown before an order is submitted. An order is not confirmed until the relevant payment or seller confirmation step succeeds. Sellers remain responsible for fulfilment and item accuracy. Buyers should contact support promptly with the order number and evidence for missing, damaged, incorrect, or materially misdescribed items. The Refunds Policy governs available remedies.</p>
-            <h3>Intellectual property and liability</h3>
-            <p>Users retain rights in content they submit but grant VelveraHub permission to display it to operate the marketplace. Users must have the rights to submit that content. The platform is provided with reasonable care; to the extent permitted by law, VelveraHub is not liable for indirect losses or for a seller's independent conduct. Nothing excludes rights or liability that cannot legally be excluded.</p>
-            <p>Governing law, venue, operator identity, and mandatory consumer protections are not yet confirmed. Owner and counsel must complete these terms for each approved market before publication. Account closure does not automatically erase transaction records or complete an account-deletion request.</p>
+            <p>These draft terms describe the current marketplace model, not a promise that every feature or market is available. The contracting operator is <strong>[OWNER: enter the verified legal operator]</strong>. Nigeria and UK storefronts are distinct market experiences; the owner and counsel must approve a separate applicable-law and consumer-rights schedule for each before accepting orders.</p>
+            <h3>Eligibility and accounts</h3>
+            <p>Users must provide accurate account details, protect their sign-in credentials, and promptly report suspected account misuse. Registration currently asks the user to confirm they are at least 18. The owner and counsel must confirm that threshold and its regional legal basis before publication; no alternative age or parental-consent policy is approved here. Sellers must complete applicable onboarding and verification and may not imply that a pending application or document submission is an approval.</p>
+            <h3>Seller responsibilities and listings</h3>
+            <p>Sellers are responsible for their authority to sell, lawful and accurate product descriptions, authenticity and condition claims, images and other content, stock, displayed prices, applicable taxes, order handling, delivery arrangements, and customer support. Sellers must keep listings and availability current and comply with local product-safety, consumer, licensing, and tax requirements. Prohibited uses include unlawful or counterfeit goods, fraud, impersonation, harassment, malware, price or review manipulation, unauthorized data collection, and attempts to bypass marketplace security.</p>
+            <h3>Prices, fees, and orders</h3>
+            <p>Product prices are shown in the applicable market currency. Delivery charges, taxes, marketplace commissions, seller charges, and other mandatory fees must be disclosed before a user commits; the applicable fee schedule is <strong>[OWNER: approve the Nigeria and UK fee/tax/delivery rules]</strong>. The checkout database calculates order totals from current product data. The order summary is not a substitute for owner-approved tax or fee rules.</p>
+            <p>Submitting checkout creates an order request subject to stock and seller/order processing. Current methods are cash on delivery and eligible manual payment; manual-payment orders remain pending until every authorized recipient confirms cleared funds. A receipt or payment instruction is not proof of payment. Card/wallet checkout, Paystack, Stripe Connect, escrow, insurance, and provider refunds are not currently offered by this draft. Do not pay by a method that is not displayed in the applicable order flow.</p>
+            <h3>Delivery, cancellation, returns, and disputes</h3>
+            <p>The seller is responsible for confirming fulfilment and delivery arrangements for the order. Any displayed estimate is not a guarantee unless the operator explicitly approves it as one. Cancellation rights, return eligibility, refund allocation, timelines, complaint escalation, and seller/platform responsibilities have not been finalized. Mandatory statutory rights remain unaffected; the owner and counsel must approve market-specific procedures and ensure the required payment and support workflows actually work before publishing a final policy.</p>
+            <h3>Reviews, moderation, and account action</h3>
+            <p>Reviews must reflect genuine eligible transactions and may not be bought, fabricated, or manipulated. Current public display filters for approved verified-purchase feedback, but a complete review submission and eligibility workflow has not passed acceptance; do not promise that feature as complete. The operator may review reported content and restrict accounts for safety, abuse, fraud, legal compliance, or material breach, using a fair process and applicable appeal rights to be defined by the owner.</p>
+            <h3>Content, intellectual property, and service limits</h3>
+            <p>You retain rights you hold in submitted content and permit the operator to host, reproduce, and display it only as reasonably needed to operate, secure, and promote the marketplace. You must have the rights and permissions necessary to submit it. The operator may remove unlawful or policy-violating content. The marketplace connects buyers and independent sellers; it does not certify every product or guarantee seller performance. Any limitation of liability is subject to mandatory law and must be reviewed by counsel.</p>
+            <h3>Regional legal terms and contact</h3>
+            <p>Operator identity, governing law, dispute forum, complaint contact, and mandatory regional consumer wording are not approved. Nigeria and UK rules must not be treated as interchangeable, and this site does not establish global availability. Complete <strong>[OWNER: approve the legal entity, Nigeria and UK schedules, governing law, and contact details]</strong> with qualified counsel before publication. Closing an account does not itself delete the Auth user or erase records that may lawfully need to be retained.</p>
         </article>
 
         <article class="legal-card" id="refunds">
@@ -73,7 +92,8 @@
         <article class="legal-card" id="cookies">
             <h2>Cookie Policy</h2>
             <p>VelveraHub uses essential browser storage for features such as region, cart, session, and consent. Optional analytics and browsing-based recommendations are enabled only after you accept. Consented activity supports aggregated product, search, checkout, and experiment measurement; the service does not use personal data as an analytics identity.</p>
-            <p>We may use self-hosted or necessary third-party resources for fonts, icons, authentication, database, payment, and media delivery. Their own policies may apply. You can change your analytics choice by clearing VelveraHub site storage in your browser.</p>
+            <p>The current static storefronts do not configure a separate analytics API host. The owner must verify deployed behavior and identify any future analytics recipient before enabling it. The application loads fonts, icons, Supabase client code, and (for larger uploads) resumable-upload code from third-party CDNs; see the launch handoff for the inventory. Payment-provider scripts are not configured in the current checkout. You can change your saved optional-analytics choice at any time using the button below.</p>
+            <button class="btn btn-secondary" type="button" data-cookie-consent-manage>Change optional analytics choice</button>
         </article>
 
         <article class="legal-card" id="data-rights">
@@ -85,5 +105,12 @@
     <footer class="footer shared-footer" data-collapsible-footer data-shared-footer-placeholder aria-label="VelveraHub site footer"></footer>
     <script src="../assets/js/components/site-navigation.js"></script>
     <script src="../assets/js/components/cookie-consent.js"></script>
+    <script>
+        document.addEventListener('click', (event) => {
+            const trigger = event.target.closest('[data-cookie-consent-manage]');
+            if (!trigger) return;
+            window.CookieConsent?.showBanner?.();
+        });
+    </script>
 </body>
 </html>

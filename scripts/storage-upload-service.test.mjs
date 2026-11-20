@@ -112,7 +112,18 @@ assert.match(xhrInstances[0].url, /\/storage\/v1\/object\/product-images\/produc
 assert.equal(xhrInstances[0].headers.Authorization, 'Bearer signed-in-user-token');
 assert.deepEqual(progress, [99, 100]);
 
-const largeFile = { size: 7 * 1024 * 1024, type: 'video/mp4', name: 'large.mp4' };
+const sixMiBFile = { size: 6 * 1024 * 1024, type: 'image/webp', name: 'six-mib.webp' };
+const sixMiBTask = window.StorageUploadService.upload(
+    supabase,
+    'product-images',
+    'product-id/six-mib.webp',
+    sixMiBFile,
+    { contentType: sixMiBFile.type }
+);
+await sixMiBTask.promise;
+assert.equal(xhrInstances.length, 2, 'a file exactly 6 MiB stays on standard upload');
+
+const largeFile = { size: (6 * 1024 * 1024) + 1, type: 'video/mp4', name: 'large.mp4' };
 const tusTask = window.StorageUploadService.upload(
     supabase,
     'product-videos',
@@ -130,6 +141,7 @@ assert.equal(tusInstances[0].options.metadata.bucketName, 'product-videos');
 assert.equal(tusInstances[0].options.metadata.objectName, 'product-id/video-id.mp4');
 assert.equal(tusInstances[0].resumedFromWrongObject, undefined, 'a previous upload for another object must never be resumed');
 assert.equal(progress.at(-1), 100);
-assert.equal(window.StorageUploadService.standardUploadLimitBytes, 6_000_000);
+assert.equal(tusInstances[0].file.size, (6 * 1024 * 1024) + 1, 'the first byte above 6 MiB uses TUS');
+assert.equal(window.StorageUploadService.standardUploadLimitBytes, 6 * 1024 * 1024);
 
-console.log('PASS standard uploads, TUS routing, direct hostname, 6 MiB chunks, retries, and progress callbacks');
+console.log('PASS 6 MiB upload boundary, TUS routing, direct hostname, retries, and progress callbacks');

@@ -33,11 +33,11 @@ assert.match(migration, /order_confirmed/);
 assert.match(migration, /TO anon, authenticated/);
 
 for (const safetyTip of [
-    'Avoid paying in advance, even for delivery',
-    'Meet with the seller at a safe public place',
-    "Inspect the item and ensure it's exactly what you want",
-    "Make sure that the packed item is the one you've inspected",
-    "Only pay if you're satisfied"
+    'Use only payment methods presented in the official checkout.',
+    'Confirm the delivery area, fees, and timing before placing an order.',
+    'Review the product condition and seller details before checkout.',
+    'Keep your order reference and relevant messages.',
+    'Never share passwords, one-time codes, or payment credentials with a seller.'
 ]) {
     assert.ok(product.includes(safetyTip), `product detail page includes safety tip: ${safetyTip}`);
 }

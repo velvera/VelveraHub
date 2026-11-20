@@ -65,8 +65,8 @@ filenames under the test listing UUID folder.
 | Invalid path | Owner A uses a non-UUID listing folder or non-UUIDv4 filename | Rejected |
 | Invalid type | Owner A sends an unsupported MIME type such as `image/jpeg` | Rejected |
 | Invalid size | Owner A sends an image of 40 MiB plus one byte at the default setting | Rejected |
-| Small upload | Upload a valid file smaller than 6 MB (6,000,000 bytes) | Accepted through the standard upload path |
-| Resumable upload | Upload a valid file larger than 6 MB and one close to 40 MiB | Accepted; TUS progress, retry, and resume work |
+| Standard upload boundary | Upload a valid file of exactly 6 MiB (6,291,456 bytes) | Accepted through the standard upload path |
+| Resumable upload | Upload a valid file one byte above 6 MiB and one close to 40 MiB | Accepted; TUS progress, retry, and resume work |
 | Cancel and recover | Cancel one upload, then separately interrupt and restore network access during TUS | Cancellation stops the upload; network recovery resumes the same upload without duplicate objects |
 | Concurrent quota | Owner A concurrently uploads eleven distinct valid media files to a fresh student listing | Exactly ten accepted at the default; at least one rejected |
 
