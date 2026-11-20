@@ -22,18 +22,24 @@ the authenticated behavior tests.
 
 ## Supabase migrations and read-only preflight
 
-1. Apply the 15 numbered migrations from `database/run-schema.txt` in order, using
-   the Supabase migration workflow chosen by the operator. Record each migration
-   and the result before moving to the next. Do not infer that a migration ran
-   from a local file or a passing source test.
-2. Apply `database/account-deletion.sql` only if the target is a legacy schema
+1. Apply migrations 1–14 from `database/run-schema.txt` in order, using the
+   Supabase migration workflow chosen by the operator. Record each result before
+   moving to the next. Do not infer that a migration ran from a local file or a
+   passing source test.
+2. Before migration 15, verify the actual project plan and global Storage limit
+   in the dashboard. Both must support at least 40 MiB (41,943,040 bytes);
+   otherwise stop and do not apply the 40 MiB bucket settings.
+3. Apply migration 15 only after that check, then run the media acceptance
+   cases below. The general Free-plan limit is not verification of this
+   project's settings.
+4. Apply `database/account-deletion.sql` only if the target is a legacy schema
    that lacks the request-queue objects. It is not an additional migration for
    a fresh/current schema.
-3. Run `database/safety-verification.sql` after migration. It is read-only and
+5. Run `database/safety-verification.sql` after migrations. It is read-only and
    checks the effective schema, access grants, triggers, RPCs, and selected
    invariants. Save sanitized output. A passing metadata check does not prove
    the behavior of a signed-in browser role.
-4. Stop and investigate any `passed = false` result before running write tests.
+6. Stop and investigate any `passed = false` result before running write tests.
 
 ## Admin-controlled media settings
 
@@ -59,8 +65,8 @@ filenames under the test listing UUID folder.
 | Invalid path | Owner A uses a non-UUID listing folder or non-UUIDv4 filename | Rejected |
 | Invalid type | Owner A sends an unsupported MIME type such as `image/jpeg` | Rejected |
 | Invalid size | Owner A sends an image of 40 MiB plus one byte at the default setting | Rejected |
-| Small upload | Upload a valid file smaller than 6 MiB | Accepted through the standard upload path |
-| Resumable upload | Upload a valid file larger than 6 MiB and one close to 40 MiB | Accepted; TUS progress, retry, and resume work |
+| Small upload | Upload a valid file smaller than 6 MB (6,000,000 bytes) | Accepted through the standard upload path |
+| Resumable upload | Upload a valid file larger than 6 MB and one close to 40 MiB | Accepted; TUS progress, retry, and resume work |
 | Cancel and recover | Cancel one upload, then separately interrupt and restore network access during TUS | Cancellation stops the upload; network recovery resumes the same upload without duplicate objects |
 | Concurrent quota | Owner A concurrently uploads eleven distinct valid media files to a fresh student listing | Exactly ten accepted at the default; at least one rejected |
 

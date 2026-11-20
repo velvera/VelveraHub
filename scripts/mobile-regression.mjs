@@ -633,6 +633,25 @@ async function assertSellerListingPublish(page, root, width) {
             body: 'window.supabaseConfigReady = Promise.resolve();',
         })
     );
+    await page.route('**/assets/js/services/storage-uploads.js*', (request) =>
+        request.fulfill({
+            status: 200,
+            contentType: 'application/javascript',
+            body: `window.StorageUploadService = Object.freeze({
+                upload(_supabase, bucket, path, file, options = {}) {
+                    const state = window.__sellerListingRegression;
+                    return {
+                        promise: Promise.resolve().then(() => {
+                            state.uploads.push({ bucket, path, type: file.type, size: file.size });
+                            options.onProgress?.(100);
+                            return { data: { path }, error: null };
+                        }),
+                        cancel() {}
+                    };
+                }
+            });`,
+        })
+    );
     await page.addInitScript(() => {
         const state = {
             products: [],
@@ -700,6 +719,20 @@ async function assertSellerListingPublish(page, root, width) {
         }
         const client = {
             from(table) { return createQuery(table); },
+            async rpc(name) {
+                if (name !== 'get_marketplace_media_limits') {
+                    return { data: null, error: new Error(`Unexpected RPC: ${name}`) };
+                }
+                return {
+                    data: {
+                        product_image_limit: 10,
+                        student_listing_media_limit: 10,
+                        product_image_max_bytes: 41943040,
+                        product_video_max_bytes: 41943040,
+                    },
+                    error: null,
+                };
+            },
             auth: {
                 async getSession() { return { data: { session: { access_token: 'test-session' } } }; },
             },

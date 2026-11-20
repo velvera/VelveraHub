@@ -1,6 +1,6 @@
 # VelveraHub Master Roadmap
 
-**Updated:** 30 October 2026
+**Updated:** 20 November 2026
 **Release decision:** **DO NOT LAUNCH YET**
 
 This is the current source of truth, consolidated from `improvement.md`, `finalassessment.md`, the previous `roadmap.md`, and the repository checks run during this review. The two dated review files are retained as historical evidence; their current status is superseded by this document.
@@ -13,14 +13,22 @@ This is the current source of truth, consolidated from `improvement.md`, `finala
 
 ## Summary
 
-The project has substantial marketplace, security, mobile, and operational groundwork. The current local product, payment, storage-safety, generated-app, image-alt, and smoke checks pass. A production read-only Supabase preflight before the latest media-settings checks returned 46 of 47 checks as passing; both product-media buckets had null size and MIME limits. Migration 15 now defines seller-friendly admin controls, fixed Storage ceilings, and database enforcement locally, but it has not been applied to production or verified in staging.
+The local implementation now includes 40 MiB per-file media limits, 10-item quotas, resumable TUS uploads for files above 6 MiB, progress/cancellation, stricter public review displays, and draft legal/support copy that no longer promises an unimplemented deletion or refund process. Migration 15 remains local and unverified. No Supabase staging integration is connected, and the actual project plan/global Storage limit have not been inspected.
 
-The expanded 66-item production checklist contains **20 PASS, 37 NEEDS REVIEW, and 9 BLOCKED** items. Do not treat a local PASS or metadata-only database check as evidence that an authenticated production upload, payment flow, or domain has been tested. The release decision remains **DO NOT LAUNCH YET**.
+The 30 October checklist counts below are a historical snapshot, not the current status. Local tests and code changes do not establish staging or production readiness. The last recorded production preflight found both product-media bucket size/MIME limits unset; manual-payment schema exists in production but no receiving destinations are configured. No complete account-deletion acceptance or provider-payment acceptance has passed. The release decision remains **DO NOT LAUNCH YET**.
 
 ## Work completed
 
 ### Changes in this review
 
+- Raised local product photo and video file ceilings to 40 MiB, while preserving 10 shop photos and 10 independent-listing media items; the project plan and global limit remain an explicit pre-migration check.
+- Added shared standard/TUS upload handling: standard uploads through 6 MiB, 6 MiB TUS chunks above that, authenticated direct Storage requests, progress, cancellation, and retry/resume behavior for recoverable TUS interruptions.
+- Added per-file progress/cancel UI to independent listings and seller product uploads; compressed photos are handled as blobs rather than expanded base64 data URLs.
+- Replaced public fallback ratings and synthetic seller trust scores with an explicit verified-review-unavailable state; seller review reads now require both verified-purchase and approved flags.
+- Reworked public shop discovery to avoid unsupported ratings/sales rankings and limited its shop query to fields needed for the directory.
+- Marked privacy, terms, and refund text as drafts; removed the unsupported 14-day deadline and corrected the account-deletion wording to say that queuing a request does not delete the Supabase Auth user.
+- Replaced escrow, trade-insurance, and unsupported security claims on the payment/support page with the current state: no Paystack/Stripe checkout and no escrow/insurance protection.
+- Expanded staging guidance with the 40 MiB plan/global-limit precondition and standard-versus-TUS acceptance cases.
 - Rendered the checked-in brand mark immediately rather than waiting for remote branding settings, and added a retry to the local footer-logo fallback.
 - Prevented generic site SEO settings from overwriting listing-specific product titles, descriptions, canonical URLs, and sharing metadata.
 - Removed the unverified “Ltd.” company suffix and “trusted products” claim from shared footer copy.
@@ -34,9 +42,12 @@ The expanded 66-item production checklist contains **20 PASS, 37 NEEDS REVIEW, a
 - Corrected the Cloudflare upload-acceptance instructions to require disposable staging accounts and prohibit write tests against production.
 - Added a staging acceptance runbook covering disposable-account checks, evidence handling, and the payment-provider test matrix.
 
-### Production checklist items marked PASS
+### Previously passed local baseline checks on 30 October
 
-- **Legal and privacy:** Refund policy, cookie policy, opt-in cookie-consent banner, and linked form acknowledgements.
+These repository and preview checks are historical local evidence only; they do
+not prove production readiness.
+
+- **Privacy UX:** Opt-in cookie-consent banner and linked form acknowledgements. The public legal copy is now explicitly a draft pending owner and legal review.
 - **Security and reliability:** API rate limits, payload/resource limits, database/API timeouts, and redacted request/error logging.
 - **UX and accessibility:** Shared loading/empty states, image alt-text audit, mobile breakpoints, and scroll-aware mobile navigation.
 - **SEO and discoverability:** Page titles/descriptions, `robots.txt`, `sitemap.xml`, and favicon/app-icon set.
@@ -76,7 +87,7 @@ The expanded 66-item production checklist contains **20 PASS, 37 NEEDS REVIEW, a
 - Focused mobile regression at 320px for the parent storefront and standalone shop-owner portal.
 - Full `npm run mobile:regression` — completed with exit code 0 across the configured viewport and app-root matrix.
 
-## Supabase and payment acceptance status — 30 October 2026
+## Supabase and payment evidence from 30 October 2026 (historical)
 
 ### Confirmed from the repository
 
@@ -109,34 +120,34 @@ The expanded 66-item production checklist contains **20 PASS, 37 NEEDS REVIEW, a
 
 | Item | Status | Required next step |
 |---|---|---|
-| Privacy Policy | NEEDS REVIEW | Confirm the real operator, jurisdiction, contact details, data flows, retention, and cross-border processing; obtain appropriate legal review and verify publication on every public domain. |
-| Terms of Service | NEEDS REVIEW | Confirm governing law, operator details, marketplace/payment/delivery/dispute terms, and that the text matches the actual seller and buyer workflows. |
+| Privacy Policy | NEEDS REVIEW | Public copy is now explicitly a draft. Confirm operator, jurisdiction, contacts, data flows, retention, and cross-border processing; obtain counsel review and verify each approved market. |
+| Terms of Service | NEEDS REVIEW | Public copy is now explicitly a draft. Confirm governing law, operator details, marketplace/payment/delivery/dispute terms, and that text matches real workflows. |
 | Business details and real contact address | BLOCKED | Supply the verified legal/operator name, registration details, jurisdiction, and address/contact information. Do not invent these details. |
-| Minimize data collection | NEEDS REVIEW | Audit forms, API payloads, database fields, cookies, logs, and analytics events; remove data not required for the stated purpose. |
-| Third-party SDK and asset review | NEEDS REVIEW | Inventory Supabase, Google Fonts, Font Awesome, external APIs, and other scripts/assets; record purpose, access, necessity, retention, and commercial licensing, then approve or remove each. |
+| Minimize data collection | NEEDS REVIEW | Public shop-directory reads now request only displayed fields. Finish the wider form, API, database, cookie, log, and analytics audit and remove unnecessary data. |
+| Third-party SDK and asset review | NEEDS REVIEW | TUS is pinned to a specific CDN version; inventory all SDKs, fonts, icons, external images/APIs and their data access, necessity, licensing, and retention before approval. |
 | Dark patterns | NEEDS REVIEW | Audit consent, cancellation, account, seller, checkout, and promotional flows for preselected choices, coercive copy, hidden controls, or misleading hierarchy. |
-| Fees and pricing disclosure | NEEDS REVIEW | Verify all mandatory buyer/seller fees, delivery charges, taxes, commissions, and regional pricing before users commit. |
-| Review integrity | NEEDS REVIEW | Verify reviews are tied to eligible transactions, approval/moderation is server-enforced, and no seeded or fabricated reviews/ratings are presented as genuine. |
-| Unsupported marketing claims | NEEDS REVIEW | Review badges, guarantees, ratings, trust language, and performance claims against evidence. The unsupported footer wording found in this pass has been removed; the wider audit remains. |
-| Account data deletion | NEEDS REVIEW | Follow `database/run-schema.txt`; use `database/account-deletion.sql` only for a legacy schema. The 14 October request-queue/RLS checks passed, but Auth-user deletion and final data cleanup were intentionally not performed. Test the complete operator workflow on staging with disposable accounts and document retention. |
-| Children’s data / age consent | NEEDS REVIEW | Verify every regional and external sign-up path enforces the intended age restriction and that the policy matches applicable law. |
+| Fees and pricing disclosure | NEEDS REVIEW | Checkout shows order totals, but owner-approved fees, tax, commissions, delivery charges, and regional rules remain unconfirmed. Verify each market before users commit. |
+| Review integrity | NEEDS REVIEW | Storefronts no longer show fallback ratings or synthetic trust scores, and seller review reads filter to approved verified purchases. There is no complete customer review submission/eligibility workflow; verify its design and server enforcement before enabling reviews. |
+| Unsupported marketing claims | NEEDS REVIEW | Removed rating/sales-ranked “Top Shops,” unverified buyer-protection score, escrow/trade-insurance promises, and unsupported 14-day refund copy from the reviewed pages. Continue the site-wide claims audit. |
+| Account data deletion | BLOCKED | Deletion requests are queued only; the approved privileged Auth-user deletion path is not implemented or available in static Pages. The 14 October queue/RLS tests did not verify deletion. Complete and stage-test the operator workflow. |
+| Children’s data / age consent | NEEDS REVIEW | Registration forms request an 18+ confirmation, but the owner and counsel must confirm the minimum age and regional legal requirement; verify every signup path and record retention. |
 | Marketing email unsubscribe | NEEDS REVIEW | No marketing sender is configured. If marketing email is enabled, implement and test reliable unsubscribe handling before sending. |
-| Font/image licensing | NEEDS REVIEW | Confirm commercial rights for bundled images, fonts, icons, and third-party CDN assets. |
+| Font/image licensing | NEEDS REVIEW | Inventory and confirm commercial rights for bundled images, fonts, icons, and third-party CDN assets; repository availability is not proof of a license. |
 
 ### 2. Security, payments, and reliability
 
 | Item | Status | Required next step |
 |---|---|---|
-| Upload limits | NEEDS REVIEW | Step 15 now implements admin-controlled defaults (10 shop photos/listing, 10 independent-listing media, 10 MiB compressed photos, 100 MiB videos), bounded controls, client guidance, and database size/MIME enforcement locally. It is not applied in production; both production bucket limits remain unset. Apply and test in dedicated staging, including an admin settings change, 11-upload quota, cross-owner, invalid-path/MIME/size checks, before any production migration. |
+| Upload limits | NEEDS REVIEW | Local migration/client/admin defaults are now 40 MiB per image/video file with fixed MIME rules; both 10-item quotas remain. Migration 15 is not verified in production. The last recorded production check found both buckets unrestricted. Verify the actual target plan/global limit first, then run the complete migration and TUS acceptance in staging. |
 | Duplicate subscriptions | NEEDS REVIEW | No complete subscription flow is configured. Confirm subscriptions are not advertised; if introduced, make creation idempotent across retries and races. |
-| Duplicate payments and webhooks | NEEDS REVIEW / BLOCKED | Order creation is idempotent, but provider charge execution, signed webhooks, replay protection, refunds, and authoritative reconciliation are not complete. Implement and stage-test Paystack for Nigeria and Stripe Connect for the UK before enabling card/wallet payments. |
-| Manual bank-transfer payments | NEEDS REVIEW | The production schema is applied, but no authorized Nigeria/UK receiving account is configured or enabled and no staging order/receipt tests have run. Verify the flow in staging first; then an authorized admin must configure only confirmed account details in the admin workspace. Do not send bank details in chat. |
+| Duplicate payments and webhooks | BLOCKED | Order creation is idempotent, but Paystack/Stripe provider execution, signed webhooks, replay protection, refunds, settlement, and reconciliation are not implemented or accepted. Keep card/wallet methods disabled. |
+| Manual bank-transfer payments | BLOCKED | Production schema is applied, but no verified Nigeria/UK receiving account is configured or enabled and no staging order/receipt test has passed. Keep each market disabled until tested and authorized details are entered in the admin workspace. |
 | Error handling and failed requests | NEEDS REVIEW | Complete the cross-surface audit for database, network, auth, upload, and payment failures; verify safe messages, retry rules, preserved form state, and duplicate-submit protection. |
 | Uptime and production monitoring | BLOCKED | Choose a monitoring provider and responsible alert destination; cover storefront/API health, database, payment, and critical error signals. |
 | Concurrent usage | NEEDS REVIEW | Run controlled load/concurrency tests for sign-in, search, listing creation, checkout, inventory locks, and seller operations; fix races and document capacity. |
 | Backup restoration | BLOCKED | Perform and document a controlled production restore, including recovery point/time and required external dependencies. |
 | Spending caps | BLOCKED | Configure provider, storage, email, analytics, and infrastructure budgets and alerts with the relevant account owners. |
-| Shared rate-limit storage | NEEDS REVIEW | Current limits are in-memory. Use a shared store or deployment guarantee before running multiple API instances. |
+| Shared rate-limit storage | NEEDS REVIEW | The local Express API supports a PostgreSQL rate-limit store with a bounded-memory fallback. Production serves static Cloudflare roots; deployed enforcement and multi-instance behavior are not verified. |
 
 ### 3. Database and performance
 

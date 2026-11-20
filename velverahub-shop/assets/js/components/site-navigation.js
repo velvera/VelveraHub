@@ -80,7 +80,7 @@
 
     const ROUTES = [
         { href: '/pages/categories.html', icon: 'fa-layer-group', image: '/img/quick-links/all-categories.png', label: 'All Categories' },
-        { href: '/pages/shops.html', icon: 'fa-store', image: '/img/quick-links/top-shops.png', label: 'Top Shops' },
+        { href: '/pages/shops.html', icon: 'fa-store', image: '/img/quick-links/top-shops.png', label: 'Shop directory' },
         { href: '/pages/secured-trading.html', icon: 'fa-shield-halved', image: '/img/quick-links/secured-trading.png', label: 'Secured Trading' },
         { href: '/pages/video-channel.html', icon: 'fa-circle-play', image: '/img/quick-links/video-channel.png', label: 'Video Channel' },
         { href: '/pages/new-users.html', icon: 'fa-gift', image: '/img/quick-links/new-users-benefits.png', label: 'New Users Benefits' },

@@ -165,7 +165,7 @@
 
         return list.map((product, index) => {
             const categoryAffinity = Number(profile.categories?.[product.category] || 0);
-            const rating = Math.min(5, Number(product.rating || 0)) / 5;
+            const rating = Math.min(5, Number(product.verified_rating || 0)) / 5;
             const sales = Math.min(1, Number(product.sales_count || 0) / maxSales);
             const market = window.RegionService?.marketContext || {};
             const selectedLocation = window.RegionService?.location || 'all';

@@ -185,12 +185,7 @@ const UI = {
                         </div>
                     </div>
                     <h3 class="product-title"${!redirectToShop ? ` data-action="view-product" data-product-id="${escapeProductHtml(product.id)}"` : ''}>${escapeProductHtml(product.title)}</h3>
-                    <div class="product-rating">
-                        <div class="stars">
-                            ${this.renderStars(parseFloat(product.rating) || 4.5)}
-                        </div>
-                        <span class="rating-count">(${product.reviews_count || 0})</span>
-                    </div>
+                    ${this.renderVerifiedReviewSummary(product)}
                     <div class="product-price">
                         <span class="current-price">${priceDisplay}</span>
                         ${hasDiscount ? `<span class="original-price">${origPriceDisplay}</span>` : ''}
@@ -224,6 +219,15 @@ const UI = {
             html += '<i class="far fa-star"></i>';
         }
         return html;
+    },
+
+    renderVerifiedReviewSummary(product = {}) {
+        const count = Number(product.verified_reviews_count);
+        const rating = Number(product.verified_rating);
+        if (!Number.isSafeInteger(count) || count < 1 || !Number.isFinite(rating) || rating < 1 || rating > 5) {
+            return '<div class="product-rating"><span class="rating-count">Verified-purchase reviews unavailable</span></div>';
+        }
+        return `<div class="product-rating"><div class="stars">${this.renderStars(rating)}</div><span class="rating-count">${rating.toFixed(1)} · ${count} verified review${count === 1 ? '' : 's'}</span></div>`;
     },
     
     renderProductSkeleton() {
@@ -278,25 +282,8 @@ const UI = {
                         ${shop.verified ? '<span class="shop-verified"><i class="fas fa-check"></i></span>' : ''}
                     </div>
                     <div class="shop-info">
-                        <div class="shop-header">
-                            <h4 class="shop-name-lg" style="margin: 0;">${shopName}</h4>
-                            <div class="shop-rating-lg" style="margin: 0; padding: 0.15rem 0.5rem; display: flex; align-items: center; gap: 0.25rem; font-size: 0.75rem;">
-                                <i class="fas fa-star" style="font-size: 0.8rem;"></i>
-                                <span>${shop.rating || 4.5}</span>
-                            </div>
-                        </div>
+                        <div class="shop-header"><h4 class="shop-name-lg" style="margin: 0;">${shopName}</h4></div>
                         <p class="shop-description">${shopDescription}</p>
-                        ${window.TrustService ? `<div class="shop-card-trust">${window.TrustService.renderBadge(shop, { compact: true })}</div>` : ''}
-                        <div class="shop-stats">
-                            <div class="shop-stat">
-                                <div class="stat-value">${shop.products || shop.total_products || 0}</div>
-                                <div class="stat-label">Products</div>
-                            </div>
-                            <div class="shop-stat">
-                                <div class="stat-value">${shop.followers || '0'}</div>
-                                <div class="stat-label">Followers</div>
-                            </div>
-                        </div>
                     </div>
                     <div class="shop-footer">
                         <a href="/pages/shop.html?id=${encodeURIComponent(shop.id || '')}" class="visit-shop-btn">Visit Shop</a>
@@ -374,10 +361,7 @@ const UI = {
                         <span class="shop-name">${shop.name || 'VelveraHub Store'}</span>
                     </div>
                     <h3 class="quick-view-title">${product.title}</h3>
-                    <div class="product-rating">
-                        <div class="stars">${this.renderStars(parseFloat(product.rating) || 4.5)}</div>
-                        <span class="rating-count">(${product.reviews_count || 0})</span>
-                    </div>
+                    ${this.renderVerifiedReviewSummary(product)}
                     <div class="product-price">
                         <span class="current-price">${priceDisplay}</span>
                         ${hasDiscount ? `<span class="original-price">${origPriceDisplay}</span>` : ''}

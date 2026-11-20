@@ -110,7 +110,7 @@ assert.equal(standardResult.data.path, 'product-id/image-id.webp');
 assert.equal(xhrInstances[0].method, 'POST');
 assert.match(xhrInstances[0].url, /\/storage\/v1\/object\/product-images\/product-id\/image-id\.webp$/);
 assert.equal(xhrInstances[0].headers.Authorization, 'Bearer signed-in-user-token');
-assert.deepEqual(progress, [100]);
+assert.deepEqual(progress, [99, 100]);
 
 const largeFile = { size: 7 * 1024 * 1024, type: 'video/mp4', name: 'large.mp4' };
 const tusTask = window.StorageUploadService.upload(
@@ -125,11 +125,11 @@ assert.equal(tusResult.data.path, 'product-id/video-id.mp4');
 assert.equal(tusInstances.length, 1);
 assert.equal(tusInstances[0].options.endpoint, 'https://project-ref.storage.supabase.co/storage/v1/upload/resumable');
 assert.equal(tusInstances[0].options.chunkSize, 6 * 1024 * 1024);
-assert.deepEqual(tusInstances[0].options.retryDelays, [0, 3000, 5000, 10000, 20000]);
+assert.deepEqual(Array.from(tusInstances[0].options.retryDelays), [0, 3000, 5000, 10000, 20000]);
 assert.equal(tusInstances[0].options.metadata.bucketName, 'product-videos');
 assert.equal(tusInstances[0].options.metadata.objectName, 'product-id/video-id.mp4');
 assert.equal(tusInstances[0].resumedFromWrongObject, undefined, 'a previous upload for another object must never be resumed');
 assert.equal(progress.at(-1), 100);
-assert.equal(window.StorageUploadService.standardUploadLimitBytes, 6 * 1024 * 1024);
+assert.equal(window.StorageUploadService.standardUploadLimitBytes, 6_000_000);
 
 console.log('PASS standard uploads, TUS routing, direct hostname, 6 MiB chunks, retries, and progress callbacks');

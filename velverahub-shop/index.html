@@ -810,10 +810,12 @@
                             <label>Product Images</label>
                             <div class="image-upload-area" id="imageUploadArea">
                                 <i class="fas fa-cloud-upload-alt"></i>
-                                <p id="sellerMediaLimitHelp">The administrator controls the per-listing media count and file-size limits. Photos are resized and uploaded as WebP.</p>
+                                <p id="sellerMediaLimitHelp">Upload JPEG, PNG, or WebP photos up to 40 MiB before compression. The administrator controls the per-listing count and compressed-photo limit.</p>
                                 <input type="file" id="productImages" accept="image/jpeg,image/png,image/webp" multiple hidden>
                             </div>
                             <div class="uploaded-images" id="uploadedImages"></div>
+                            <ol class="seller-media-upload-progress" id="productImageUploadProgress" aria-live="polite" hidden></ol>
+                            <button class="btn btn-secondary" id="cancelProductImageUploads" type="button" hidden>Cancel uploads</button>
                         </div>
                         </div>
                     </div>
@@ -843,6 +845,7 @@
     <script src="assets/js/components/interaction-feedback.js"></script>
     <script src="assets/js/components/custom-select.js"></script>
     <script src="assets/js/services/categories.js"></script>
+    <script src="assets/js/services/storage-uploads.js"></script>
     <script src="shop.js"></script>
     <script src="assets/js/components/smart-features.js"></script>
     <script src="assets/js/components/mobile-nav.js"></script>

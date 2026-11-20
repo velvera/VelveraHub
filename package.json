@@ -7,6 +7,7 @@
     "test:messages-moderation": "node scripts/messages-moderation.test.mjs",
     "test:storage-policy-safety": "node scripts/storage-policy-safety.test.mjs",
     "test:storage-upload-service": "node scripts/storage-upload-service.test.mjs",
+    "test:marketplace-integrity": "node scripts/marketplace-integrity.test.mjs",
     "test:supabase-readiness": "node scripts/supabase-readiness.test.mjs",
     "test:cookie-consent": "node scripts/cookie-consent.test.mjs",
     "test:manual-payments": "node scripts/manual-payment-safety.test.mjs",

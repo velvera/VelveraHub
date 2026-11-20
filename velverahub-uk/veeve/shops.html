@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Top Shops - VelveraHub</title>
-    <meta name="description" content="Discover verified VelveraHub shops ranked by customer rating and marketplace sales performance.">
+    <title>Shop Directory - VelveraHub</title>
+    <meta name="description" content="Browse active VelveraHub shops and their current listings.">
     <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="../assets/css/base.css" rel="stylesheet"><link href="../assets/css/components/navbar.css" rel="stylesheet"><link href="../assets/css/components/custom-select.css" rel="stylesheet"><link href="../assets/css/components/smart-features.css" rel="stylesheet"><link href="../assets/css/components/landing-pages.css" rel="stylesheet">
@@ -14,7 +14,7 @@
 </head>
 <body>
     <nav class="navbar"><div class="nav-container"><div class="nav-left"><a href="/" class="logo"><span class="logo-icon"><img src="../img/logo.png" alt="VelveraHub"></span><span class="logo-text">Velvera<span class="accent">Hub</span></span></a></div><div class="nav-center"><div class="search-container"><select class="category-select" id="searchCategory"><option value="all">All Categories</option><option value="electronics">Electronics</option><option value="fashion">Fashion</option><option value="home">Home &amp; Garden</option><option value="sports">Sports</option><option value="beauty">Beauty</option><option value="toys">Toys &amp; Games</option></select><input class="search-input" id="searchInput" placeholder="Search for products..."><button class="search-btn" id="searchBtn" aria-label="Search"><i class="fas fa-search"></i></button></div></div><div class="nav-right"><div class="nav-icons"><a class="nav-icon-item" href="/"><i class="fas fa-home"></i><span class="icon-label">Home</span></a><a class="nav-icon-item" href="/veeve/products.html"><i class="fas fa-th-large"></i><span class="icon-label">Browse</span></a><a class="nav-icon-item" href="/veeve/account.html"><i class="fas fa-user"></i><span class="icon-label">Account</span></a><a class="nav-icon-item" href="/veeve/cart.html"><i class="fas fa-shopping-cart"></i><span class="icon-label">Cart</span></a></div></div></div></nav>
-<main class="landing-main"><div class="section-container"><header class="landing-hero"><span class="landing-eyebrow"><i class="fas fa-store"></i> Verified marketplace</span><h1>Top Shops</h1><p>Discover dependable sellers ranked by customer rating first, then proven sales performance.</p></header><section class="shops-directory-grid" id="shopsDirectory" aria-live="polite"><div class="shops-directory-status"><i class="fas fa-spinner fa-spin"></i> Loading top shops...</div></section></div></main>
+<main class="landing-main"><div class="section-container"><header class="landing-hero"><span class="landing-eyebrow"><i class="fas fa-store"></i> Shop directory</span><h1>Active Shops</h1><p>Browse shops that are currently listed on VelveraHub. Review each listing and confirm delivery and payment details before ordering.</p></header><section class="shops-directory-grid" id="shopsDirectory" aria-live="polite"><div class="shops-directory-status"><i class="fas fa-spinner fa-spin"></i> Loading shops...</div></section></div></main>
     <nav class="mobile-bottom-nav"><div class="bottom-nav-items"><a class="bottom-nav-item" href="/"><i class="fas fa-home"></i><span>Home</span></a><a class="bottom-nav-item active" href="/veeve/shops.html"><i class="fas fa-store"></i><span>Shops</span></a><button class="bottom-nav-item" id="bottomCartBtn"><i class="fas fa-shopping-cart"></i><span>Cart</span></button><button class="bottom-nav-item" id="bottomAccountBtn"><i class="fas fa-user"></i><span>Account</span></button></div></nav>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../assets/js/services/region.js"></script><script src="../assets/js/config.js"></script><script src="../assets/js/services/publicSupabaseConfig.js"></script><script src="../assets/js/services/observability.js"></script><script src="../assets/js/services/supabaseClient.js"></script><script src="../assets/js/components/async-feedback.js"></script><script src="../assets/js/components/focus-manager.js"></script>
@@ -26,31 +26,19 @@
             }[char]));
             const imageFallback = 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800&q=80';
 
-            function trustTier(shop) {
-                const rating = Number(shop.rating) || 0;
-                const sales = Number(shop.total_sales) || 0;
-                if (rating >= 4.8 && sales >= 10000) return ['tier-premium', 'Premium', 'fa-certificate'];
-                if (rating >= 4.5 && sales >= 5000) return ['tier-trusted', 'Trusted', 'fa-circle-check'];
-                if (rating >= 4) return ['tier-rising', 'Rising', 'fa-shield-check'];
-                return ['tier-low', 'New / low rating', 'fa-star-half-stroke'];
-            }
-
             function renderShop(shop, index) {
-                const [tierClass, tierLabel, icon] = trustTier(shop);
                 const shopId = encodeURIComponent(shop.slug || shop.id);
                 const name = escapeHtml(shop.name || 'VelveraHub shop');
-                const description = escapeHtml(shop.description || 'A growing shop on VelveraHub.');
-                const rating = (Number(shop.rating) || 0).toFixed(1);
-                const sales = Number(shop.total_sales) || 0;
+                const description = escapeHtml(shop.description || 'Shop on VelveraHub.');
                 return `<article class="shop-rank-card" data-shop-href="/veeve/shop.html?id=${shopId}" tabindex="0" role="link">
                     <a href="/veeve/shop.html?id=${shopId}" aria-label="Visit ${name}">
-                        <div class="shop-rank-banner"><img src="${escapeHtml(shop.banner_url || imageFallback)}" alt="${name} banner" loading="lazy" onerror="this.src='${imageFallback}'"><span class="shop-rank-number">#${index + 1}</span></div>
+                        <div class="shop-rank-banner"><img src="${escapeHtml(shop.banner_url || imageFallback)}" alt="${name} banner" loading="lazy" onerror="this.src='${imageFallback}'"></div>
                     </a>
                     <div class="shop-rank-body">
                         <img class="shop-rank-logo" src="${escapeHtml(shop.logo_url || imageFallback)}" alt="${name} logo" loading="lazy" onerror="this.src='${imageFallback}'">
                         <div class="shop-rank-copy"><h2>${name}</h2><p>${description}</p></div>
                     </div>
-                    <div class="shop-rank-meta"><span><strong>${rating}</strong> <i class="fas fa-star" style="color:#f59e0b"></i> · ${sales.toLocaleString()} sales</span><span class="shop-trust-check ${tierClass}"><i class="fas ${icon}"></i>${tierLabel}</span></div>
+                    <div class="shop-rank-meta"><span>Active shop</span><a href="/veeve/shop.html?id=${shopId}">View listings</a></div>
                 </article>`;
             }
 
@@ -58,7 +46,7 @@
                 const directory = document.getElementById('shopsDirectory');
                 const requestId = AsyncFeedback.createRequestId('shops');
                 AsyncFeedback.render(directory, 'loading', {
-                    loadingTitle: 'Loading top shops',
+                    loadingTitle: 'Loading shops',
                     loadingMessage: 'Connecting to the live shop directory.'
                 });
                 try {
@@ -67,17 +55,15 @@
                     if (!supabase) throw new Error('Live catalogue is not configured');
                     const { data: shops, error } = await supabase
                         .from('shops')
-                        .select('*')
+                        .select('id, slug, name, description, logo_url, banner_url')
                         .eq('status', 'active')
-                        .order('rating', { ascending: false, nullsFirst: false })
-                        .order('total_sales', { ascending: false })
+                        .order('name', { ascending: true })
                         .limit(24);
                     if (error) throw error;
-                    shops.sort((a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0) || (Number(b.total_sales) || 0) - (Number(a.total_sales) || 0));
                     if (shops.length) directory.innerHTML = shops.map(renderShop).join('');
                     else AsyncFeedback.render(directory, 'empty', {
                         emptyTitle: 'No active shops yet',
-                        emptyMessage: 'Verified shops will appear here when they publish live listings.'
+                        emptyMessage: 'Active shops will appear here when they are available.'
                     });
                 } catch (error) {
                     AsyncFeedback.log('shops', requestId, error);

@@ -1386,7 +1386,7 @@ async function renderSellerPage(page) {
                 body.innerHTML = sellerEmpty('Reviews appear after customers complete verified purchases.');
                 return;
             }
-            const { data, error } = await supabase.from('reviews').select('id, rating, title, comment, created_at, products!inner(title, shop_id)').eq('products.shop_id', shop.id).order('created_at', { ascending: false }).limit(50);
+            const { data, error } = await supabase.from('reviews').select('id, rating, title, comment, created_at, is_verified_purchase, is_approved, products!inner(title, shop_id)').eq('products.shop_id', shop.id).eq('is_verified_purchase', true).eq('is_approved', true).order('created_at', { ascending: false }).limit(50);
             if (error) throw error;
             body.innerHTML = renderSellerReviews(data || []);
         } else if (page === 'promotions') {
@@ -1867,7 +1867,7 @@ function initProductForm() {
         return limits;
     }
 
-    async function uploadSelectedImages(supabase, productId, selectedImages) {
+    async function uploadSelectedImages(supabase, productId, selectedImages, configuredLimits = null) {
         const newImages = selectedImages
             .map((url) => {
                 const image = Array.from(uploadedImages?.querySelectorAll('img') || []).find((item) => item.src === url);
@@ -1875,7 +1875,7 @@ function initProductForm() {
             })
             .filter((image) => sellerImageBlobsByPreviewUrl.has(image.url) || image.url.startsWith('data:'));
         if (!newImages.length) return [];
-        const limits = await loadSellerMediaLimits(supabase);
+        const limits = configuredLimits || await loadSellerMediaLimits(supabase);
         if (selectedImages.length > limits.product_image_limit) {
             throw new Error(`A listing can have no more than ${limits.product_image_limit} photos.`);
         }
@@ -2103,9 +2103,21 @@ function initProductForm() {
             let uploadedImageResults = [];
             try {
                 const { supabase, shop } = supabaseContext;
+                const mediaLimits = hasNewImages ? await loadSellerMediaLimits(supabase) : null;
+                if (mediaLimits) {
+                    if (selectedImages.length > mediaLimits.product_image_limit) {
+                        throw new Error(`A listing can have no more than ${mediaLimits.product_image_limit} photos.`);
+                    }
+                    const newImageBlobs = selectedImages
+                        .map((url) => sellerImageBlobsByPreviewUrl.get(url))
+                        .filter(Boolean);
+                    if (newImageBlobs.some((image) => image.size > mediaLimits.product_image_max_bytes)) {
+                        throw new Error(`Each compressed photo must be ${Math.floor(mediaLimits.product_image_max_bytes / 1048576)} MiB or smaller.`);
+                    }
+                }
 
                 if (isEditing) {
-                    uploadedImageResults = await uploadSelectedImages(supabase, editingProductId, selectedImages);
+                    uploadedImageResults = await uploadSelectedImages(supabase, editingProductId, selectedImages, mediaLimits);
                     const trustFields = {
                         specifications,
                         provenance_documents: provenanceUrl ? [{ url: provenanceUrl, type: 'reference' }] : [],
@@ -2214,7 +2226,7 @@ function initProductForm() {
                     }
                     if (insertResult.error) throw insertResult.error;
                     const product = insertResult.data;
-                    uploadedImageResults = await uploadSelectedImages(supabase, product.id, selectedImages);
+                    uploadedImageResults = await uploadSelectedImages(supabase, product.id, selectedImages, mediaLimits);
                     const imageRows = uploadedImageResults.map((image, index) => ({
                         product_id: product.id,
                         url: image.url,

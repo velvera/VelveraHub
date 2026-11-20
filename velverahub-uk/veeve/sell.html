@@ -71,7 +71,7 @@
                                 <label id="listingAdReferenceWrap" for="listingAdReference" hidden>Bank transfer reference<input id="listingAdReference" name="ad_reference" maxlength="120" placeholder="Enter your ₦999 transfer reference"></label>
                             </div>
                             <div class="full-width"><label for="listingDescription">Description</label><textarea id="listingDescription" name="description" required maxlength="3000" placeholder="Share useful details, pickup options, and anything buyers should know."></textarea></div>
-                            <div class="full-width"><label for="listingImages">Photos and videos <span style="font-weight:400;color:var(--campus-muted)">(count set by administrator)</span></label><input id="listingImages" name="images" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime" multiple><small id="listingMediaLimitHelp" class="campus-help">Upload limits are controlled by the administrator. Original photos up to 20 MiB are compressed to WebP. Supported videos: MP4, WebM, or QuickTime.</small><div id="listingImagePreview" class="campus-image-preview" hidden></div></div>
+                            <div class="full-width"><label for="listingImages">Photos and videos <span style="font-weight:400;color:var(--campus-muted)">(count set by administrator)</span></label><input id="listingImages" name="images" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime" multiple><small id="listingMediaLimitHelp" class="campus-help">Upload limits are controlled by the administrator. Original photos up to 40 MiB are compressed to WebP. Supported videos: MP4, WebM, or QuickTime.</small><div id="listingImagePreview" class="campus-image-preview" hidden></div></div>
                         </div>
                         <div class="campus-form-actions">
                             <p class="campus-privacy-note"><i class="fas fa-shield-halved"></i> Your seller name and avatar come from your account. Never share passwords or payment details in a listing.</p>
@@ -105,6 +105,7 @@
     <script src="../assets/js/services/categories.js"></script>
     <script src="../assets/js/components/mobile-nav.js"></script>
     <script src="../assets/js/components/interaction-feedback.js"></script>
+    <script src="../assets/js/services/storage-uploads.js"></script>
     <script src="../assets/js/pages/student-listing.js"></script>
 </body>
 </html>

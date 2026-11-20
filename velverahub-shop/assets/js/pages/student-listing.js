@@ -14,10 +14,12 @@
     const boostPayment = $('listingBoostPayment');
     const adReferenceWrap = $('listingAdReferenceWrap');
     const adReference = $('listingAdReference');
-    const MAX_IMAGE_INPUT_BYTES = 20 * 1024 * 1024;
+    const MAX_IMAGE_INPUT_BYTES = 40 * 1024 * 1024;
     const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
     const VIDEO_TYPES = new Set(['video/mp4', 'video/webm', 'video/quicktime']);
     let marketplaceMediaLimitsPromise = null;
+    let mediaProgressRows = [];
+    let activeMediaUploadTasks = [];
 
     async function loadMarketplaceMediaLimits(supabase) {
         if (!supabase) throw new Error('Marketplace upload settings are unavailable.');
@@ -36,10 +38,10 @@
                     limits.student_listing_media_limit > 100 ||
                     !Number.isSafeInteger(limits.product_image_max_bytes) ||
                     limits.product_image_max_bytes < 5 * 1024 * 1024 ||
-                    limits.product_image_max_bytes > 20 * 1024 * 1024 ||
+                    limits.product_image_max_bytes > 40 * 1024 * 1024 ||
                     !Number.isSafeInteger(limits.product_video_max_bytes) ||
-                    limits.product_video_max_bytes < 50 * 1024 * 1024 ||
-                    limits.product_video_max_bytes > 200 * 1024 * 1024
+                    limits.product_video_max_bytes < 5 * 1024 * 1024 ||
+                    limits.product_video_max_bytes > 40 * 1024 * 1024
                 ) {
                     throw new Error('Marketplace upload settings are invalid. Contact the administrator.');
                 }
@@ -62,7 +64,7 @@
         for (const file of files) {
             if (IMAGE_TYPES.has(file.type)) {
                 if (!file.size) return 'Selected images cannot be empty files.';
-                if (file.size > MAX_IMAGE_INPUT_BYTES) return 'Each original photo must be 20 MiB or smaller before compression.';
+                if (file.size > MAX_IMAGE_INPUT_BYTES) return 'Each original photo must be 40 MiB or smaller before compression.';
             } else if (VIDEO_TYPES.has(file.type)) {
                 if (!file.size) return 'Selected videos cannot be empty files.';
                 if (file.size > limits.product_video_max_bytes) {
@@ -81,6 +83,56 @@
             type === 'success' ? '#087443' : type === 'warning' ? '#8a5a00' : '';
     }
 
+    function renderMediaProgress(files) {
+        preview.replaceChildren();
+        mediaProgressRows = [];
+        if (!files.length) {
+            preview.hidden = true;
+            return;
+        }
+
+        const list = document.createElement('ul');
+        list.className = 'campus-media-upload-list';
+        for (const file of files) {
+            const row = document.createElement('li');
+            const name = document.createElement('span');
+            name.textContent = file.name || 'Selected file';
+            const progress = document.createElement('progress');
+            progress.max = 100;
+            progress.value = 0;
+            progress.setAttribute('aria-label', `Upload progress for ${file.name || 'selected file'}`);
+            const state = document.createElement('span');
+            state.textContent = 'Ready to upload';
+            row.append(name, progress, state);
+            list.appendChild(row);
+            mediaProgressRows.push({ progress, state });
+        }
+
+        const cancel = document.createElement('button');
+        cancel.type = 'button';
+        cancel.className = 'btn btn-secondary';
+        cancel.textContent = 'Cancel uploads';
+        cancel.hidden = true;
+        cancel.addEventListener('click', () => {
+            activeMediaUploadTasks.forEach((task) => task.cancel());
+            setStatus('Cancelling uploads…', 'warning');
+        });
+        preview.append(list, cancel);
+        preview.hidden = false;
+    }
+
+    function updateMediaProgress(index, percent, message) {
+        const row = mediaProgressRows[index];
+        if (!row) return;
+        row.progress.value = Math.max(0, Math.min(100, Number(percent) || 0));
+        row.state.textContent = message || `${Math.round(row.progress.value)}%`;
+    }
+
+    function setMediaUploadActive(active) {
+        const cancel = preview.querySelector('button');
+        if (cancel) cancel.hidden = !active;
+    }
+
     function populateSchools(state) {
         const schools = window.CampusService?.getByState(state) || [];
         schoolSelect.innerHTML = '<option value="">Choose an institution</option>' +
@@ -92,15 +144,17 @@
     function compressImage(file, limits) {
         return new Promise((resolve, reject) => {
             if (!IMAGE_TYPES.has(file.type) || file.size > MAX_IMAGE_INPUT_BYTES) {
-                reject(new Error('Choose a JPEG, PNG, or WebP photo up to 20 MiB.'));
+                reject(new Error('Choose a JPEG, PNG, or WebP photo up to 40 MiB.'));
                 return;
             }
-            const reader = new FileReader();
-            reader.onerror = () => reject(new Error('Could not read an image.'));
-            reader.onload = () => {
-                const image = new Image();
-                image.onerror = () => reject(new Error('Could not process an image.'));
-                image.onload = () => {
+            const image = new Image();
+            const objectUrl = URL.createObjectURL(file);
+            image.onerror = () => {
+                URL.revokeObjectURL(objectUrl);
+                reject(new Error('Could not process an image.'));
+            };
+            image.onload = () => {
+                    URL.revokeObjectURL(objectUrl);
                     const canvas = document.createElement('canvas');
                     const context = canvas.getContext('2d');
                     if (!context) {
@@ -140,10 +194,8 @@
                         }
                         reject(new Error(`This photo remains larger than the ${Math.floor(limits.product_image_max_bytes / 1048576)} MiB upload limit after compression.`));
                     })().catch(reject);
-                };
-                image.src = reader.result;
             };
-            reader.readAsDataURL(file);
+            image.src = objectUrl;
         });
     }
 
@@ -156,28 +208,45 @@
         return file;
     }
 
-    async function uploadMedia(supabase, blob, productId, mediaType, mediaCount = 1, limits) {
+    function uploadMedia(supabase, blob, productId, mediaType, mediaCount = 1, limits, onProgress) {
         const allowedTypes = mediaType === 'video' ? VIDEO_TYPES : new Set(['image/webp']);
         const maxBytes = mediaType === 'video' ? limits.product_video_max_bytes : limits.product_image_max_bytes;
         if (!allowedTypes.has(blob.type) || !blob.size || blob.size > maxBytes) {
-            throw new Error('This file does not meet the marketplace upload limits.');
+            return { promise: Promise.reject(new Error('This file does not meet the marketplace upload limits.')), cancel() {} };
         }
         if (!window.crypto?.randomUUID) {
-            throw new Error('Secure file naming is unavailable in this browser. Open the site over HTTPS and try again.');
+            return { promise: Promise.reject(new Error('Secure file naming is unavailable in this browser. Open the site over HTTPS and try again.')), cancel() {} };
         }
         const extension = mediaType === 'video'
             ? (blob.type === 'video/webm' ? 'webm' : blob.type === 'video/quicktime' ? 'mov' : 'mp4')
             : 'webp';
         const path = `${productId}/${window.crypto.randomUUID()}.${extension}`;
         const bucket = mediaType === 'video' ? 'product-videos' : 'product-images';
-        try {
-            const result = await supabase.storage.from(bucket).upload(path, blob, {
-                contentType: blob.type,
-                cacheControl: '3600',
-                upsert: false
-            });
+        if (!window.StorageUploadService?.upload) {
+            return { promise: Promise.reject(new Error('The secure upload service is unavailable. Refresh and try again.')), cancel() {} };
+        }
+        const task = window.StorageUploadService.upload(supabase, bucket, path, blob, {
+            contentType: blob.type,
+            cacheControl: '3600',
+            upsert: false,
+            onProgress
+        });
+        const promise = task.promise.then(async (result) => {
             if (result.error) throw result.error;
-        } catch (error) {
+            const publicUrl = supabase.storage.from(bucket).getPublicUrl(path)?.data?.publicUrl;
+            if (!publicUrl) {
+                const cleanup = await supabase.storage.from(bucket).remove([path]);
+                if (cleanup.error) {
+                    window.AsyncFeedback?.log(
+                        'student-listing-media-cleanup',
+                        window.AsyncFeedback?.createRequestId('student-listing-media-cleanup'),
+                        cleanup.error
+                    );
+                }
+                throw new Error('The uploaded media could not be prepared for this listing.');
+            }
+            return { bucket, path, url: publicUrl, mediaType };
+        }).catch((error) => {
             const requestId = window.AsyncFeedback?.createRequestId('student-listing-media-upload') || 'media-upload';
             const diagnostic = window.Observability?.formatErrorDiagnostic?.(error) ||
                 'Storage request failed; diagnostic formatter is unavailable.';
@@ -199,21 +268,14 @@
                 mediaCount
             });
             throw error;
-        }
-        const publicUrl = supabase.storage.from(bucket).getPublicUrl(path)?.data?.publicUrl;
-        if (!publicUrl) {
-            try {
-                const cleanup = await supabase.storage.from(bucket).remove([path]);
-                if (cleanup.error) window.AsyncFeedback?.log('student-listing-media-cleanup', window.AsyncFeedback?.createRequestId('student-listing-media-cleanup'), cleanup.error);
-            } catch (error) {
-                window.AsyncFeedback?.log('student-listing-media-cleanup', window.AsyncFeedback?.createRequestId('student-listing-media-cleanup'), error);
-            }
-            throw new Error('The uploaded media could not be prepared for this listing.');
-        }
-        return { bucket, path, url: publicUrl, mediaType };
+        });
+        return { promise, cancel: task.cancel };
     }
 
     function submissionErrorMessage(error, stage, requestId) {
+        if (error?.name === 'AbortError') {
+            return 'The upload was cancelled. Your listing was not published, and your details are still on this page.';
+        }
         const details = [
             error?.message,
             error?.details,
@@ -357,25 +419,31 @@
         });
         imageInput.addEventListener('change', async () => {
             const files = Array.from(imageInput.files || []);
-            if (!files.length) return;
+            if (!files.length) {
+                renderMediaProgress([]);
+                setStatus('');
+                return;
+            }
             setStatus('Checking current upload limits…');
             try {
                 const limits = await loadMarketplaceMediaLimits(window.SupabaseClient?.get());
                 const mediaHelp = $('listingMediaLimitHelp');
                 if (mediaHelp) {
-                    mediaHelp.textContent = `Current limit: ${limits.student_listing_media_limit} files per listing; compressed photos up to ${Math.floor(limits.product_image_max_bytes / 1048576)} MiB; videos up to ${Math.floor(limits.product_video_max_bytes / 1048576)} MiB. Original photos may be up to 20 MiB.`;
+                    mediaHelp.textContent = `Current limit: ${limits.student_listing_media_limit} files per listing; compressed photos up to ${Math.floor(limits.product_image_max_bytes / 1048576)} MiB; videos up to ${Math.floor(limits.product_video_max_bytes / 1048576)} MiB. Original photos may be up to 40 MiB.`;
                 }
                 const validationError = mediaSelectionError(files, limits);
                 if (validationError) {
                     preview.hidden = true;
-                    preview.innerHTML = '';
+                    preview.replaceChildren();
+                    mediaProgressRows = [];
                     setStatus(validationError, 'error');
                     imageInput.value = '';
                     return;
                 }
             } catch (error) {
                 preview.hidden = true;
-                preview.innerHTML = '';
+                preview.replaceChildren();
+                mediaProgressRows = [];
                 setStatus(window.AsyncFeedback?.errorMessage(
                     error,
                     'Marketplace upload settings could not be loaded. Refresh and try again.',
@@ -385,8 +453,7 @@
                 return;
             }
             setStatus('');
-            preview.hidden = !files.length;
-            preview.innerHTML = files.length ? `<i class="fas fa-photo-film"></i><span>${files.length} photo${files.length === 1 ? '' : 's'} or video${files.length === 1 ? '' : 's'} selected</span>` : '';
+            renderMediaProgress(files);
         });
 
         form.addEventListener('submit', async (event) => {
@@ -410,6 +477,7 @@
             let failureMediaType = '';
             let failureMediaCount = 0;
             const uploadedMedia = [];
+            activeMediaUploadTasks = [];
             try {
                 failureStage = 'media settings';
                 const mediaLimits = await loadMarketplaceMediaLimits(supabase);
@@ -470,10 +538,29 @@
                 if (inserted.error) throw inserted.error;
                 productId = inserted.data.id;
                 failureStage = 'media upload';
-                for (const item of preparedMedia) {
+                setMediaUploadActive(true);
+                for (let index = 0; index < preparedMedia.length; index += 1) {
+                    const item = preparedMedia[index];
                     failureMediaType = item.mediaType;
-                    uploadedMedia.push(await uploadMedia(supabase, item.blob, productId, item.mediaType, failureMediaCount, mediaLimits));
+                    updateMediaProgress(index, 0, 'Starting upload');
+                    const task = uploadMedia(
+                        supabase,
+                        item.blob,
+                        productId,
+                        item.mediaType,
+                        failureMediaCount,
+                        mediaLimits,
+                        (percent) => updateMediaProgress(index, percent, `Uploading ${percent}%`)
+                    );
+                    activeMediaUploadTasks.push(task);
+                    try {
+                        uploadedMedia.push(await task.promise);
+                        updateMediaProgress(index, 100, 'Uploaded');
+                    } finally {
+                        activeMediaUploadTasks = activeMediaUploadTasks.filter((activeTask) => activeTask !== task);
+                    }
                 }
+                setMediaUploadActive(false);
                 if (uploadedMedia.length) {
                     failureStage = 'media metadata';
                     failureMediaType = [...new Set(uploadedMedia.map((item) => item.mediaType))].join(',') || failureMediaType;
@@ -521,7 +608,8 @@
                 }
                 form.reset();
                 preview.hidden = true;
-                preview.innerHTML = '';
+                preview.replaceChildren();
+                mediaProgressRows = [];
                 if (adReferenceWrap) adReferenceWrap.hidden = true;
                 if (boostPayment) boostPayment.hidden = true;
                 schoolSelect.innerHTML = '<option value="">Choose a state first</option>';
@@ -575,6 +663,9 @@
                     ? `Your listing was not published, and some temporary files could not be removed. Please contact support before retrying. Reference: ${requestId}.`
                     : submissionErrorMessage(error, failureStage, requestId), 'error');
             } finally {
+                activeMediaUploadTasks.forEach((task) => task.cancel());
+                activeMediaUploadTasks = [];
+                setMediaUploadActive(false);
                 submit.disabled = false;
                 submit.innerHTML = '<i class="fas fa-paper-plane"></i> Publish listing';
             }

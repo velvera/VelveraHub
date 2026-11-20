@@ -125,22 +125,8 @@
                                         >0</span
                                     >
                                     <span class="shop-stat-label"
-                                        >Products</span
+                                        >Products shown</span
                                     >
-                                </div>
-                                <div class="shop-stat">
-                                    <span class="shop-stat-value" id="shopSales"
-                                        >0</span
-                                    >
-                                    <span class="shop-stat-label">Sales</span>
-                                </div>
-                                <div class="shop-stat">
-                                    <span
-                                        class="shop-stat-value"
-                                        id="shopRating"
-                                        >0</span
-                                    >
-                                    <span class="shop-stat-label">Rating</span>
                                 </div>
                             </div>
                         </div>
@@ -149,7 +135,6 @@
             </header>
 
             <main class="page-main">
-                <div class="section-container" id="shopTrust"></div>
                 <section class="products-page-section">
                     <div class="section-container">
                         <div class="products-header">
@@ -290,7 +275,6 @@
         <script src="../assets/js/services/api.js"></script>
         <script src="../assets/js/services/publicSupabaseConfig.js"></script>
         <script src="../assets/js/services/supabaseClient.js"></script>
-    <script src="../assets/js/services/trust.js"></script>
         <script src="../assets/js/services/products.js"></script>
         <script src="../assets/js/services/observability.js"></script>
         <script src="../assets/js/services/marketplace-intelligence.js"></script>
@@ -327,7 +311,7 @@
                 const isUuid = /^[0-9a-f-]{36}$/i.test(shopId);
                 const { data: shop, error } = await supabase
                     .from("shops")
-                    .select("*")
+                    .select("id, slug, name, description, logo_url, verified, status")
                     .eq(isUuid ? "id" : "slug", shopId)
                     .eq("status", "active")
                     .maybeSingle();
@@ -341,21 +325,33 @@
                     return;
                 }
 
-                document.getElementById("shopLogo").innerHTML =
-                    `<img src="${shop.logo_url}" alt="${shop.name}">`;
-                document.getElementById("shopName").innerHTML =
-                    `${shop.name} ${shop.verified ? '<i class="fas fa-check-circle verified"></i>' : ""}`;
+                const logo = document.createElement('img');
+                const logoUrl = String(shop.logo_url || '').trim();
+                try {
+                    const parsedLogoUrl = new URL(logoUrl, window.location.origin);
+                    logo.src = parsedLogoUrl.protocol === 'https:' || parsedLogoUrl.origin === window.location.origin
+                        ? parsedLogoUrl.href
+                        : '/img/basket.png';
+                } catch (_) {
+                    logo.src = '/img/basket.png';
+                }
+                logo.alt = `${shop.name || 'Shop'} logo`;
+                logo.onerror = () => {
+                    logo.onerror = null;
+                    logo.src = '/img/basket.png';
+                };
+                document.getElementById("shopLogo").replaceChildren(logo);
+                const shopNameElement = document.getElementById("shopName");
+                shopNameElement.textContent = shop.name || 'Shop';
+                if (shop.verified === true) {
+                    const verified = document.createElement('span');
+                    verified.className = 'verified';
+                    verified.textContent = ' · Verified shop';
+                    shopNameElement.appendChild(verified);
+                }
                 document.getElementById("shopDescription").textContent =
                     shop.description || "";
-                document.getElementById("shopProductCount").textContent =
-                    shop.total_products || 0;
-                document.getElementById("shopSales").textContent = (
-                    shop.total_sales || 0
-                ).toLocaleString();
-                document.getElementById("shopRating").textContent =
-                    shop.rating || "4.5";
-                document.getElementById("shopTrust").innerHTML =
-                    window.TrustService?.renderEvidencePanel(shop) || "";
+                document.getElementById("shopProductCount").textContent = '—';
                 const locationSelect = document.getElementById("locationSelect");
                 window.RegionService?.syncLocationSelect(locationSelect);
                 window.RegionService?.syncLocationSelect(document.getElementById("headerLocationSelect"));
@@ -414,6 +410,7 @@
                 container.innerHTML = products
                     .map((p) => UI.renderProductCard(p))
                     .join("");
+                document.getElementById('shopProductCount').textContent = String(products.length);
                 if (!products.length) AsyncFeedback.render(container, 'empty', {
                     emptyTitle: 'No products found',
                     emptyMessage: 'Try another delivery location or check back soon.'
