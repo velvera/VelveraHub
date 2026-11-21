@@ -10,6 +10,7 @@ const checkoutMigration = read('database/production-hardening.sql');
 const paymentsMigration = read('database/shop-owner-payments.sql');
 const manualPaymentsMigration = read('database/marketplace-manual-payments.sql');
 const mediaSettingsMigration = read('database/marketplace-media-settings.sql');
+const deletionStatusMigration = read('database/account-deletion-status.sql');
 const adminWorkspace = read('admin-workspace/index.html');
 const adminWorkspaceJs = read('admin-workspace/admin.js');
 const sellerDashboard = read('assets/js/pages/seller-dashboard.js');
@@ -20,8 +21,8 @@ const cloudflareGuide = read('docs/cloudflare-pages.md');
 
 const migrations = [...migrationGuide.matchAll(/^\s*(\d+)\.\s+(database\/[^\s—]+)/gm)]
     .map((match) => ({ order: Number(match[1]), path: match[2] }));
-assert.equal(migrations.length, 15, 'the migration guide must list the full numbered migration set');
-assert.deepEqual(migrations.map(({ order }) => order), Array.from({ length: 15 }, (_, index) => index + 1));
+assert.equal(migrations.length, 16, 'the migration guide must list the full numbered migration set');
+assert.deepEqual(migrations.map(({ order }) => order), Array.from({ length: 16 }, (_, index) => index + 1));
 assert.equal(new Set(migrations.map(({ path }) => path)).size, migrations.length, 'migration files must not be duplicated');
 for (const { path } of migrations) assert.ok(fs.existsSync(new URL(`../${path}`, import.meta.url)), `${path} must exist`);
 const sqlFiles = fs.readdirSync(new URL('../database/', import.meta.url)).filter((name) => name.endsWith('.sql'));
@@ -40,6 +41,8 @@ for (const check of [
     'product media quota state is private to server-side policies',
     'account deletion request table is protected by RLS',
     'account deletion RPCs exist with restricted request access',
+    'account deletion status RPC is requester-only',
+    'account deletion status RPC is requester-only',
     'secure checkout RPC exists and is not missing its client grants',
     'order idempotency has a valid unique index',
     'regional payment records remain server-only',
@@ -60,6 +63,9 @@ assert.match(storagePolicies, /CREATE TRIGGER enforce_product_media_object_quota
 assert.match(storagePolicies, /CREATE TRIGGER release_product_media_quota/);
 assert.match(deletionPolicies, /create or replace function public\.request_account_deletion\(\)/i);
 assert.match(deletionPolicies, /create or replace function public\.admin_update_account_deletion_request/i);
+assert.match(deletionStatusMigration, /create or replace function public\.get_my_account_deletion_request\(\)/i);
+assert.match(deletionStatusMigration, /grant execute on function public\.get_my_account_deletion_request\(\) to authenticated/i);
+assert.doesNotMatch(deletionStatusMigration, /grant execute on function public\.get_my_account_deletion_request\(\) to [^;]*anon/i);
 assert.match(checkoutMigration, /v_payment_method NOT IN \('cash_on_delivery', 'bank_transfer'\)/);
 assert.match(server, /if \(!\['cash_on_delivery', 'bank_transfer'\]\.includes\(payment_method\)\)/);
 

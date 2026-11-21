@@ -21,7 +21,7 @@ Do not put passwords, API keys, Supabase service-role keys, database URLs, webho
 | Current global Storage file-size limit | The global limit must be at least **40 MiB (41,943,040 bytes)** before the bucket limits can be set to 40 MiB. | Supabase dashboard → Storage → Settings. Record the observed limit and unit here after verification. |
 | Effective `product-images` and `product-videos` bucket settings in staging | Confirms the bucket limits do not exceed the global limit and accepted MIME types remain restricted. | Supabase dashboard → Storage → Buckets, followed by the staging acceptance checks. |
 | Disposable buyer, seller A, seller B, and administrator accounts | Needed for authenticated upload, cross-owner, quota, checkout, and admin authorization tests. | Create in the staging project with synthetic details; configure test credentials through workspace Secrets. |
-| Staging migration access and migration history | Migration 15 exists locally but is not evidence that it ran in staging or production. | Authorized operator applies the ordered migration in `database/run-schema.txt` to staging and records sanitized results. |
+| Staging migration access and migration history | Migration 15 and the new migration 16 exist locally but are not evidence that they ran in staging or production. | Authorized operator applies the ordered migrations in `database/run-schema.txt` to staging and records sanitized results. |
 
 ### Supabase upload references
 
@@ -44,6 +44,7 @@ Keep the current **10 shop photos per product** and **10 independent-listing med
 | Governing-law and dispute-resolution decision for Nigeria and the UK | Terms of Service and complaint handling | Owner and qualified counsel approve the regional terms. |
 | Minimum eligible age and any guardian/age-verification process | Registration gates and public policies | Owner and qualified counsel approve the rule before publication. |
 | Buyer/seller fee and commission schedule, taxes, and payment-processing deductions | Checkout totals and seller disclosures | Owner supplies approved regional values; update only through the existing configured business rules. |
+| Confirm or replace the existing fixed checkout tax calculation of 7.5% of item subtotal | The checkout UI and secure database RPC currently apply this rate in both NG and UK calculations; no owner/legal approval or region-specific tax basis is recorded. | Owner and qualified tax/legal adviser approve the applicable treatment before accepting orders; then configure and test database-authoritative totals. |
 | Delivery responsibility, returns, refunds, cancellations, and dispute policy | Checkout, buyer/seller terms, support, and provider refunds | Owner approves the operational policy with legal review. |
 | First launch markets | Scope and legal, tax, delivery, payment, and support requirements | Current product scope is Nigeria and the UK. If “global use” means enabling other countries, list each target country and approve its market requirements before adding it. |
 | Evidence for seller verification, badges, guarantees, delivery promises, ratings, and marketing claims | Public trust and promotional content | Owner identifies the evidence and approves claims that remain visible. |
@@ -101,7 +102,9 @@ behavior:
   reconciliation flows are not implemented. Keep card/wallet methods disabled.
 - Account deletion queues a request and provides admin review. It does not
   perform privileged Supabase Auth deletion or complete associated-data
-  cleanup.
+  cleanup. A new authenticated requester-only status lookup and account-page
+  status display are implemented locally in migration 16; they do not verify
+  the actual deletion step.
 - The current app logic targets Nigeria and the UK. Additional global markets
   require separate legal, payment, tax, currency, and delivery decisions and
   implementation.
@@ -135,6 +138,11 @@ behavior:
 - Regression harness: mobile navigation measurements now wait for its scroll
   transition and top-of-page position to settle, preventing transient animation
   frames from being treated as viewport overflow.
+- Account deletion request visibility: migration 16 returns only the signed-in
+  requester's latest reference, status, and timestamps. The account page
+  distinguishes received, in-review, completed-record, and rejected states,
+  while explicitly warning that a completed queue status does not prove Auth
+  deletion or data cleanup. Apply and behavior-test the migration in staging.
 
 ### Local checks completed on 21 November 2026
 
@@ -207,7 +215,8 @@ or commercial licenses.
    receiving details only through the authenticated admin workspace and only
    after an authorized decision.
 5. Complete the privileged account-deletion workflow and staging acceptance.
-   Do not mark an account request completed based only on a browser confirmation.
+    The account page now shows queue status, but do not mark a request completed
+    based only on a browser confirmation or queue status.
 6. Implement and test Paystack/Stripe only if approved for launch; otherwise
    keep card/wallet methods disabled.
 7. Return sanitized staging evidence and update `roadmap.md`. Keep the release

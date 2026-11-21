@@ -26,6 +26,7 @@ const sharedFiles = [
     'assets/js/services/region.js',
     'assets/js/services/publicSupabaseConfig.js',
     'assets/js/pages/account-page.js',
+    'assets/js/pages/account-privacy.js',
     'assets/js/pages/seller-dashboard.js',
     'assets/js/pages/student-listing.js',
     'assets/css/components/seller-updates.css',

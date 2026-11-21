@@ -13,7 +13,7 @@ This is the current source of truth, consolidated from `improvement.md`, `finala
 
 ## Summary
 
-The local implementation now includes 40 MiB per-file media limits, 10-item quotas, resumable TUS uploads for files above 6 MiB, progress/cancellation, stricter public review displays, and draft legal/support copy that no longer promises an unimplemented deletion or refund process. Migration 15 remains local and unverified. No Supabase staging integration is connected, and the actual project plan/global Storage limit have not been inspected.
+The local implementation now includes 40 MiB per-file media limits, 10-item quotas, resumable TUS uploads for files above 6 MiB, progress/cancellation, requester-only account-deletion status visibility, stricter public review displays, and draft legal/support copy that no longer promises an unimplemented deletion or refund process. Migrations 15 and 16 remain local and unverified. No Supabase staging integration is connected, and the actual project plan/global Storage limit have not been inspected.
 
 The 30 October checklist counts below are a historical snapshot, not the current status. Local tests and code changes do not establish staging or production readiness. The last recorded production preflight found both product-media bucket size/MIME limits unset; manual-payment schema exists in production but no receiving destinations are configured. No complete account-deletion acceptance or provider-payment acceptance has passed. The release decision remains **DO NOT LAUNCH YET**.
 
@@ -50,6 +50,8 @@ The 30 October checklist counts below are a historical snapshot, not the current
 - Tightened the mobile regression check to wait for the bottom-navigation scroll animation to settle before measuring its position; this removes a timing-only false failure without changing navigation behavior.
 - Updated the Express dependency override for the reported body-parser advisory; the current dependency audit reports no vulnerabilities.
 - Added a disaster-recovery runbook that separates database backups, Storage objects/settings, Cloudflare deployments, authentication, and payment reconciliation. It is a procedure only; no restore was performed.
+- Added migration 16 and account-page status messages so a signed-in requester can see the latest deletion-request state without exposing the request email or implying that the Auth user or related data has been deleted.
+- Added read-only preflight coverage and a local regression test for the requester-only deletion-status RPC; the migration and UI remain unverified in staging.
 
 ### Previously passed local baseline checks on 30 October
 
@@ -104,7 +106,7 @@ passed. This invocation error is not an application or smoke-test failure.
 
 ### Confirmed from the repository
 
-- `database/run-schema.txt` defines the 15-step Supabase migration order: `schema.sql`, `seller.sql`, `admin.sql`, `supabase-rls.sql`, `security-hardening.sql`, `cloudflare-dashboard.sql`, `cloudflare-supabase-direct.sql`, `production-hardening.sql`, `shop-owner-payments.sql`, `shop-verification-compliance.sql`, `seller-contact-safety.sql`, `product-delivery-options.sql`, `client-error-logging.sql`, `marketplace-manual-payments.sql`, and `marketplace-media-settings.sql`.
+- `database/run-schema.txt` defines the 16-step Supabase migration order. Migration 15 configures local product-media limits; migration 16 adds only a requester-scoped account-deletion status lookup. Neither file proves application to staging or production.
 - `database/account-deletion.sql` is a **legacy-only** migration. The runbook says to apply it after `schema.sql` and before `cloudflare-supabase-direct.sql` only when the older database lacks the deletion-request objects. Do not apply it as an extra migration to a fresh/current schema.
 - The supplied storage-test path `scripts/test-storage-policy-safety.mjs` does not exist. The actual test is `scripts/storage-policy-safety.test.mjs`, run by `npm run test:storage-policy-safety`; it checks source and SQL invariants without contacting Supabase.
 - `docs/cloudflare-pages.md` contains direct Storage acceptance steps for a dedicated staging project: verify the admin-controlled defaults and a temporary settings change, then concurrently upload eleven distinct valid objects to a disposable listing at the default cap of ten. Verify cross-owner and invalid-path/MIME/size rejections and clean up the test objects. Production write tests are prohibited.
@@ -139,10 +141,11 @@ passed. This invocation error is not an application or smoke-test failure.
 | Minimize data collection | NEEDS REVIEW | Public shop-directory reads now request only displayed fields. Finish the wider form, API, database, cookie, log, and analytics audit and remove unnecessary data. |
 | Third-party SDK and asset review | NEEDS REVIEW | TUS is pinned to a specific CDN version; inventory all SDKs, fonts, icons, external images/APIs and their data access, necessity, licensing, and retention before approval. |
 | Dark patterns | NEEDS REVIEW | Audit consent, cancellation, account, seller, checkout, and promotional flows for preselected choices, coercive copy, hidden controls, or misleading hierarchy. |
-| Fees and pricing disclosure | NEEDS REVIEW | Checkout shows order totals, but owner-approved fees, tax, commissions, delivery charges, and regional rules remain unconfirmed. Verify each market before users commit. |
+| Fees and pricing disclosure | NEEDS REVIEW | Checkout displays item subtotal, delivery, tax and total, but its fixed 7.5% subtotal tax calculation is not owner/legal approved or region-specific. Fees, commissions, delivery charges and regional rules remain unconfirmed. Verify each market before users commit. |
 | Review integrity | NEEDS REVIEW | Storefronts no longer show fallback ratings or synthetic trust scores, and seller review reads filter to approved verified purchases. There is no complete customer review submission/eligibility workflow; verify its design and server enforcement before enabling reviews. |
 | Unsupported marketing claims | NEEDS REVIEW | Removed rating/sales-ranked “Top Shops,” unverified buyer-protection score, escrow/trade-insurance promises, and unsupported 14-day refund copy from the reviewed pages. Continue the site-wide claims audit. |
 | Account data deletion | BLOCKED | Deletion requests are queued only; the approved privileged Auth-user deletion path is not implemented or available in static Pages. The 14 October queue/RLS tests did not verify deletion. Complete and stage-test the operator workflow. |
+| Requester-visible deletion status | NEEDS REVIEW | Migration 16 and account-page status text are implemented locally with a narrow status-only response. Apply it to staging and verify buyer isolation; it does not perform Auth deletion or associated-data cleanup. |
 | Children’s data / age consent | NEEDS REVIEW | Registration forms request an 18+ confirmation, but the owner and counsel must confirm the minimum age and regional legal requirement; verify every signup path and record retention. |
 | Marketing email unsubscribe | NEEDS REVIEW | No marketing sender is configured. If marketing email is enabled, implement and test reliable unsubscribe handling before sending. |
 | Font/image licensing | NEEDS REVIEW | Inventory and confirm commercial rights for bundled images, fonts, icons, and third-party CDN assets; repository availability is not proof of a license. |
@@ -194,6 +197,7 @@ passed. This invocation error is not an application or smoke-test failure.
 
 - Verified legal/operator name, registration jurisdiction and number, business address, and support contact; obtain legal review of privacy, terms, age/eligibility, fees, delivery, returns, and dispute wording.
 - Confirm the first launch markets and seller eligibility/KYC approval process, listing moderation rules, commissions, buyer/seller fees, taxes, delivery responsibilities, and refund/dispute policy.
+- Confirm the current fixed 7.5% checkout tax treatment for Nigeria and the UK, or provide approved region-specific tax rules before orders are accepted.
 - Provide a separate staging Supabase project and disposable buyer, seller, and admin accounts. Keep credentials in workspace Secrets; do not put them in chat.
 - Complete [`requiredinformations.md`](requiredinformations.md) with verified business, market, legal, commercial, monitoring, recovery, and spending decisions. Never enter credentials or receiving-account numbers in the Markdown file.
 - Confirm whether the launch will use manual bank transfer only. After staging tests, an authorized admin should enter verified Nigeria and/or UK receiving details directly in the authenticated admin workspace; keep each market disabled until verified.

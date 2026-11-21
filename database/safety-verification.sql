@@ -438,6 +438,23 @@ WITH checks AS (
         END
     UNION ALL
     SELECT
+        'account deletion status RPC is requester-only',
+        CASE
+            WHEN to_regprocedure('public.get_my_account_deletion_request()') IS NULL
+                THEN false
+            ELSE has_function_privilege(
+                     'authenticated',
+                     to_regprocedure('public.get_my_account_deletion_request()'),
+                     'EXECUTE'
+                 )
+                 AND NOT has_function_privilege(
+                     'anon',
+                     to_regprocedure('public.get_my_account_deletion_request()'),
+                     'EXECUTE'
+                 )
+        END
+    UNION ALL
+    SELECT
         'secure checkout RPC exists and is not missing its client grants',
         CASE
             WHEN to_regprocedure('public.place_order_secure(jsonb,jsonb,jsonb,text,text,text)') IS NULL

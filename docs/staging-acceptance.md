@@ -93,7 +93,8 @@ verification easier.
    remain disabled.
 3. Submit an account-deletion request as the disposable customer. Verify
    duplicate-request reuse, customer access denial to the private queue/admin
-   RPCs, and the permitted admin status transitions.
+   RPCs, the requester-only status lookup, accurate status text in the account
+   page, and the permitted admin status transitions.
 4. Test Auth-user deletion only as the final, explicitly approved staging step
    against a disposable account. The request-queue migration does not itself
    delete the Supabase Auth user. Verify the deleted account’s token is rejected
@@ -127,8 +128,8 @@ secret or card number in a staging run.
 
 ## Current evidence boundary
 
-As of 21 November 2026, this workspace still does not have a dedicated
-Supabase staging project or disposable test accounts. No staging migrations,
+As of 21 November 2026, this workspace still does not have a dedicated Supabase
+staging project or disposable test accounts. No staging migrations,
 authenticated acceptance tests, real Storage uploads, or payment-confirmation
 checks have been run. Migration 15 and the admin controls are implemented
 locally but have not been verified in production. Local tests and preview checks
@@ -143,6 +144,9 @@ limits unset. This verifies metadata only, not checkout, order snapshots,
 uploads, or receipt-confirmation behavior. No customer rows were queried and no
 writes were made.
 
+The requester-only deletion-status lookup is now implemented as migration 16
+and has local source-level regression coverage. It exposes no email or account
+data and does not perform or prove Auth-user deletion or related-data cleanup.
 The local checks recorded in `roadmap.md` and `requiredinformations.md` do not
 prove effective project plan/global Storage settings, migration application,
 real upload enforcement, role isolation, checkout behavior, deletion, or
