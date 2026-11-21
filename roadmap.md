@@ -1,6 +1,6 @@
 # VelveraHub Master Roadmap
 
-**Updated:** 20 November 2026
+**Updated:** 21 November 2026
 **Release decision:** **DO NOT LAUNCH YET**
 
 This is the current source of truth, consolidated from `improvement.md`, `finalassessment.md`, the previous `roadmap.md`, and the repository checks run during this review. The two dated review files are retained as historical evidence; their current status is superseded by this document.
@@ -42,9 +42,14 @@ The 30 October checklist counts below are a historical snapshot, not the current
 - Corrected the Cloudflare upload-acceptance instructions to require disposable staging accounts and prohibit write tests against production.
 - Added a staging acceptance runbook covering disposable-account checks, evidence handling, and the payment-provider test matrix.
 - Corrected the upload routing boundary to use standard uploads through exactly 6 MiB and TUS above 6 MiB; added a local boundary regression test. This does not establish that Storage accepts 40 MiB in staging or production.
+- Added client-side extension and file-signature checks for WebP, MP4, WebM, and QuickTime product media before standard/TUS transfer. This is defense-in-depth only; the database trigger and Storage bucket restrictions validate metadata, not the complete file bytes.
 - Expanded the public privacy/terms draft with the known data categories, current payment/deletion limitations, and explicit owner/legal placeholders; it remains unapproved and must not be treated as final legal advice.
 - Kept the two-choice cookie consent banner and added a way to reopen it from the cookie policy so users can change their optional analytics choice.
 - Expanded [`requiredinformations.md`](requiredinformations.md) with the owner decision form, current local implementation boundary, third-party inventory, and exact next-workflow steps.
+- Checked the three supplied Supabase Storage documentation pages. They confirm the plan-level global maximum, that bucket limits cannot exceed the global limit, the 6 MiB TUS chunk size, and the recommendation to use TUS for larger or interruption-prone uploads. The target project's actual plan and global limit remain unverified.
+- Tightened the mobile regression check to wait for the bottom-navigation scroll animation to settle before measuring its position; this removes a timing-only false failure without changing navigation behavior.
+- Updated the Express dependency override for the reported body-parser advisory; the current dependency audit reports no vulnerabilities.
+- Added a disaster-recovery runbook that separates database backups, Storage objects/settings, Cloudflare deployments, authentication, and payment reconciliation. It is a procedure only; no restore was performed.
 
 ### Previously passed local baseline checks on 30 October
 
@@ -68,29 +73,32 @@ not prove production readiness.
 - Server-side order price/stock calculation and order-creation idempotency. Card payments remain disabled until payment providers and webhooks are implemented and verified.
 - Authenticated API deployment contract, health endpoints, CORS controls, shared static-root parity checks, operator runbook, and mobile regression tooling.
 
-### Local verification recorded in this review
+### Local verification run on 21 November 2026
 
-- `npm run test:product-meta`
-- `npm run test:messages-moderation`
-- `npm run test:storage-policy-safety`
-- `npm run test:category-images`
-- `npm run test:domain-routing`
-- `npm run audit:image-alt`
-- `npm run apps:check`
-- `npm run apps:production:check`
-- `npm run smoke`
-- `npm run test:storage-policy-safety` — passed; this is a static repository test, not a live Supabase request.
-- `npm run test:storage-upload-service` — verifies the 6 MiB standard/TUS boundary, direct Storage hostname, chunk size, retry settings, and progress callback behavior; it does not make a Storage request.
-- `npm run test:cookie-consent`
-- `npm run test:supabase-readiness` — validates the local migration manifest and safe-check definitions; it does not connect to Supabase.
-- `npm run apps:check` and `npm run apps:production:check` — both pass after synchronizing all four generated roots.
-- `npm run smoke` — API, route, CORS, and static-root checks pass after the workflow restart.
-- 30 October re-run: all eight focused product, message-moderation, storage-safety, Supabase-readiness, cookie-consent, manual-payment, category-image, and domain-routing test scripts pass; both generated-root checks, the image-alt audit, and the smoke suite pass.
-- Filtered mobile regressions at 320px, 390px, and 430px pass across the storefront, regional, admin, and shop-owner roots. The 320px matrix was rerun after the final analytics-consent change.
-- Preview checked at 1024px desktop and 402px mobile; the two-choice banner renders and the browser console is clean.
-- `npm audit` — 0 vulnerabilities after the dependency update.
-- Focused mobile regression at 320px for the parent storefront and standalone shop-owner portal.
-- Full `npm run mobile:regression` — completed with exit code 0 across the configured viewport and app-root matrix.
+These checks ran against the local repository and Replit preview only. None
+connected to Supabase staging or production.
+
+- Passed: `npm run test:product-meta`
+- Passed: `npm run test:messages-moderation`
+- Passed: `npm run test:storage-policy-safety`
+- Passed: `npm run test:storage-upload-service` — covers accepted/rejected product-media signatures, extension matching, the exact 6 MiB standard/TUS boundary, TUS chunk size, retry settings, direct Storage host, and progress callbacks; it does not upload to Supabase.
+- Passed: `npm run test:marketplace-integrity`
+- Passed: `npm run test:supabase-readiness` — checks local migration/read-only-check definitions only.
+- Passed: `npm run test:cookie-consent`
+- Passed: `npm run test:manual-payments` — source and SQL safety checks only.
+- Passed: `npm run test:category-images`
+- Passed: `npm run test:domain-routing`
+- Passed: `npm run audit:image-alt` — 374 static image tags and 32 dynamic image elements checked across 259 HTML/JS files.
+- Passed: `npm run apps:check` and `npm run apps:production:check` — generated-root parity and JavaScript syntax checks for all four app roots.
+- Passed: `SMOKE_PORT=5000 npm run smoke` — local API health, routes, CORS, redirects, and static-root checks.
+- Passed: `npm audit --omit=dev` — zero reported vulnerabilities.
+- Passed: `git diff --check`.
+- Passed: `npm run mobile:regression` run separately at 320px, 390px, and 430px; all configured parent, Nigeria, UK, admin, and shop-owner checks passed. The combined run was stopped by its five-minute timeout while running concurrently; the completed per-width runs are the evidence of the full viewport matrix.
+- Browser screenshot of the legal page was checked in the local preview; the draft disclosures and cookie-preference control rendered, and no browser-console errors were reported.
+
+An initial `npm run smoke -- --help` invocation was invalid for this script and
+returned `Invalid URL`; the correct `SMOKE_PORT=5000 npm run smoke` command
+passed. This invocation error is not an application or smoke-test failure.
 
 ## Supabase and payment evidence from 30 October 2026 (historical)
 
@@ -143,14 +151,14 @@ not prove production readiness.
 
 | Item | Status | Required next step |
 |---|---|---|
-| Upload limits | NEEDS REVIEW | Local migration/client/admin defaults are now 40 MiB per image/video file with fixed MIME rules; both 10-item quotas remain. Migration 15 is not verified in production. The last recorded production check found both buckets unrestricted. Verify the actual target plan/global limit first, then run the complete migration and TUS acceptance in staging. |
+| Upload limits | NEEDS REVIEW | Local migration/client/admin defaults are now 40 MiB per image/video file with fixed MIME rules; both 10-item quotas remain. The browser also checks expected extensions and file signatures, but Storage/database rules validate metadata and do not independently inspect full bytes. Migration 15 is not verified in production. The last recorded production check found both buckets unrestricted. Verify the actual target plan/global limit first, then run the complete migration and TUS acceptance in staging. |
 | Duplicate subscriptions | NEEDS REVIEW | No complete subscription flow is configured. Confirm subscriptions are not advertised; if introduced, make creation idempotent across retries and races. |
 | Duplicate payments and webhooks | BLOCKED | Order creation is idempotent, but Paystack/Stripe provider execution, signed webhooks, replay protection, refunds, settlement, and reconciliation are not implemented or accepted. Keep card/wallet methods disabled. |
 | Manual bank-transfer payments | BLOCKED | Production schema is applied, but no verified Nigeria/UK receiving account is configured or enabled and no staging order/receipt test has passed. Keep each market disabled until tested and authorized details are entered in the admin workspace. |
 | Error handling and failed requests | NEEDS REVIEW | Complete the cross-surface audit for database, network, auth, upload, and payment failures; verify safe messages, retry rules, preserved form state, and duplicate-submit protection. |
 | Uptime and production monitoring | BLOCKED | Choose a monitoring provider and responsible alert destination; cover storefront/API health, database, payment, and critical error signals. |
 | Concurrent usage | NEEDS REVIEW | Run controlled load/concurrency tests for sign-in, search, listing creation, checkout, inventory locks, and seller operations; fix races and document capacity. |
-| Backup restoration | BLOCKED | Perform and document a controlled production restore, including recovery point/time and required external dependencies. |
+| Backup restoration | BLOCKED | Procedure is documented in `docs/backup-restore-runbook.md`. Verify this project's actual backup/PITR plan and separate Storage-object backup, then run an authorized non-production restore exercise and record measured recovery point/time. No restore has been performed. |
 | Spending caps | BLOCKED | Configure provider, storage, email, analytics, and infrastructure budgets and alerts with the relevant account owners. |
 | Shared rate-limit storage | NEEDS REVIEW | The local Express API supports a PostgreSQL rate-limit store with a bounded-memory fallback. Production serves static Cloudflare roots; deployed enforcement and multi-instance behavior are not verified. |
 

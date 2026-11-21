@@ -7,6 +7,17 @@ const progress = [];
 const xhrInstances = [];
 const tusInstances = [];
 
+function mediaFile(size, type, name, signature) {
+    return {
+        size,
+        type,
+        name,
+        slice(start, end) {
+            return new Blob([signature.slice(start, end)]);
+        }
+    };
+}
+
 class MockXhr {
     static DONE = 4;
 
@@ -60,15 +71,25 @@ class MockTusUpload {
     }
 
     start() {
+        this.started = true;
         this.url = 'https://project-ref.storage.supabase.co/storage/v1/upload/resumable/session';
+        if (MockTusUpload.holdNextStart) {
+            MockTusUpload.holdNextStart = false;
+            return;
+        }
         this.options.onProgress(this.file.size, this.file.size);
         this.options.onSuccess();
     }
 
-    abort() {
-        return Promise.resolve();
+    abort(shouldTerminate) {
+        this.abortArgument = shouldTerminate;
+        return MockTusUpload.abortFailure
+            ? Promise.reject(MockTusUpload.abortFailure)
+            : Promise.resolve();
     }
 }
+MockTusUpload.holdNextStart = false;
+MockTusUpload.abortFailure = null;
 
 const window = {
     VELVERAHUB_CONFIG: {
@@ -97,7 +118,19 @@ const supabase = {
         })
     }
 };
-const smallFile = { size: 1024, type: 'image/webp', name: 'small.webp' };
+const webpSignature = Uint8Array.from([
+    0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50
+]);
+const mp4Signature = Uint8Array.from([
+    0x00, 0x00, 0x00, 0x00, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d
+]);
+const webmSignature = Uint8Array.from([
+    0x1a, 0x45, 0xdf, 0xa3, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+]);
+const quicktimeSignature = Uint8Array.from([
+    0x00, 0x00, 0x00, 0x00, 0x66, 0x74, 0x79, 0x70, 0x71, 0x74, 0x20, 0x20
+]);
+const smallFile = mediaFile(1024, 'image/webp', 'small.webp', webpSignature);
 const standardTask = window.StorageUploadService.upload(
     supabase,
     'product-images',
@@ -112,7 +145,7 @@ assert.match(xhrInstances[0].url, /\/storage\/v1\/object\/product-images\/produc
 assert.equal(xhrInstances[0].headers.Authorization, 'Bearer signed-in-user-token');
 assert.deepEqual(progress, [99, 100]);
 
-const sixMiBFile = { size: 6 * 1024 * 1024, type: 'image/webp', name: 'six-mib.webp' };
+const sixMiBFile = mediaFile(6 * 1024 * 1024, 'image/webp', 'six-mib.webp', webpSignature);
 const sixMiBTask = window.StorageUploadService.upload(
     supabase,
     'product-images',
@@ -123,7 +156,7 @@ const sixMiBTask = window.StorageUploadService.upload(
 await sixMiBTask.promise;
 assert.equal(xhrInstances.length, 2, 'a file exactly 6 MiB stays on standard upload');
 
-const largeFile = { size: (6 * 1024 * 1024) + 1, type: 'video/mp4', name: 'large.mp4' };
+const largeFile = mediaFile((6 * 1024 * 1024) + 1, 'video/mp4', 'large.mp4', mp4Signature);
 const tusTask = window.StorageUploadService.upload(
     supabase,
     'product-videos',
@@ -144,4 +177,64 @@ assert.equal(progress.at(-1), 100);
 assert.equal(tusInstances[0].file.size, (6 * 1024 * 1024) + 1, 'the first byte above 6 MiB uses TUS');
 assert.equal(window.StorageUploadService.standardUploadLimitBytes, 6 * 1024 * 1024);
 
-console.log('PASS 6 MiB upload boundary, TUS routing, direct hostname, retries, and progress callbacks');
+const mismatchedFile = mediaFile(
+    (6 * 1024 * 1024) + 1,
+    'video/mp4',
+    'fake.mp4',
+    webmSignature
+);
+const mismatchedTask = window.StorageUploadService.upload(
+    supabase,
+    'product-videos',
+    'product-id/fake.mp4',
+    mismatchedFile,
+    { contentType: mismatchedFile.type }
+);
+await assert.rejects(mismatchedTask.promise, /content does not match/);
+assert.equal(tusInstances.length, 1, 'invalid media bytes must be rejected before creating a TUS upload');
+
+for (const [type, extension, signature] of [
+    ['video/webm', 'webm', webmSignature],
+    ['video/quicktime', 'mov', quicktimeSignature]
+]) {
+    const file = mediaFile((6 * 1024 * 1024) + 1, type, `sample.${extension}`, signature);
+    const task = window.StorageUploadService.upload(
+        supabase,
+        'product-videos',
+        `product-id/sample.${extension}`,
+        file,
+        { contentType: type }
+    );
+    await task.promise;
+}
+assert.equal(tusInstances.length, 3, 'valid WebM and QuickTime signatures should use TUS');
+
+MockTusUpload.holdNextStart = true;
+MockTusUpload.abortFailure = new Error('simulated termination failure');
+let cleanupFailure = null;
+const cancellableFile = mediaFile(
+    (6 * 1024 * 1024) + 1,
+    'video/mp4',
+    'cancel.mp4',
+    mp4Signature
+);
+const cancellableTask = window.StorageUploadService.upload(
+    supabase,
+    'product-videos',
+    'product-id/cancel.mp4',
+    cancellableFile,
+    {
+        contentType: cancellableFile.type,
+        onCancelCleanupError: (error) => { cleanupFailure = error; }
+    }
+);
+await new Promise((resolve) => setTimeout(resolve, 0));
+const activeTusUpload = tusInstances.at(-1);
+assert.equal(activeTusUpload.started, true, 'the cancellable TUS test must reach an active upload');
+await cancellableTask.cancel();
+await assert.rejects(cancellableTask.promise, (error) => error.name === 'AbortError');
+assert.equal(activeTusUpload.abortArgument, true, 'cancellation should request server-side TUS termination');
+assert.match(cleanupFailure?.message || '', /termination failure/);
+MockTusUpload.abortFailure = null;
+
+console.log('PASS media signatures, 6 MiB upload boundary, TUS routing, retries, and progress callbacks');

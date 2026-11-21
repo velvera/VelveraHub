@@ -58,6 +58,12 @@ remain fixed regardless of these settings.
 Use owner A’s test listing and two seller accounts. Generate unique UUIDv4
 filenames under the test listing UUID folder.
 
+The browser uploader checks the expected extension and basic WebP, MP4, WebM,
+or QuickTime signature before sending product media. This is a client-side
+defense-in-depth check; the current database trigger and bucket MIME rules
+validate metadata, not the complete object bytes. Do not report a client check
+as server-side content enforcement.
+
 | Case | Action | Expected result |
 | --- | --- | --- |
 | Owner access | Owner A uploads one valid WebP image, no larger than the configured 40 MiB default | Accepted |
@@ -121,18 +127,26 @@ secret or card number in a staging run.
 
 ## Current evidence boundary
 
-As of 30 October 2026, the workspace does not have a dedicated Supabase
-staging project or disposable test accounts accessible, so no staging
-migrations, authenticated safety checks, or payment-confirmation checks have
-been run. The manual-payment schema was applied to production on 29 October;
-read-only checks confirmed its tables, RLS, grants, and that no regional
-receiving destinations exist or are enabled. A 30 October read-only production
-preflight, before the media-settings checks were added, passed 46 of 47 checks;
-both product-media buckets had size and MIME limits unset. Migration 15 and the
-admin controls are implemented locally but have not been applied to production.
-This verifies metadata only, not checkout, order snapshots, uploads, or
-receipt-confirmation behavior. No customer rows were queried and no writes
-were made.
+As of 21 November 2026, this workspace still does not have a dedicated
+Supabase staging project or disposable test accounts. No staging migrations,
+authenticated acceptance tests, real Storage uploads, or payment-confirmation
+checks have been run. Migration 15 and the admin controls are implemented
+locally but have not been verified in production. Local tests and preview checks
+are repository evidence only.
+
+Historical production evidence from 29–30 October 2026: the manual-payment
+schema was applied on 29 October; read-only checks confirmed its tables, RLS,
+grants, and that no regional receiving destinations exist or are enabled. A
+30 October read-only production preflight, before the media-settings checks were
+added, passed 46 of 47 checks; both product-media buckets had size and MIME
+limits unset. This verifies metadata only, not checkout, order snapshots,
+uploads, or receipt-confirmation behavior. No customer rows were queried and no
+writes were made.
+
+The local checks recorded in `roadmap.md` and `requiredinformations.md` do not
+prove effective project plan/global Storage settings, migration application,
+real upload enforcement, role isolation, checkout behavior, deletion, or
+production readiness.
 The local checks `npm run test:manual-payments` and
 `npm run test:supabase-readiness` validate source/SQL invariants only; they do
 not prove that a migration was applied or that Supabase enforces the behavior.

@@ -1,6 +1,6 @@
 # VelveraHub — Required Owner Information and Staging Access
 
-**Updated:** 20 November 2026  
+**Updated:** 21 November 2026
 **Purpose:** Gather the owner decisions and non-production access needed to finish legal approval and genuine staging acceptance. This is not a launch approval.
 
 ## Keep credentials and payment details out of this file
@@ -60,7 +60,7 @@ No legal entity, address, minimum age, governing law, fee, tax rate, or regional
 | Approved multi-seller commission, allocation, payout, refund, and chargeback rules | Provider integrations cannot safely calculate seller/platform shares without these rules. | Owner and finance/legal approvers document the rules before payment implementation is enabled. |
 | Verified Nigeria and UK receiving destinations, if manual transfers will launch | Manual payment must remain disabled in a market without confirmed receiving details. | An authorized administrator enters and verifies details directly in the admin workspace; never send bank details through chat or this file. |
 | Monitoring provider and alert recipient | Needed to prove alerts reach a responsible operator. | Owner chooses the provider and authorized destination; configure in that provider's dashboard and workspace Secrets as applicable. |
-| Backup/restore owner, recovery window, and acceptable recovery-point/time objectives | Needed for an authorized, measured restore exercise and runbook. | Owner assigns an operator and approves the test window; test only against a non-production target. |
+| Backup/restore owner, recovery window, and acceptable recovery-point/time objectives | Needed for an authorized, measured restore exercise. The procedure is documented in [`docs/backup-restore-runbook.md`](docs/backup-restore-runbook.md). | Owner assigns an operator, verifies the target project's backup/PITR and Storage-backup configuration, and approves the test window; test only against a non-production target. |
 | Approved spending thresholds and alert levels | Provider budgets are financial decisions and vary by account capability. | Account owners configure provider-level caps or usage alerts in the relevant dashboards. |
 | Production Cloudflare access and exact approved domains | Needed only for a later authorized production configuration/deployment review. | Authorized operator provides access through the platform's secure integration flow. Do not deploy as part of staging acceptance. |
 | Approved server-side path for Supabase Auth-user deletion | The static Cloudflare apps cannot hold the privileged key required to delete Auth users; current SQL only advances the request queue. | Owner/platform operator identifies an authorized server-side execution environment and grants access through Secrets. Do not put privileged credentials in browser code. |
@@ -105,6 +105,75 @@ behavior:
 - The current app logic targets Nigeria and the UK. Additional global markets
   require separate legal, payment, tax, currency, and delivery decisions and
   implementation.
+- A recovery procedure is documented, but the actual Supabase plan, backup
+  retention/PITR settings, off-site Storage-object backup, alert path, and
+  restore owner have not been verified or exercised.
+
+## Local implementation and verification handoff
+
+### Implemented locally
+
+- Product media: `database/marketplace-media-settings.sql` (migration 15) sets
+  image/video MIME and 40 MiB per-file bucket constraints and preserves the
+  10-image shop and 10-file independent-listing quotas. Existing admin settings
+  may lower supported sizes/counts; they cannot change MIME rules.
+- Upload routing: `assets/js/services/storage-uploads.js` uses standard upload
+  through exactly **6 MiB (6,291,456 bytes)** and TUS above that boundary with
+  **6 MiB chunks**, progress, cancellation, and resumable retry support. Shared
+  source changes are synchronized into the NG, UK, shop, and admin app roots.
+  Before sending product media, it also checks the expected filename extension
+  and basic WebP, MP4, WebM, or QuickTime file signatures.
+- Public trust and legal copy: public review displays no longer invent ratings
+  or seller trust scores; seller review reads require approved, verified
+  purchases. `veeve/legal.html` contains expanded Privacy and Terms drafts with
+  explicit gaps rather than invented operator, legal, payment, or deletion
+  guarantees.
+- Consent: users still see only Decline and Accept. The cookie policy can reopen
+  the same banner so optional analytics choice can be changed.
+- Local dependency safety: the Express body-parser advisory was addressed;
+  `npm audit --omit=dev` reports zero vulnerabilities.
+- Regression harness: mobile navigation measurements now wait for its scroll
+  transition and top-of-page position to settle, preventing transient animation
+  frames from being treated as viewport overflow.
+
+### Local checks completed on 21 November 2026
+
+All of the following passed locally:
+
+```text
+npm run test:product-meta
+npm run test:messages-moderation
+npm run test:storage-policy-safety
+npm run test:storage-upload-service
+npm run test:marketplace-integrity
+npm run test:supabase-readiness
+npm run test:cookie-consent
+npm run test:manual-payments
+npm run test:category-images
+npm run test:domain-routing
+npm run audit:image-alt
+npm run apps:check
+npm run apps:production:check
+SMOKE_PORT=5000 npm run smoke
+npm audit --omit=dev
+git diff --check
+```
+
+The image-alt audit checked 374 static image tags and 32 dynamic image elements
+across 259 HTML/JS files. Mobile regression runs completed separately at
+320px, 390px, and 430px across the parent, Nigeria, UK, admin, and shop-owner
+roots. The combined mobile run hit its five-minute timeout while competing
+with other checks; the per-width runs completed without assertion failures.
+An initial smoke-script `--help` probe returned `Invalid URL` because that
+script does not accept that option; the correct local smoke command above
+passed.
+
+The checks above do not connect to Supabase, run real Storage uploads, verify
+authorization against staging roles, or establish production readiness.
+The browser signature check is defense-in-depth, not a server-side security
+boundary: current Storage/database enforcement checks MIME and size metadata,
+which a direct authenticated Storage request can supply itself. Do not describe
+the byte signature as independently enforced by Supabase.
 
 ## Third-party services and asset review
 

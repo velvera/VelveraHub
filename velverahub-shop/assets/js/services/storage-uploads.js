@@ -9,7 +9,52 @@
     const STANDARD_UPLOAD_LIMIT_BYTES = 6 * 1024 * 1024;
     const TUS_CHUNK_BYTES = 6 * 1024 * 1024;
     const TUS_CLIENT_URL = 'https://cdn.jsdelivr.net/npm/tus-js-client@4.3.1/dist/tus.min.js';
+    const PRODUCT_MEDIA_TYPES = Object.freeze({
+        'product-images': Object.freeze({ 'image/webp': 'webp' }),
+        'product-videos': Object.freeze({
+            'video/mp4': 'mp4',
+            'video/webm': 'webm',
+            'video/quicktime': 'mov'
+        })
+    });
     let tusClientPromise = null;
+
+    async function validateProductMediaContent(bucket, path, file, options) {
+        const allowedTypes = PRODUCT_MEDIA_TYPES[bucket];
+        if (!allowedTypes) return;
+
+        const contentType = String(options.contentType || file.type || '').toLowerCase();
+        const expectedExtension = allowedTypes[contentType];
+        const actualExtension = String(path).split('.').pop()?.toLowerCase();
+        if (!expectedExtension || actualExtension !== expectedExtension ||
+            (file.type && String(file.type).toLowerCase() !== contentType)) {
+            throw new Error('Choose a supported media format and try again.');
+        }
+
+        let bytes;
+        try {
+            if (typeof file.slice !== 'function') throw new Error('File bytes cannot be inspected.');
+            bytes = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+        } catch (_) {
+            throw new Error('This file could not be checked. Choose it again and retry.');
+        }
+
+        const ascii = (start, length) => String.fromCharCode(...bytes.slice(start, start + length));
+        const isWebp = bytes.length >= 12 && ascii(0, 4) === 'RIFF' && ascii(8, 4) === 'WEBP';
+        const isIsoBmff = bytes.length >= 12 && ascii(4, 4) === 'ftyp';
+        const isWebm = bytes.length >= 4 &&
+            bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3;
+        const contentMatches = contentType === 'image/webp'
+            ? isWebp
+            : contentType === 'video/webm'
+                ? isWebm
+                : contentType === 'video/quicktime'
+                    ? isIsoBmff && ascii(8, 4) === 'qt  '
+                    : isIsoBmff;
+        if (!contentMatches) {
+            throw new Error('The file content does not match its selected media format.');
+        }
+    }
 
     function abortError() {
         const error = new Error('Upload cancelled.');
@@ -164,6 +209,7 @@
             if (!supabase?.auth?.getSession || !file || !Number.isFinite(file.size) || file.size < 1) {
                 throw new Error('A signed-in user and a non-empty file are required.');
             }
+            await validateProductMediaContent(bucket, path, file, options);
             const { url, anonKey } = publicConfig();
             const token = await getAccessToken(supabase);
             if (cancelled) throw abortError();

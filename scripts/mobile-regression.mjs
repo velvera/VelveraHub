@@ -157,14 +157,26 @@ async function assertLoader(page, rootName, width) {
 
 async function assertBottomNavigation(page, rootName, width) {
     const nav = page.locator('.mobile-bottom-nav');
-    await page.evaluate(() => {
-        document.documentElement.style.scrollBehavior = 'auto';
-        window.scrollTo(0, 0);
-    });
-    await page.waitForFunction(() =>
-        document.querySelector('.mobile-bottom-nav')?.getAttribute('aria-hidden') === 'false'
-    );
-    await nav.waitFor({ state: 'visible' });
+    const waitUntilVisibleAtTop = async () => {
+        await page.evaluate(() => {
+            document.documentElement.style.scrollBehavior = 'auto';
+            window.scrollTo({ left: 0, top: 0, behavior: 'instant' });
+        });
+        await page.waitForFunction(() => {
+            const currentNav = document.querySelector('.mobile-bottom-nav');
+            if (!currentNav || currentNav.getAttribute('aria-hidden') !== 'false' ||
+                window.scrollY > 1) return false;
+            const style = window.getComputedStyle(currentNav);
+            if (style.visibility === 'hidden') return false;
+            const translateY = style.transform === 'none'
+                ? 0
+                : new DOMMatrixReadOnly(style.transform).m42;
+            return Math.abs(translateY) < 0.5;
+        });
+        await nav.waitFor({ state: 'visible' });
+    };
+
+    await waitUntilVisibleAtTop();
     const result = await nav.evaluate((node) => {
         const rect = node.getBoundingClientRect();
         const items = [...node.querySelectorAll('.bottom-nav-item')];
@@ -199,7 +211,7 @@ async function assertBottomNavigation(page, rootName, width) {
     if (!result.hasSafeAreaPadding || !result.hasSafeAreaBodyReserve) {
         throw new Error(`${rootName} ${width}px bottom navigation is missing safe-area inset handling`);
     }
-    if (result.bottom > width * 0 + page.viewportSize().height + 1) {
+    if (result.bottom > page.viewportSize().height + 1) {
         throw new Error(`${rootName} ${width}px bottom navigation overlaps the viewport edge`);
     }
 
@@ -238,10 +250,7 @@ async function assertBottomNavigation(page, rootName, width) {
     await page.waitForFunction(() =>
         document.querySelector('.mobile-bottom-nav')?.getAttribute('aria-hidden') === 'true'
     );
-    await page.evaluate(() => window.scrollTo(0, 0));
-    await page.waitForFunction(() =>
-        document.querySelector('.mobile-bottom-nav')?.getAttribute('aria-hidden') === 'false'
-    );
+    await waitUntilVisibleAtTop();
     pass(`${rootName} ${width}px bottom navigation`);
 }
 

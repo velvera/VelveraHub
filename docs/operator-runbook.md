@@ -2,8 +2,11 @@
 
 ## Before a database change
 
-1. Back up the Supabase project and confirm the target is the intended
-   development or production project.
+1. Follow [`backup-restore-runbook.md`](./backup-restore-runbook.md) to confirm
+   that the selected target has a usable backup and that Storage objects are
+   separately protected. Confirm the target is the intended development or
+   production project; do not treat this procedure as evidence that a restore
+   has been tested.
 2. Inspect existing profile, shop, and product ownership data. Resolve duplicate
    Auth/profile mappings manually; do not rewrite `owner_id` or `seller_id` as
    part of a routine migration.
