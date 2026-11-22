@@ -17,11 +17,11 @@ Do not put passwords, API keys, Supabase service-role keys, database URLs, webho
 | --- | --- | --- |
 | Dedicated Supabase staging project, separate from production | All migration, upload, ownership, quota, checkout, and deletion write tests must run outside production. | Share staging access through the approved integration/secrets workflow; do not paste keys here. |
 | Staging project reference and public URL | Confirms that the browser and test credentials target staging rather than production. | Verify in the Supabase dashboard and configure through the workspace Secrets flow. |
-| Actual Supabase plan for the target project | The plan determines the maximum Storage upload size. | Supabase dashboard → project billing/plan. |
+| Actual Supabase plan for the target project | User confirms the current plan is Free (22 November 2026); the documented Free maximum is 50 MB. Recheck the dashboard if the plan changes. | Supabase dashboard → project billing/plan. |
 | Current global Storage file-size limit | The global limit must be at least **40 MiB (41,943,040 bytes)** before the bucket limits can be set to 40 MiB. | Supabase dashboard → Storage → Settings. Record the observed limit and unit here after verification. |
 | Effective `product-images` and `product-videos` bucket settings in staging | Confirms the bucket limits do not exceed the global limit and accepted MIME types remain restricted. | Supabase dashboard → Storage → Buckets, followed by the staging acceptance checks. |
 | Disposable buyer, seller A, seller B, and administrator accounts | Needed for authenticated upload, cross-owner, quota, checkout, and admin authorization tests. | Create in the staging project with synthetic details; configure test credentials through workspace Secrets. |
-| Staging migration access and migration history | Migration 15 and the new migration 16 exist locally but are not evidence that they ran in staging or production. | Authorized operator applies the ordered migrations in `database/run-schema.txt` to staging and records sanitized results. |
+| Staging migration access and migration history | The production media-settings RPC responds, but that does not verify migration history, effective bucket/global limits, or successful Storage writes. Migration 16 remains unverified. | Authorized operator checks migration history and applies missing ordered migrations in `database/run-schema.txt` to staging. |
 
 ### Supabase upload references
 
@@ -70,11 +70,28 @@ No legal entity, address, minimum age, governing law, fee, tax rate, or regional
 
 - No Supabase integration is connected in this workspace, so the actual Supabase plan and global Storage limit have not been inspected.
 - The roadmap records no dedicated staging project or disposable acceptance accounts.
-- Migration 15 is present locally but has not been verified in production.
+- The production `get_marketplace_media_limits()` RPC returned a 40 MiB image limit, a 40 MiB video limit, and 10-item quotas on 22 November 2026. Effective Storage bucket settings and the global file-size limit were not verified.
+- The user confirms the production Supabase plan is Free. The documented 50 MB Free maximum exceeds 40 MiB, but does not prove the project's current global setting or bucket configuration.
 - Production manual-payment schema was applied, but no regional receiving destination is configured or enabled.
 - Paystack and Stripe processing, webhooks, refunds, settlement, and reconciliation are not complete; card/wallet payments must remain disabled.
 - Account-deletion request handling exists, but the complete end-to-end acceptance test and actual Supabase Auth-user deletion have not passed.
 - Passing local automated tests is repository evidence only, not staging or production evidence.
+
+## Production listing-upload incident
+
+- The user reports an image upload failure with `HTTP 500`, code
+  `DatabaseError`. The response points to a Storage/database-layer failure but
+  does not include the underlying SQL exception or trigger name.
+- The read-only production settings RPC returned 10-item quotas and 40 MiB
+  image/video application limits. This does not verify the actual Supabase
+  global upload limit or effective `product-images` bucket settings.
+- Replit has no active production deployment or connected Supabase integration
+  for this project, so the production Storage logs could not be read here.
+- To identify the permanent fix, provide the sanitized Supabase Dashboard
+  Storage/Database log entry for the failed attempt: timestamp, message/details,
+  SQLSTATE, and trigger/function name if shown. Do not include keys, tokens,
+  customer data, or storage object paths. Do not change upload limits or run
+  production write tests based only on the generic `DatabaseError`.
 
 ## Current local implementation status
 

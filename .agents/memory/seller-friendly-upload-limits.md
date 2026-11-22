@@ -3,10 +3,10 @@ name: Seller-friendly upload limits
 description: The marketplace's media caps should be reasonable for sellers and adjustable by admins.
 ---
 
-For VelveraHub, upload limits should not be so restrictive that sellers complain, and the admin should control them.
+For VelveraHub, upload limits should not be so restrictive that sellers complain, and the admin should control them. The current user-approved target is 40 MiB per image or video, with 10 shop photos per product and 10 media files per independent listing. The user states the connected Supabase project is on the Free plan as of 22 November 2026.
 
-Recommended defaults selected by the user: 10 shop photos per product, 10 media files per independent listing, 10 MiB per compressed WebP photo, and 100 MiB per video. Original photos may be up to 20 MiB before compression. Admin ranges are 1–100 items, 5–20 MiB per photo, and 50–200 MiB per video; allowed MIME types stay fixed.
+The 40 MiB per-file target is below Supabase Free's documented 50 MB maximum, but that does not prove the project's global Storage limit or bucket configuration. Verify the actual settings before attributing failures to size or changing them. Keep MIME types fixed and do not increase the 10-item quotas.
 
-**Why:** the user selected the recommended defaults and wants seller-friendly limits with admin control.
+**Why:** the user explicitly approved the 40 MiB file target, retained both 10-item quotas, and stated the current Supabase plan is Free.
 
-**How to apply:** when setting image/video sizes or per-listing counts, keep the defaults reasonable and ensure admin settings control the enforced limits.
+**How to apply:** enforce the same per-file ceilings at the client, database, and bucket layers; check the live global and bucket limits before diagnosing or changing production settings.

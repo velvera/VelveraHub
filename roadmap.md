@@ -123,11 +123,26 @@ for a local session first. Signed-in status behavior remains unverified until
 migration 16 is applied in staging. No production or staging readiness is
 implied by these local passes.
 
+### Production upload check on 22 November 2026
+
+- A read-only call to `get_marketplace_media_limits()` against the configured
+  production Supabase project returned 10 items per independent listing and
+  40 MiB image/video limits.
+- The user reports the Supabase project is on the Free plan. The documented
+  Free maximum is 50 MB, so 40 MiB is below that plan ceiling; the project's
+  actual global Storage limit and effective bucket settings were not verified.
+- The reported image upload fails with `HTTP 500`, code `DatabaseError`. This
+  points to a Storage/database-layer failure but does not identify the SQL
+  exception or trigger. The Replit project has no active production deployment
+  or Supabase integration, so its production logs are not available here.
+- Do not claim the upload is fixed until the timestamped Supabase Storage log
+  identifies and resolves the database error, then the seller upload passes.
+
 ## Supabase and payment evidence from 30 October 2026 (historical)
 
 ### Confirmed from the repository
 
-- `database/run-schema.txt` defines the 16-step Supabase migration order. Migration 15 configures local product-media limits; migration 16 adds only a requester-scoped account-deletion status lookup. Neither file proves application to staging or production.
+- `database/run-schema.txt` defines the 16-step Supabase migration order. The current production media-settings RPC responds with 10-item quotas and 40 MiB limits, but migration history, effective bucket/global settings, and real upload behavior are not fully verified; migration 16 adds only a requester-scoped status lookup and is not verified in staging.
 - `database/account-deletion.sql` is a **legacy-only** migration. The runbook says to apply it after `schema.sql` and before `cloudflare-supabase-direct.sql` only when the older database lacks the deletion-request objects. Do not apply it as an extra migration to a fresh/current schema.
 - The supplied storage-test path `scripts/test-storage-policy-safety.mjs` does not exist. The actual test is `scripts/storage-policy-safety.test.mjs`, run by `npm run test:storage-policy-safety`; it checks source and SQL invariants without contacting Supabase.
 - `docs/cloudflare-pages.md` contains direct Storage acceptance steps for a dedicated staging project: verify the admin-controlled defaults and a temporary settings change, then concurrently upload eleven distinct valid objects to a disposable listing at the default cap of ten. Verify cross-owner and invalid-path/MIME/size rejections and clean up the test objects. Production write tests are prohibited.
@@ -175,7 +190,7 @@ implied by these local passes.
 
 | Item | Status | Required next step |
 |---|---|---|
-| Upload limits | NEEDS REVIEW | Local migration/client/admin defaults are now 40 MiB per image/video file with fixed MIME rules; both 10-item quotas remain. The browser also checks expected extensions and file signatures, but Storage/database rules validate metadata and do not independently inspect full bytes. Migration 15 is not verified in production. The last recorded production check found both buckets unrestricted. Verify the actual target plan/global limit first, then run the complete migration and TUS acceptance in staging. |
+| Upload limits | NEEDS REVIEW | The user confirms Supabase Free. A read-only production RPC returns 40 MiB app limits and the two 10-item quotas; the documented Free maximum is 50 MB, but the actual global limit and bucket settings are not confirmed. The reported upload returns HTTP 500 `DatabaseError`, requiring the underlying Supabase Storage/database log before a root-cause fix can be verified. The last bucket metadata preflight on 30 October found both buckets unrestricted. Do not increase limits; inspect the actual global/bucket settings and test in staging. |
 | Duplicate subscriptions | NEEDS REVIEW | No complete subscription flow is configured. Confirm subscriptions are not advertised; if introduced, make creation idempotent across retries and races. |
 | Duplicate payments and webhooks | BLOCKED | Order creation is idempotent, but Paystack/Stripe provider execution, signed webhooks, replay protection, refunds, settlement, and reconciliation are not implemented or accepted. Keep card/wallet methods disabled. |
 | Manual bank-transfer payments | BLOCKED | Production schema is applied, but no verified Nigeria/UK receiving account is configured or enabled and no staging order/receipt test has passed. Keep each market disabled until tested and authorized details are entered in the admin workspace. |

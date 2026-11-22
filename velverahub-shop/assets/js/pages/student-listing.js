@@ -307,6 +307,9 @@
         }
         if (stage === 'media preparation' && error?.message) return error.message;
         if (stage === 'media upload') {
+            if (statusCode >= 500 && String(error?.code || '').toLowerCase() === 'databaseerror') {
+                return `Supabase Storage returned a database error while saving the photo. An administrator must inspect the Storage log for the underlying database cause.${statusSuffix}${requestSuffix}`;
+            }
             if (/row-level security|42501|permission denied|not authorized|unauthorized|access denied/.test(details)) {
                 return `Supabase denied the photo upload to product storage. Check the signed-in seller's upload permissions.${statusSuffix}${requestSuffix}`;
             }

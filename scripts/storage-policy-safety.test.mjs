@@ -102,6 +102,10 @@ assert.match(
     /photo upload to product storage.*HTTP 403, code 42501.*Reference: upload-ref/,
 );
 assert.match(
+    submissionErrorMessage({ statusCode: 500, code: 'DatabaseError' }, 'media upload', 'database-ref'),
+    /Storage returned a database error.*Storage log.*HTTP 500, code DatabaseError.*Reference: database-ref/,
+);
+assert.match(
     submissionErrorMessage({ statusCode: 403, code: '42501' }, 'media metadata', 'metadata-ref'),
     /listing-record step.*product image record.*permissions and triggers.*Reference: metadata-ref/,
 );
