@@ -208,7 +208,7 @@
         return file;
     }
 
-    function uploadMedia(supabase, blob, productId, mediaType, mediaCount = 1, limits, onProgress) {
+    function uploadMedia(supabase, blob, productId, mediaType, mediaCount = 1, limits, onProgress, onCancelCleanupError) {
         const allowedTypes = mediaType === 'video' ? VIDEO_TYPES : new Set(['image/webp']);
         const maxBytes = mediaType === 'video' ? limits.product_video_max_bytes : limits.product_image_max_bytes;
         if (!allowedTypes.has(blob.type) || !blob.size || blob.size > maxBytes) {
@@ -229,7 +229,8 @@
             contentType: blob.type,
             cacheControl: '3600',
             upsert: false,
-            onProgress
+            onProgress,
+            onCancelCleanupError
         });
         const promise = task.promise.then(async (result) => {
             if (result.error) throw result.error;
@@ -476,6 +477,7 @@
             let failureStage = 'listing details';
             let failureMediaType = '';
             let failureMediaCount = 0;
+            let cancelledUploadCleanupFailed = false;
             const uploadedMedia = [];
             activeMediaUploadTasks = [];
             try {
@@ -550,7 +552,22 @@
                         item.mediaType,
                         failureMediaCount,
                         mediaLimits,
-                        (percent) => updateMediaProgress(index, percent, `Uploading ${percent}%`)
+                        (percent) => updateMediaProgress(index, percent, `Uploading ${percent}%`),
+                        (cleanupError) => {
+                            cancelledUploadCleanupFailed = true;
+                            window.AsyncFeedback?.log(
+                                'student-listing-media-cancel',
+                                window.AsyncFeedback?.createRequestId('student-listing-media-cancel'),
+                                cleanupError,
+                                {
+                                    source: 'storage-upload',
+                                    action: 'cancel',
+                                    bucket: item.mediaType === 'video' ? 'product-videos' : 'product-images',
+                                    mediaType: item.mediaType,
+                                    stage: 'cancel-cleanup'
+                                }
+                            );
+                        }
                     );
                     activeMediaUploadTasks.push(task);
                     try {
@@ -658,7 +675,8 @@
                         cleanupProductFailed = true;
                     }
                 }
-                const cleanupFailed = cleanupMediaFailed || cleanupProductFailed || cleanupErrorCode === '42702';
+                const cleanupFailed = cleanupMediaFailed || cleanupProductFailed ||
+                    cancelledUploadCleanupFailed || cleanupErrorCode === '42702';
                 setStatus(cleanupFailed
                     ? `Your listing was not published, and some temporary files could not be removed. Please contact support before retrying. Reference: ${requestId}.`
                     : submissionErrorMessage(error, failureStage, requestId), 'error');

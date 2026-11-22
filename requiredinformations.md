@@ -1,6 +1,6 @@
 # VelveraHub — Required Owner Information and Staging Access
 
-**Updated:** 21 November 2026
+**Updated:** 22 November 2026
 **Purpose:** Gather the owner decisions and non-production access needed to finish legal approval and genuine staging acceptance. This is not a launch approval.
 
 ## Keep credentials and payment details out of this file
@@ -103,8 +103,9 @@ behavior:
 - Account deletion queues a request and provides admin review. It does not
   perform privileged Supabase Auth deletion or complete associated-data
   cleanup. A new authenticated requester-only status lookup and account-page
-  status display are implemented locally in migration 16; they do not verify
-  the actual deletion step.
+  status display are implemented locally in migration 16; the browser checks
+  for a signed-in session before querying. These changes do not verify the
+  actual deletion step.
 - The current app logic targets Nigeria and the UK. Additional global markets
   require separate legal, payment, tax, currency, and delivery decisions and
   implementation.
@@ -182,6 +183,22 @@ The browser signature check is defense-in-depth, not a server-side security
 boundary: current Storage/database enforcement checks MIME and size metadata,
 which a direct authenticated Storage request can supply itself. Do not describe
 the byte signature as independently enforced by Supabase.
+
+## Latest local verification on 22 November 2026
+
+- Passed the requester-only deletion-status test, storage upload service and
+  policy tests, marketplace-integrity checks, Supabase-readiness checks, and
+  manual-payment safety checks.
+- Passed generated-root and production-root parity/syntax checks after updating
+  only the affected account-status and listing-upload files across all app roots.
+- Passed the mobile checks at 320px and 390px; the isolated 430px run passed
+  across all roots after the anonymous status-RPC request was removed.
+- Passed the local API smoke checks, dependency audit with zero reported
+  vulnerabilities, and `git diff --check`.
+
+These checks are local only. Migration 15 and migration 16 have not been
+verified in production, no staging write acceptance has been performed, and
+the signed-in status view still requires staging verification.
 
 ## Third-party services and asset review
 

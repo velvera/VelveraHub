@@ -1681,7 +1681,10 @@ async function run() {
             const errors = [];
             page.on('pageerror', (error) => errors.push(error.message));
             page.on('console', (message) => {
-                if (message.type() === 'error') errors.push(message.text());
+                if (message.type() === 'error') {
+                    const location = message.location();
+                    errors.push(`${message.text()}${location?.url ? ` [${location.url}]` : ''}`);
+                }
             });
             try {
                 await assertAuth(page, root.name, width);
@@ -1738,7 +1741,10 @@ async function run() {
             const errors = [];
             page.on('pageerror', (error) => errors.push(error.message));
             page.on('console', (message) => {
-                if (message.type() === 'error') errors.push(message.text());
+                if (message.type() === 'error') {
+                    const location = message.location();
+                    errors.push(`${message.text()}${location?.url ? ` [${location.url}]` : ''}`);
+                }
             });
             try {
                 await page.goto(route(root, '/'), { waitUntil: 'domcontentloaded' });

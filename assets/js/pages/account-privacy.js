@@ -43,6 +43,12 @@
                     status.textContent = 'Request status is unavailable right now. You can still submit a request after signing in.';
                     return;
                 }
+                const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+                if (sessionError) throw sessionError;
+                if (!sessionData?.session) {
+                    status.textContent = 'Sign in to view your account deletion request status.';
+                    return;
+                }
                 const { data, error } = await supabase.rpc('get_my_account_deletion_request');
                 if (error) throw error;
                 renderRequest(data);

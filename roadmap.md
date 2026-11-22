@@ -1,6 +1,6 @@
 # VelveraHub Master Roadmap
 
-**Updated:** 21 November 2026
+**Updated:** 22 November 2026
 **Release decision:** **DO NOT LAUNCH YET**
 
 This is the current source of truth, consolidated from `improvement.md`, `finalassessment.md`, the previous `roadmap.md`, and the repository checks run during this review. The two dated review files are retained as historical evidence; their current status is superseded by this document.
@@ -51,7 +51,9 @@ The 30 October checklist counts below are a historical snapshot, not the current
 - Updated the Express dependency override for the reported body-parser advisory; the current dependency audit reports no vulnerabilities.
 - Added a disaster-recovery runbook that separates database backups, Storage objects/settings, Cloudflare deployments, authentication, and payment reconciliation. It is a procedure only; no restore was performed.
 - Added migration 16 and account-page status messages so a signed-in requester can see the latest deletion-request state without exposing the request email or implying that the Auth user or related data has been deleted.
-- Added read-only preflight coverage and a local regression test for the requester-only deletion-status RPC; the migration and UI remain unverified in staging.
+- Added read-only preflight coverage and a local regression test for the requester-only deletion-status RPC; the account page checks for a signed-in session before calling it. The migration and UI remain unverified in staging.
+- Synchronized the existing listing-upload cancellation-cleanup failure reporting into the Nigeria, UK, shop-owner, and admin app roots after targeted parity checks found stale copies. Kept all unrelated per-root files untouched.
+- Improved mobile-regression console diagnostics to show the failing resource URL, which identified an anonymous request to the not-yet-applied deletion-status RPC; the UI now avoids that request unless a session exists.
 
 ### Previously passed local baseline checks on 30 October
 
@@ -101,6 +103,25 @@ connected to Supabase staging or production.
 An initial `npm run smoke -- --help` invocation was invalid for this script and
 returned `Invalid URL`; the correct `SMOKE_PORT=5000 npm run smoke` command
 passed. This invocation error is not an application or smoke-test failure.
+
+### Latest local verification run on 22 November 2026
+
+These are local repository/API/browser checks only. They did not use Supabase
+staging or production:
+
+- Passed: `npm run test:account-deletion-status` — requester-only response, session-gated status lookup, and honest queue-state wording.
+- Passed: `npm run test:storage-upload-service`, `npm run test:storage-policy-safety`, `npm run test:marketplace-integrity`, `npm run test:supabase-readiness`, and `npm run test:manual-payments`.
+- Passed: `npm run apps:check` and `npm run apps:production:check` after targeted root updates; generated JavaScript syntax and static-page parity checks pass for all four app roots.
+- Passed: mobile regression at 320px and 390px in the combined run; isolated 430px run also passed across the parent, Nigeria, UK, admin, and shop-owner roots after preventing anonymous status-RPC calls. The combined run exceeded five minutes before the 430px pass, and the desktop portion was not run.
+- Passed: `SMOKE_PORT=5000 npm run smoke` — local API health, routes, CORS, redirects, and static-root checks.
+- Passed: `npm audit --omit=dev` — zero reported vulnerabilities.
+- Passed: `git diff --check`.
+
+The 430px run first exposed that an unauthenticated account page attempted to
+call migration 16 before it exists in the hosted project; the page now checks
+for a local session first. Signed-in status behavior remains unverified until
+migration 16 is applied in staging. No production or staging readiness is
+implied by these local passes.
 
 ## Supabase and payment evidence from 30 October 2026 (historical)
 

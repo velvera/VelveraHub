@@ -17,6 +17,9 @@ assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.get_my_account_deleti
 assert.match(migration, /does not delete an Auth user or related marketplace data/i);
 
 assert.match(page, /rpc\('get_my_account_deletion_request'\)/);
+assert.match(page, /supabase\.auth\.getSession\(\)/);
+assert.ok(page.indexOf('if (!sessionData?.session)') < page.indexOf("rpc('get_my_account_deletion_request')"));
+assert.match(page, /Sign in to view your account deletion request status/);
 assert.match(page, /Your request is awaiting review/);
 assert.match(page, /Your request is being reviewed/);
 assert.match(page, /marked complete in the review queue/);
