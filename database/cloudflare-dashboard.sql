@@ -250,13 +250,13 @@ begin
             new.original_price, new.discount_percent, new.category, new.category_id,
             new.location, new.school_id, new.school_slug, new.school_name,
             new.school_city, new.campus_area, new.condition, new.delivery_options,
-            new.specifications, new.tags, new.image_url, new.listing_type
+            new.specifications, new.tags, to_jsonb(new) -> 'image_url', new.listing_type
         ) is distinct from row(
             old.title, old.description, old.short_description, old.price,
             old.original_price, old.discount_percent, old.category, old.category_id,
             old.location, old.school_id, old.school_slug, old.school_name,
             old.school_city, old.campus_area, old.condition, old.delivery_options,
-            old.specifications, old.tags, old.image_url, old.listing_type
+            old.specifications, old.tags, to_jsonb(old) -> 'image_url', old.listing_type
         );
     review_fields_changed :=
         row(new.moderation_status, new.moderation_note, new.moderated_by, new.moderated_at)

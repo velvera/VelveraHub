@@ -175,7 +175,9 @@ BEGIN
         RETURN NEW;
     END IF;
 
-    media_size_text := NEW.metadata->>'size';
+    -- Current Supabase Storage writes contentLength; older Storage versions
+    -- used size. Accept both without trusting client-supplied user_metadata.
+    media_size_text := coalesce(NEW.metadata->>'size', NEW.metadata->>'contentLength');
     IF media_size_text IS NULL OR media_size_text !~ '^[0-9]+$' THEN
         RAISE EXCEPTION 'Product media size metadata is required'
             USING ERRCODE = '23514';

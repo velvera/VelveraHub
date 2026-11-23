@@ -45,6 +45,10 @@ WITH checks AS (
               AND tgname = 'enforce_product_listing_review'
               AND NOT tgisinternal
         )
+        AND position(
+            'to_jsonb(new) -> ''image_url''' IN
+            pg_get_functiondef(to_regprocedure('public.enforce_product_listing_review()'))
+        ) > 0
     UNION ALL
     SELECT
         'listing media resubmission trigger exists',
@@ -740,6 +744,10 @@ WITH checks AS (
     SELECT
         'marketplace media size guard is installed',
         to_regprocedure('public.enforce_marketplace_product_media_size()') IS NOT NULL
+        AND position(
+            'contentLength' IN
+            pg_get_functiondef(to_regprocedure('public.enforce_marketplace_product_media_size()'))
+        ) > 0
         AND EXISTS (
             SELECT 1
             FROM pg_trigger

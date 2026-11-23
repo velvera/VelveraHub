@@ -109,6 +109,10 @@ Run these files in order in the Supabase SQL editor:
     plan and global Storage limit are at least 40 MiB before applying; the
     migration sets both product-media buckets to a 40 MiB ceiling and retains
     the 10-item listing quotas.
+16. `database/account-deletion-status.sql`
+17. `database/student-listing-submission-fixes.sql` — fixes listing submission
+     when the products table has no image_url column and supports current
+     Supabase Storage contentLength metadata.
 
 For an existing database that reports PostgreSQL error `42702` while removing
 or cleaning up failed listing media uploads, apply

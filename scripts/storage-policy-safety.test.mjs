@@ -71,6 +71,11 @@ assert.match(
     /'product-videos'[\s\S]*?41943040[\s\S]*?ARRAY\['video\/mp4',\s*'video\/webm',\s*'video\/quicktime'\]::text\[\]/,
     'the final video bucket must enforce the 40 MiB ceiling and fixed supported MIME types',
 );
+assert.match(
+    mediaSettingsMigration,
+    /coalesce\(NEW\.metadata->>'size', NEW\.metadata->>'contentLength'\)/i,
+    'the database size guard must accept Supabase Storage contentLength metadata',
+);
 assert.match(studentListing, /get_marketplace_media_limits/);
 assert.match(rls, /CREATE POLICY "students can upload listing images"/);
 assert.match(rls, /CREATE POLICY "restrict product media uploads"/);
