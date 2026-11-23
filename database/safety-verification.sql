@@ -386,6 +386,18 @@ WITH checks AS (
         )
     UNION ALL
     SELECT
+        'product media quota trigger avoids ambiguous conflict variables',
+        to_regprocedure('public.enforce_product_media_object_quota()') IS NOT NULL
+        AND position(
+            'v_product_id' IN
+            pg_get_functiondef(to_regprocedure('public.enforce_product_media_object_quota()'))
+        ) > 0
+        AND position(
+            'ON CONFLICT (product_id)' IN
+            pg_get_functiondef(to_regprocedure('public.enforce_product_media_object_quota()'))
+        ) > 0
+    UNION ALL
+    SELECT
         'product media quota state is private to server-side policies',
         CASE
             WHEN to_regclass('public.product_media_quota_usage') IS NULL

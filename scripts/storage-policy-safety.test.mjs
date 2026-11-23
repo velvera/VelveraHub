@@ -6,6 +6,7 @@ const read = (path) => fs.readFileSync(new URL(`../${path}`, import.meta.url), '
 const rls = read('database/supabase-rls.sql');
 const mediaSettingsMigration = read('database/marketplace-media-settings.sql');
 const focusedFix = read('database/storage-public-bucket-list-policy-fix.sql');
+const mediaQuotaConflictFix = read('database/fix-product-media-upload-quota-conflict.sql');
 const verification = read('database/safety-verification.sql');
 const studentListing = read('assets/js/pages/student-listing.js');
 const observability = read('assets/js/services/observability.js');
@@ -76,6 +77,14 @@ assert.match(
     /coalesce\(NEW\.metadata->>'size', NEW\.metadata->>'contentLength'\)/i,
     'the database size guard must accept Supabase Storage contentLength metadata',
 );
+const quotaTriggerFunction = rls.match(
+    /CREATE OR REPLACE FUNCTION public\.enforce_product_media_object_quota\(\)[\s\S]*?\$function\$;/i,
+);
+assert.ok(quotaTriggerFunction, 'product media quota trigger function must exist');
+assert.match(quotaTriggerFunction[0], /DECLARE\s+v_product_id UUID/i);
+assert.match(quotaTriggerFunction[0], /VALUES \(v_product_id, 1\)\s+ON CONFLICT \(product_id\)/i);
+assert.match(mediaQuotaConflictFix, /DECLARE\s+v_product_id UUID/i);
+assert.match(mediaQuotaConflictFix, /VALUES \(v_product_id, 1\)\s+ON CONFLICT \(product_id\)/i);
 assert.match(studentListing, /get_marketplace_media_limits/);
 assert.match(rls, /CREATE POLICY "students can upload listing images"/);
 assert.match(rls, /CREATE POLICY "restrict product media uploads"/);

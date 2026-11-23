@@ -113,6 +113,8 @@ Run these files in order in the Supabase SQL editor:
 17. `database/student-listing-submission-fixes.sql` — fixes listing submission
      when the products table has no image_url column and supports current
      Supabase Storage contentLength metadata.
+18. `database/fix-product-media-upload-quota-conflict.sql` — fixes the
+     PostgreSQL name collision that caused product image uploads to fail.
 
 For an existing database that reports PostgreSQL error `42702` while removing
 or cleaning up failed listing media uploads, apply

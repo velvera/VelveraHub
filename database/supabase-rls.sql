@@ -448,7 +448,7 @@ SET search_path = ''
 SET row_security = off
 AS $function$
 DECLARE
-    product_id UUID;
+    v_product_id UUID;
     product_shop_id UUID;
     media_limit INTEGER;
     resulting_count INTEGER;
@@ -484,8 +484,8 @@ BEGIN
                 USING ERRCODE = '23514';
         END IF;
 
-        product_id := pg_catalog.split_part(NEW.name, '/', 1)::UUID;
-        IF NOT public.can_manage_product_media(product_id) THEN
+        v_product_id := pg_catalog.split_part(NEW.name, '/', 1)::UUID;
+        IF NOT public.can_manage_product_media(v_product_id) THEN
             RAISE EXCEPTION 'You cannot upload media for this listing'
                 USING ERRCODE = '42501';
         END IF;
@@ -493,7 +493,7 @@ BEGIN
         SELECT product.shop_id
         INTO product_shop_id
         FROM public.products AS product
-        WHERE product.id = product_id;
+        WHERE product.id = v_product_id;
 
         IF NEW.bucket_id = 'product-videos' AND product_shop_id IS NOT NULL THEN
             RAISE EXCEPTION 'Videos are only allowed on independent listings'
@@ -513,7 +513,7 @@ BEGIN
         INSERT INTO public.product_media_quota_objects (
             bucket_id, object_name, product_id, counts_toward_quota
         )
-        VALUES (NEW.bucket_id, NEW.name, product_id, counts_toward_quota)
+        VALUES (NEW.bucket_id, NEW.name, v_product_id, counts_toward_quota)
         ON CONFLICT (bucket_id, object_name) DO NOTHING;
         IF NOT FOUND THEN
             RETURN NEW;
@@ -521,7 +521,7 @@ BEGIN
 
         IF counts_toward_quota THEN
             INSERT INTO public.product_media_quota_usage (product_id, object_count)
-            VALUES (product_id, 1)
+            VALUES (v_product_id, 1)
             ON CONFLICT (product_id) DO UPDATE
             SET object_count = public.product_media_quota_usage.object_count + 1
             WHERE public.product_media_quota_usage.object_count < media_limit
