@@ -3,3 +3,4 @@
 - [Multi-root change coverage](multi-root-change-coverage.md) — check and update relevant pages across the root, UK, NG, shop, and admin app folders.
 - [Password toggle alignment](password-toggle-alignment.md) — keep the visible eye centered within each password field with no button background.
 - [Seller-friendly upload limits](seller-friendly-upload-limits.md) — keep media caps reasonable and make upload thresholds admin-controllable.
+- [Student segment positioning](student-segment-positioning.md) — retain student buyers and sellers as a differentiator, but keep them secondary to the broader marketplace.
