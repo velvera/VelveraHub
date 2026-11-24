@@ -276,6 +276,9 @@
                 const profile = window.AuthService.getProfile();
                 const user = window.AuthService.getUser();
                 renderAuthenticated(user, profile);
+                await window.PhoneVerification?.showAccountSettings?.(
+                    document.getElementById('accountPhoneVerification')
+                );
                 await Promise.all([
                     loadSellerAlerts(profile),
                     loadAccountRegion(user, profile)

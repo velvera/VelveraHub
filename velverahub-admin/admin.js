@@ -13,6 +13,8 @@
         paymentSettingsLoading: false,
         mediaSettingsLoading: false,
         mediaLimits: null,
+        phoneVerificationSettingsLoading: false,
+        phoneVerificationSettings: null,
         pendingManualPayments: [],
         manualPaymentsLoading: false,
         activeView: 'verification'
@@ -555,7 +557,8 @@
             listingReviews: ['listingReviewPanel', 'listingReviewTab'],
             systemErrors: ['systemErrorsPanel', 'systemErrorsTab'],
             paymentSettings: ['paymentSettingsPanel', 'paymentSettingsTab'],
-            mediaSettings: ['mediaSettingsPanel', 'mediaSettingsTab']
+            mediaSettings: ['mediaSettingsPanel', 'mediaSettingsTab'],
+            phoneVerificationSettings: ['phoneVerificationSettingsPanel', 'phoneVerificationSettingsTab']
         };
         if (!views[view]) return;
         state.activeView = view;
@@ -572,6 +575,7 @@
             loadPendingManualPayments();
         }
         else if (view === 'mediaSettings') loadMarketplaceMediaLimits();
+        else if (view === 'phoneVerificationSettings') loadPhoneVerificationSettings();
         else loadQueue();
     }
 
@@ -745,6 +749,92 @@
             ) || 'Media limits could not be saved. Check the values and try again.';
             message.classList.add('is-error');
             message.hidden = false;
+        } finally {
+            button.disabled = false;
+        }
+    }
+
+    function renderPhoneVerificationSettings() {
+        const settings = state.phoneVerificationSettings;
+        if (!settings) return;
+        byId('phoneVerificationEnabled').checked = settings.enabled === true;
+        byId('phoneVerificationMode').textContent = settings.mode || (settings.enabled ? 'Enabled' : 'Disabled');
+        byId('phoneVerificationProviderStatus').textContent = settings.providerStatus || 'Not configured';
+        byId('phoneVerificationReadiness').textContent = settings.configurationReady
+            ? 'Ready to activate'
+            : 'Not ready — configure Supabase and Termii Function secrets';
+        byId('savePhoneVerificationSettings').disabled = settings.configurationReady !== true
+            && settings.enabled !== true;
+    }
+
+    async function loadPhoneVerificationSettings() {
+        if (state.phoneVerificationSettingsLoading) return;
+        state.phoneVerificationSettingsLoading = true;
+        const message = byId('phoneVerificationSettingsMessage');
+        message.hidden = true;
+        message.classList.remove('is-error');
+        try {
+            const { data, error } = await state.supabase.functions.invoke('phone-verification', {
+                body: { action: 'admin_status' }
+            });
+            if (error) {
+                let payload = null;
+                try { payload = await error.context?.clone?.().json(); } catch (_) {}
+                throw new Error(payload?.error || error.message || 'Phone verification settings are unavailable.');
+            }
+            if (!data || typeof data.enabled !== 'boolean' || typeof data.configurationReady !== 'boolean') {
+                throw new Error('The phone verification settings response is incomplete.');
+            }
+            state.phoneVerificationSettings = data;
+            renderPhoneVerificationSettings();
+        } catch (error) {
+            message.textContent = /function.*not found|not deployed|404/i.test(error?.message || '')
+                ? 'Phone verification controls are not installed yet. Deploy the phone-verification Supabase Function and apply database/phone-verification.sql.'
+                : window.AsyncFeedback?.errorMessage(error, 'Phone verification settings could not be loaded.', 'admin-phone-verification-load') || 'Phone verification settings could not be loaded.';
+            message.classList.add('is-error');
+            message.hidden = false;
+            byId('phoneVerificationReadiness').textContent = 'Unavailable';
+            byId('phoneVerificationProviderStatus').textContent = 'Unavailable';
+            byId('phoneVerificationMode').textContent = 'Unavailable';
+            byId('savePhoneVerificationSettings').disabled = true;
+        } finally {
+            state.phoneVerificationSettingsLoading = false;
+        }
+    }
+
+    async function savePhoneVerificationSettings(event) {
+        event.preventDefault();
+        const button = byId('savePhoneVerificationSettings');
+        const message = byId('phoneVerificationSettingsMessage');
+        const enabled = byId('phoneVerificationEnabled').checked;
+        button.disabled = true;
+        message.hidden = true;
+        message.classList.remove('is-error');
+        try {
+            const { data, error } = await state.supabase.functions.invoke('phone-verification', {
+                body: { action: 'admin_set', enabled }
+            });
+            if (error) {
+                let payload = null;
+                try { payload = await error.context?.clone?.().json(); } catch (_) {}
+                throw new Error(payload?.error || error.message || 'Phone verification setting could not be saved.');
+            }
+            if (!data || data.enabled !== enabled) throw new Error('The saved setting could not be confirmed.');
+            state.phoneVerificationSettings = data;
+            renderPhoneVerificationSettings();
+            message.textContent = enabled
+                ? 'Phone verification is enabled. New registration and publishing checks now use Termii.'
+                : 'Phone verification is disabled. New OTP activity has stopped; existing records were kept.';
+            message.hidden = false;
+        } catch (error) {
+            message.textContent = window.AsyncFeedback?.errorMessage(
+                error,
+                'Phone verification setting could not be saved. Check the Termii setup and try again.',
+                'admin-phone-verification-save'
+            ) || 'Phone verification setting could not be saved. Check the Termii setup and try again.';
+            message.classList.add('is-error');
+            message.hidden = false;
+            await loadPhoneVerificationSettings();
         } finally {
             button.disabled = false;
         }
@@ -992,6 +1082,7 @@
                 loadPendingManualPayments();
             }
             else if (state.activeView === 'mediaSettings') loadMarketplaceMediaLimits();
+            else if (state.activeView === 'phoneVerificationSettings') loadPhoneVerificationSettings();
             else loadQueue();
         });
         byId('refreshSystemErrors').addEventListener('click', loadSystemErrors);
@@ -1000,6 +1091,7 @@
         byId('listingReviewStatus').addEventListener('change', loadProductReviewQueue);
         byId('marketplacePaymentSettingsForm').addEventListener('submit', saveMarketplacePaymentSettings);
         byId('marketplaceMediaSettingsForm').addEventListener('submit', saveMarketplaceMediaLimits);
+        byId('phoneVerificationSettingsForm').addEventListener('submit', savePhoneVerificationSettings);
         byId('marketplacePaymentRegion').addEventListener('change', renderMarketplacePaymentSettings);
         byId('marketplacePaymentEnabled').addEventListener('change', setPaymentFieldRequirements);
         byId('refreshManualPaymentOrders').addEventListener('click', loadPendingManualPayments);

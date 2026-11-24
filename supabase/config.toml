@@ -1,0 +1,6 @@
+[functions.phone-verification]
+# Signup verification starts before a user has a Supabase session. The
+# function performs explicit authentication for account changes and admin
+# actions; public signup actions are protected by SMS challenge state and the
+# single-use SQL signup ticket.
+verify_jwt = false

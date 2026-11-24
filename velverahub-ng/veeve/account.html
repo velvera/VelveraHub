@@ -72,6 +72,11 @@
                 <section class="account-info-card"><h3>Account overview</h3><dl class="account-info-list"><div><dt>Email</dt><dd id="accountEmail">Not added yet</dd></div><div><dt>Region</dt><dd id="accountRegion" aria-live="polite">Loading…</dd></div></dl></section>
                 <section class="account-info-card"><h3>Need something else?</h3><p class="account-section-heading" style="margin:0"><a class="landing-card-link" href="/veeve/secured-trading.html#help">Open support <i class="fas fa-arrow-right"></i></a></p></section>
             </div>
+            <section class="account-info-card" id="accountPhoneVerification" hidden aria-labelledby="accountPhoneVerificationHeading">
+                <h3 id="accountPhoneVerificationHeading">Phone verification</h3>
+                <p data-phone-verification-status></p>
+                <button class="btn btn-secondary" type="button" data-phone-verification-change>Verify phone number</button>
+            </section>
             <section class="account-info-card account-danger-zone" aria-labelledby="accountPrivacyHeading">
                 <h3 id="accountPrivacyHeading">Privacy and data</h3>
                 <p>Submit a request for admin review and check its status here. Submitting or viewing a request does not delete your sign-in or account data. The complete deletion process has not passed end-to-end testing.</p>
@@ -90,6 +95,7 @@
     <script src="../assets/js/services/publicSupabaseConfig.js"></script>
     <script src="../assets/js/services/supabaseClient.js"></script>
     <script src="../assets/js/services/auth.js"></script>
+    <script src="../assets/js/services/phone-verification.js"></script>
     <script src="../assets/js/services/observability.js"></script>
     <script src="../assets/js/components/async-feedback.js"></script>
     <script src="../assets/js/components/focus-manager.js"></script>

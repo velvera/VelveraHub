@@ -101,7 +101,7 @@ const AuthService = {
         try {
             const { data: profile, error } = await supabase
                 .from('profiles')
-                .select('id, user_id, email, first_name, last_name, avatar_url, phone, role, business_name, business_state, business_institution')
+                .select('id, user_id, email, first_name, last_name, avatar_url, phone, phone_e164, phone_verified, phone_verified_at, role, business_name, business_state, business_institution')
                 .or(`user_id.eq.${user.id},id.eq.${user.id}`)
                 .limit(1)
                 .maybeSingle();
@@ -268,6 +268,30 @@ const AuthService = {
     async signUp(email, password, userData = {}) {
         if (window.supabaseConfigReady) await window.supabaseConfigReady;
         const normalizedEmail = String(email || '').trim().toLowerCase();
+        if (window.PhoneVerification?.isEnabled && await window.PhoneVerification.isEnabled(true)) {
+            try {
+                const verification = await window.PhoneVerification.verifyForSignup(
+                    normalizedEmail,
+                    userData.phone || userData.businessPhone || ''
+                );
+                if (!verification?.ticket || !verification?.phone) {
+                    return {
+                        data: null,
+                        error: { message: 'Verify your Nigerian phone number before creating an account.' }
+                    };
+                }
+                userData = {
+                    ...userData,
+                    phone_e164: verification.phone,
+                    phone_verification_ticket: verification.ticket
+                };
+            } catch (error) {
+                return {
+                    data: null,
+                    error: { message: authErrorMessage(error, 'Phone verification could not be completed.') }
+                };
+            }
+        }
         if (window.SupabaseClient && window.SupabaseClient.isConfigured()) {
             const supabase = window.SupabaseClient.get();
             try {

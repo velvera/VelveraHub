@@ -71,6 +71,7 @@
                 <button class="admin-tab" id="systemErrorsTab" type="button" aria-pressed="false" aria-controls="systemErrorsPanel" data-admin-view="systemErrors">System errors</button>
                 <button class="admin-tab" id="paymentSettingsTab" type="button" aria-pressed="false" aria-controls="paymentSettingsPanel" data-admin-view="paymentSettings">Payment settings</button>
                 <button class="admin-tab" id="mediaSettingsTab" type="button" aria-pressed="false" aria-controls="mediaSettingsPanel" data-admin-view="mediaSettings">Media limits</button>
+                <button class="admin-tab" id="phoneVerificationSettingsTab" type="button" aria-pressed="false" aria-controls="phoneVerificationSettingsPanel" data-admin-view="phoneVerificationSettings">Phone verification</button>
             </div>
 
             <p class="admin-global-message" id="adminGlobalMessage" role="status" aria-live="polite" hidden></p>
@@ -234,6 +235,30 @@
                     <p class="marketplace-media-note">The default quota remains 10 photos per shop product and 10 files per independent listing. Each product photo or video can be configured up to 40 MiB. The project plan and global Storage limit must support 40 MiB before this setting is enabled. Original photos up to 40 MiB are compressed before upload. Allowed formats remain JPEG, PNG, or WebP photos and MP4, WebM, or QuickTime videos; uploaded photos are stored as WebP.</p>
                     <p class="admin-global-message" id="marketplaceMediaSettingsMessage" role="status" aria-live="polite" hidden></p>
                     <button class="admin-primary-button" id="saveMarketplaceMediaSettings" type="submit">Save media limits</button>
+                </form>
+            </section>
+            <section id="phoneVerificationSettingsPanel" aria-labelledby="phoneVerificationSettingsTab" hidden>
+                <div class="deletion-review-note">
+                    <strong>Phone verification is hidden from marketplace users while disabled.</strong>
+                    <span>Enabling this setting requires a ready Termii configuration. Turning it off stops new OTP activity without removing existing phone records or verification status.</span>
+                </div>
+                <form class="marketplace-payment-form" id="phoneVerificationSettingsForm">
+                    <div class="marketplace-payment-form-heading">
+                        <h2>Nigerian phone verification</h2>
+                        <p>The setting applies globally to buyer and seller registration, phone changes, and new listing publication. Email confirmation and seller KYC remain in place.</p>
+                    </div>
+                    <div class="phone-verification-admin-status" aria-live="polite">
+                        <p><strong>SMS provider:</strong> <span id="phoneVerificationProviderStatus">Loading…</span></p>
+                        <p><strong>Mode:</strong> <span id="phoneVerificationMode">Loading…</span></p>
+                        <p><strong>Configuration readiness:</strong> <span id="phoneVerificationReadiness">Checking…</span></p>
+                    </div>
+                    <label class="marketplace-payment-enabled">
+                        <input id="phoneVerificationEnabled" name="enabled" type="checkbox">
+                        <span>Enable phone verification across VelveraHub</span>
+                    </label>
+                    <p class="marketplace-media-note">Termii API credentials remain in Supabase Function secrets and are never displayed here. “Configured” confirms the required secrets are present; a live SMS delivery is confirmed only when a code is sent.</p>
+                    <p class="admin-global-message" id="phoneVerificationSettingsMessage" role="status" aria-live="polite" hidden></p>
+                    <button class="admin-primary-button" id="savePhoneVerificationSettings" type="submit">Save phone verification setting</button>
                 </form>
             </section>
         </section>
