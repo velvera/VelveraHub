@@ -2094,6 +2094,10 @@ function initProductForm() {
         const isEditing = !!editingProductId;
         let deliveryOptionsSaved = true;
         const supabaseContext = await getSupabaseSellerContext();
+        if (supabaseContext && window.PhoneVerification && !await window.PhoneVerification.requireVerifiedPhone()) {
+            showToast('Verify your Nigerian phone number before publishing a listing.', 'warning');
+            return;
+        }
         const submitBtn = form.querySelector('button[type="submit"]');
         if (submitBtn) {
             submitBtn.disabled = true;

@@ -224,48 +224,8 @@ export function createPhoneVerificationHandler({
         }
     }
 
-    async function setProductMediaBucketsPublic(isPublic) {
-        const updatedBuckets = [];
-        try {
-            for (const bucket of PRODUCT_MEDIA_BUCKETS) {
-                const response = await fetchImpl(`${config.url}/storage/v1/bucket/${bucket}`, {
-                    method: 'PUT',
-                    headers: {
-                        apikey: config.serviceKey,
-                        Authorization: `Bearer ${config.serviceKey}`,
-                        'Content-Type': 'application/json',
-                        Accept: 'application/json'
-                    },
-                    body: JSON.stringify({ public: isPublic })
-                });
-                if (!response.ok) {
-                    throw errorResult('Product media access could not be updated safely.', 503, 'MEDIA_ACCESS_UPDATE_FAILED');
-                }
-                updatedBuckets.push(bucket);
-            }
-        } catch (error) {
-            // If the second bucket fails, restore the first to its previous
-            // mode so photos and videos do not end up with different access.
-            for (const bucket of updatedBuckets.reverse()) {
-                try {
-                    await fetchImpl(`${config.url}/storage/v1/bucket/${bucket}`, {
-                        method: 'PUT',
-                        headers: {
-                            apikey: config.serviceKey,
-                            Authorization: `Bearer ${config.serviceKey}`,
-                            'Content-Type': 'application/json',
-                            Accept: 'application/json'
-                        },
-                        body: JSON.stringify({ public: !isPublic })
-                    });
-                } catch (_) {}
-            }
-            throw error;
-        }
-    }
-
-    async function productMediaModeMatches(isEnabled) {
-        if (!config.url || !config.serviceKey) return false;
+    async function getProductMediaBucketStates() {
+        const states = {};
         for (const bucket of PRODUCT_MEDIA_BUCKETS) {
             const response = await fetchImpl(`${config.url}/storage/v1/bucket/${bucket}`, {
                 method: 'GET',
@@ -275,12 +235,66 @@ export function createPhoneVerificationHandler({
                     Accept: 'application/json'
                 }
             });
-            if (!response.ok) return false;
             let details = null;
-            try { details = await response.json(); } catch { details = null; }
-            if (typeof details?.public !== 'boolean' || details.public === isEnabled) return false;
+            try { details = await response.json(); } catch (_) {}
+            if (!response.ok || typeof details?.public !== 'boolean') {
+                throw errorResult('Product media access could not be checked safely.', 503, 'MEDIA_ACCESS_UPDATE_FAILED');
+            }
+            states[bucket] = details.public;
         }
-        return true;
+        return states;
+    }
+
+    async function writeProductMediaBucket(bucket, isPublic) {
+        const response = await fetchImpl(`${config.url}/storage/v1/bucket/${bucket}`, {
+            method: 'PUT',
+            headers: {
+                apikey: config.serviceKey,
+                Authorization: `Bearer ${config.serviceKey}`,
+                'Content-Type': 'application/json',
+                Accept: 'application/json'
+            },
+            body: JSON.stringify({ public: isPublic })
+        });
+        if (!response.ok) {
+            throw errorResult('Product media access could not be updated safely.', 503, 'MEDIA_ACCESS_UPDATE_FAILED');
+        }
+    }
+
+    async function restoreProductMediaBucketStates(states) {
+        let restored = true;
+        for (const bucket of [...PRODUCT_MEDIA_BUCKETS].reverse()) {
+            if (typeof states?.[bucket] !== 'boolean') continue;
+            try {
+                await writeProductMediaBucket(bucket, states[bucket]);
+            } catch (_) {
+                restored = false;
+            }
+        }
+        return restored;
+    }
+
+    async function setProductMediaBucketsPublic(isPublic) {
+        const previousStates = await getProductMediaBucketStates();
+        try {
+            for (const bucket of PRODUCT_MEDIA_BUCKETS) {
+                await writeProductMediaBucket(bucket, isPublic);
+            }
+            return previousStates;
+        } catch (error) {
+            await restoreProductMediaBucketStates(previousStates);
+            throw error;
+        }
+    }
+
+    async function productMediaModeMatches(isEnabled) {
+        if (!config.url || !config.serviceKey) return false;
+        try {
+            const states = await getProductMediaBucketStates();
+            return PRODUCT_MEDIA_BUCKETS.every((bucket) => states[bucket] === !isEnabled);
+        } catch (_) {
+            return false;
+        }
     }
 
     async function startChallenge(mode, body, request) {
@@ -403,16 +417,17 @@ export function createPhoneVerificationHandler({
             if (action === 'admin_status') {
                 await requireAdmin(request);
                 const isEnabled = await enabled();
-                let configurationReady = config.ready;
-                const mediaAccessReady = await productMediaModeMatches(isEnabled);
-                configurationReady = configurationReady && mediaAccessReady;
-                if (isEnabled && configurationReady) {
+                let termiiReady = false;
+                if (config.ready) {
                     try {
                         await validateTermiiConfiguration();
+                        termiiReady = true;
                     } catch (_) {
-                        configurationReady = false;
+                        termiiReady = false;
                     }
                 }
+                const mediaAccessReady = await productMediaModeMatches(isEnabled);
+                const configurationReady = config.ready && termiiReady && mediaAccessReady;
                 return json({
                     enabled: isEnabled,
                     mode: isEnabled ? 'Enabled' : 'Disabled',
@@ -428,21 +443,41 @@ export function createPhoneVerificationHandler({
                 const nextEnabled = body.enabled === true;
                 if (nextEnabled) {
                     await validateTermiiConfiguration();
-                    await setProductMediaBucketsPublic(false);
+                    const previousMediaStates = await setProductMediaBucketsPublic(false);
                     try {
                         const updated = await rpc('admin_update_phone_verification', { p_enabled: true });
                         if (updated !== true) throw errorResult('The setting could not be saved.', 503, 'SETTINGS_SAVE_FAILED');
                     } catch (error) {
-                        try { await setProductMediaBucketsPublic(true); } catch (_) {}
+                        const restored = await restoreProductMediaBucketStates(previousMediaStates);
+                        if (!restored) {
+                            throw errorResult(
+                                'The setting could not be saved and product media access needs administrator attention.',
+                                503,
+                                'MEDIA_ACCESS_UPDATE_FAILED'
+                            );
+                        }
                         throw error;
                     }
                 } else {
-                    const updated = await rpc('admin_update_phone_verification', { p_enabled: false });
+                    // Disabling enforcement takes priority over storage cleanup:
+                    // a Storage outage must not keep OTPs and publishing checks
+                    // active after an administrator has turned the feature off.
+                    const updated = await rpc('admin_update_phone_verification', { p_enabled: nextEnabled });
                     if (updated !== true) throw errorResult('The setting could not be saved.', 503, 'SETTINGS_SAVE_FAILED');
-                    // Disable server enforcement first; making media public is
-                    // a second step so a failure cannot expose new unverified
-                    // listings while the feature is still active.
-                    await setProductMediaBucketsPublic(true);
+                    try {
+                        await setProductMediaBucketsPublic(true);
+                    } catch (_) {
+                        return json({
+                            enabled: false,
+                            mode: 'Disabled',
+                            provider: 'Termii',
+                            providerConfigured: config.termiiConfigured,
+                            configurationReady: false,
+                            mediaAccessStatus: 'Needs attention',
+                            providerStatus: config.termiiConfigured ? 'Configured' : 'Not configured',
+                            warning: 'Phone verification is disabled and new OTPs have stopped, but product-media access could not be confirmed or restored. Retry this setting and check the bucket access in Supabase.'
+                        }, 200, origin);
+                    }
                 }
                 return json({
                     enabled: nextEnabled,

@@ -767,6 +767,107 @@ WITH checks AS (
               AND tgname = 'enforce_marketplace_product_media_size'
               AND NOT tgisinternal
         )
+    UNION ALL
+    SELECT
+        'phone verification schema is private and disabled by default',
+        to_regclass('public.phone_verification_challenges') IS NOT NULL
+        AND (
+            SELECT count(*) = 3
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'profiles'
+              AND column_name IN ('phone_e164', 'phone_verified', 'phone_verified_at')
+        )
+        AND EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'marketplace_settings'
+              AND column_name = 'phone_verification_enabled'
+              AND column_default IN ('false', 'false::boolean')
+        )
+        AND EXISTS (
+            SELECT 1
+            FROM pg_class
+            WHERE oid = to_regclass('public.phone_verification_challenges')
+              AND relrowsecurity
+        )
+        AND NOT has_table_privilege('anon', 'public.phone_verification_challenges', 'SELECT')
+        AND NOT has_table_privilege('authenticated', 'public.phone_verification_challenges', 'SELECT')
+        AND EXISTS (
+            SELECT 1
+            FROM pg_indexes
+            WHERE schemaname = 'public'
+              AND indexname = 'profiles_phone_e164_unique'
+        )
+    UNION ALL
+    SELECT
+        'phone verification setting and verification state are server controlled',
+        to_regprocedure('public.admin_update_phone_verification(boolean)') IS NOT NULL
+        AND to_regprocedure('public.phone_verification_complete_update(text,uuid)') IS NOT NULL
+        AND has_function_privilege(
+            'service_role',
+            to_regprocedure('public.admin_update_phone_verification(boolean)'),
+            'EXECUTE'
+        )
+        AND NOT has_function_privilege(
+            'anon',
+            to_regprocedure('public.admin_update_phone_verification(boolean)'),
+            'EXECUTE'
+        )
+        AND NOT has_function_privilege(
+            'authenticated',
+            to_regprocedure('public.admin_update_phone_verification(boolean)'),
+            'EXECUTE'
+        )
+        AND NOT has_function_privilege(
+            'anon',
+            to_regprocedure('public.phone_verification_complete_update(text,uuid)'),
+            'EXECUTE'
+        )
+        AND NOT has_function_privilege(
+            'authenticated',
+            to_regprocedure('public.phone_verification_complete_update(text,uuid)'),
+            'EXECUTE'
+        )
+    UNION ALL
+    SELECT
+        'phone verification signup and publishing triggers are installed',
+        EXISTS (
+            SELECT 1
+            FROM pg_trigger
+            WHERE tgrelid = 'auth.users'::regclass
+              AND tgname = 'enforce_phone_verification_signup'
+              AND NOT tgisinternal
+        )
+        AND EXISTS (
+            SELECT 1
+            FROM pg_trigger
+            WHERE tgrelid = to_regclass('public.products')
+              AND tgname = 'enforce_phone_verification_before_publish'
+              AND NOT tgisinternal
+        )
+    UNION ALL
+    SELECT
+        'public product and media reads use phone verification visibility',
+        to_regprocedure('public.phone_verification_product_is_public(uuid)') IS NOT NULL
+        AND to_regprocedure('public.phone_verification_product_media_is_public(uuid)') IS NOT NULL
+        AND EXISTS (
+            SELECT 1
+            FROM pg_policies
+            WHERE schemaname = 'public'
+              AND tablename = 'products'
+              AND policyname = 'public can read active products'
+              AND qual LIKE '%phone_verification_product_is_public%'
+        )
+        AND EXISTS (
+            SELECT 1
+            FROM pg_policies
+            WHERE schemaname = 'public'
+              AND tablename = 'product_images'
+              AND policyname = 'public can read product images'
+              AND qual LIKE '%phone_verification_product_media_is_public%'
+        )
 )
 SELECT check_name, passed
 FROM checks

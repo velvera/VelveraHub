@@ -4,7 +4,7 @@ This directory contains ordered migrations, conditional legacy/repair scripts,
 one read-only verification script, and one operator-only role-promotion script.
 Do not run every `.sql` file as one batch.
 
-For a new Supabase project, apply migrations 1–18 in order using a trusted
+For a new Supabase project, apply migrations 1–19 in order using a trusted
 Supabase SQL Editor session with a privileged database role. For an existing
 project, inspect its schema and migration history, then apply only the missing
 ordered migrations in this sequence. Do not put database credentials in browser
@@ -30,6 +30,7 @@ code or run schema changes from a storefront.
 16. database/account-deletion-status.sql — lets an authenticated requester view only their latest deletion-request status; requires migration 7 and does not perform account or data deletion.
 17. database/student-listing-submission-fixes.sql — fixes listing submission against schemas without products.image_url and accepts current Supabase Storage contentLength metadata; requires migrations 6 and 15.
 18. database/fix-product-media-upload-quota-conflict.sql — removes the PL/pgSQL variable/column name collision that causes product image uploads to return HTTP 500; requires migration 4.
+19. database/phone-verification.sql — optional phone verification, private OTP challenge state, seller publishing and public-media policies, and admin-controlled activation; starts disabled and requires the Supabase Edge Function setup in docs/phone-verification.md.
 
 Before applying step 15 to any Supabase project, verify the project's actual
 plan and global Storage file-size limit in the dashboard. Both must support at
@@ -40,7 +41,9 @@ quotas; the 40 MiB value is a per-file ceiling.
 The order keeps the security helpers ahead of dashboard RPCs, checkout
 hardening ahead of shop-owner payment functions, verification before seller
 contact/payment preferences, and the media-settings migration after the
-manual-payment dependencies it requires.
+manual-payment dependencies it requires. Phone verification is the final
+optional migration because it depends on the marketplace settings, product
+media buckets, and seller policies established by earlier migrations.
 Steps with only a schema.sql dependency are kept in this sequence so fresh
 projects have one consistent run order.
 

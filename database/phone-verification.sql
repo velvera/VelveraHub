@@ -1,12 +1,16 @@
 -- Optional Nigerian phone verification. The feature is deliberately disabled
 -- at installation and is only activated through the authenticated Edge
 -- Function after Termii configuration has been checked.
--- Apply after migrations 1-18 in database/run-schema.txt.
+-- Apply after migrations 1-18 in database/run-schema.txt (migration 19).
 
 BEGIN;
 
 ALTER TABLE public.marketplace_settings
     ADD COLUMN IF NOT EXISTS phone_verification_enabled BOOLEAN NOT NULL DEFAULT FALSE;
+
+INSERT INTO public.marketplace_settings (id, product_image_limit, phone_verification_enabled)
+VALUES (1, 10, FALSE)
+ON CONFLICT (id) DO NOTHING;
 
 ALTER TABLE public.marketplace_settings ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE public.marketplace_settings FROM PUBLIC, anon, authenticated;

@@ -484,6 +484,9 @@
             const uploadedMedia = [];
             activeMediaUploadTasks = [];
             try {
+                if (window.PhoneVerification && !await window.PhoneVerification.requireVerifiedPhone()) {
+                    throw new Error('Verify your Nigerian phone number before publishing this listing.');
+                }
                 failureStage = 'media settings';
                 const mediaLimits = await loadMarketplaceMediaLimits(supabase);
                 const profile = window.AuthService?.getProfile() || {};

@@ -12,6 +12,7 @@ const manualPaymentsMigration = read('database/marketplace-manual-payments.sql')
 const mediaSettingsMigration = read('database/marketplace-media-settings.sql');
 const listingSubmissionFixes = read('database/student-listing-submission-fixes.sql');
 const mediaQuotaConflictFix = read('database/fix-product-media-upload-quota-conflict.sql');
+const phoneVerificationMigration = read('database/phone-verification.sql');
 const deletionStatusMigration = read('database/account-deletion-status.sql');
 const adminWorkspace = read('admin-workspace/index.html');
 const adminWorkspaceJs = read('admin-workspace/admin.js');
@@ -23,8 +24,8 @@ const cloudflareGuide = read('docs/cloudflare-pages.md');
 
 const migrations = [...migrationGuide.matchAll(/^\s*(\d+)\.\s+(database\/[^\s—]+)/gm)]
     .map((match) => ({ order: Number(match[1]), path: match[2] }));
-assert.equal(migrations.length, 18, 'the migration guide must list the full numbered migration set');
-assert.deepEqual(migrations.map(({ order }) => order), Array.from({ length: 18 }, (_, index) => index + 1));
+assert.equal(migrations.length, 19, 'the migration guide must list the full numbered migration set');
+assert.deepEqual(migrations.map(({ order }) => order), Array.from({ length: 19 }, (_, index) => index + 1));
 assert.equal(new Set(migrations.map(({ path }) => path)).size, migrations.length, 'migration files must not be duplicated');
 for (const { path } of migrations) assert.ok(fs.existsSync(new URL(`../${path}`, import.meta.url)), `${path} must exist`);
 const sqlFiles = fs.readdirSync(new URL('../database/', import.meta.url)).filter((name) => name.endsWith('.sql'));
@@ -56,6 +57,10 @@ for (const check of [
     'marketplace media settings RPCs have restricted write access',
     'marketplace media size guard is installed',
     'product media quota trigger avoids ambiguous conflict variables',
+    'phone verification schema is private and disabled by default',
+    'phone verification setting and verification state are server controlled',
+    'phone verification signup and publishing triggers are installed',
+    'public product and media reads use phone verification visibility',
 ]) {
     assert.ok(verificationSql.includes(check), `read-only preflight must report: ${check}`);
 }
@@ -79,6 +84,18 @@ assert.match(mediaSettingsMigration, /product_image_max_bytes BIGINT NOT NULL DE
 assert.match(mediaSettingsMigration, /product_video_max_bytes BIGINT NOT NULL DEFAULT 41943040/i);
 assert.match(mediaSettingsMigration, /CREATE TRIGGER enforce_marketplace_product_media_size/i);
 assert.match(mediaSettingsMigration, /coalesce\(NEW\.metadata->>'size', NEW\.metadata->>'contentLength'\)/i);
+assert.match(phoneVerificationMigration, /phone_verification_enabled BOOLEAN NOT NULL DEFAULT FALSE/i);
+assert.match(phoneVerificationMigration, /phone_verification_challenges ENABLE ROW LEVEL SECURITY/i);
+assert.match(phoneVerificationMigration, /phone_e164_unique/i);
+assert.match(phoneVerificationMigration, /enforce_phone_verification_signup/i);
+assert.match(phoneVerificationMigration, /enforce_phone_verification_before_publish/i);
+assert.match(phoneVerificationMigration, /phone_verification_product_is_public/i);
+assert.match(phoneVerificationMigration, /phone_verification_product_media_is_public/i);
+assert.match(phoneVerificationMigration, /REVOKE ALL ON FUNCTION public\.admin_update_phone_verification\(BOOLEAN\) FROM PUBLIC, anon, authenticated/i);
+assert.match(read('supabase/functions/phone-verification/core.mjs'), /await requireAdmin\(request\)/);
+assert.match(read('supabase/functions/phone-verification/core.mjs'), /TERMII_API_KEY/);
+assert.match(read('docs/phone-verification.md'), /TERMII_API_KEY/);
+assert.match(read('docs/phone-verification.md'), /disabled by default/i);
 assert.match(listingSubmissionFixes, /coalesce\(NEW\.metadata->>'size', NEW\.metadata->>'contentLength'\)/i);
 assert.match(listingSubmissionFixes, /to_jsonb\(new\) -> 'image_url'/i);
 assert.match(listingSubmissionFixes, /to_jsonb\(old\) -> 'image_url'/i);

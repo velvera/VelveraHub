@@ -825,9 +825,10 @@
             if (!data || data.enabled !== enabled) throw new Error('The saved setting could not be confirmed.');
             state.phoneVerificationSettings = data;
             renderPhoneVerificationSettings();
-            message.textContent = enabled
+            message.textContent = data.warning || (enabled
                 ? 'Phone verification is enabled. New registration and publishing checks now use Termii.'
-                : 'Phone verification is disabled. New OTP activity has stopped; existing records were kept.';
+                : 'Phone verification is disabled. New OTP activity has stopped; existing records were kept.');
+            message.classList.toggle('is-error', Boolean(data.warning));
             message.hidden = false;
         } catch (error) {
             message.textContent = window.AsyncFeedback?.errorMessage(
