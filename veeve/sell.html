@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sell on VelveraHub</title>
-    <meta name="description" content="Create a VelveraHub seller account and learn how to publish products for buyers in the campus marketplace.">
+    <meta name="description" content="Create a VelveraHub seller account and publish products or services for local buyers.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -40,19 +40,15 @@
                 <div id="listingAuthGate" class="campus-auth-gate" hidden>
                     <i class="fas fa-lock"></i>
                     <h2>Sign in to create a listing</h2>
-                    <p>Campus listings are available to authenticated customers and sellers. Sign in or create a free customer account to continue.</p>
+                    <p>Sign in or create an account to publish products and services on VelveraHub.</p>
                     <a class="btn btn-primary" data-surface-target="seller" href="/pages/seller.html">Sign in to sell</a>
                 </div>
 
                 <div id="listingFormWrap" hidden>
                     <div class="campus-form-header">
-                        <div><h2>Publish a campus listing</h2><p>Choose the format that best describes what you’re offering.</p></div>
+                        <div><h2>Create a listing</h2><p>Add the details buyers need to find and understand your offer.</p></div>
                     </div>
-                    <form id="studentListingForm">
-                        <div class="campus-type-switch" role="radiogroup" aria-label="Listing type">
-                            <label><input type="radio" name="listingType" value="student_item" checked><span><i class="fas fa-box"></i> Item for sale</span></label>
-                            <label><input type="radio" name="listingType" value="student_ad"><span><i class="fas fa-bullhorn"></i> Direct ad</span></label>
-                        </div>
+                    <form id="listingForm">
                         <div class="campus-form-grid">
                             <div class="full-width"><label for="listingTitle">Title</label><input id="listingTitle" name="title" required maxlength="120" placeholder="e.g. Barely used mini fridge"></div>
                             <div><label for="listingCategory">Category</label><select id="listingCategory" name="category" required><option value="">Choose a category</option><option value="electronics">Electronics</option><option value="fashion">Fashion</option><option value="home">Home &amp; Garden</option><option value="books">Books</option><option value="services">Services</option><option value="other">Other</option></select></div>
@@ -60,8 +56,8 @@
                             <div><label for="listingPrice">Price (₦)</label><input id="listingPrice" name="price" type="number" min="0" step="0.01" required placeholder="0"></div>
                             <div><label for="listingStock">Available quantity</label><input id="listingStock" name="stock" type="number" min="1" step="1" value="1" required></div>
                             <div><label for="listingState">State</label><select id="listingState" name="location" required><option value="">Choose a state</option></select></div>
-                            <div><label for="listingSchool">School / institution <span class="campus-help">(optional)</span></label><select id="listingSchool" name="school"><option value="">Choose a state first</option></select><small class="campus-help">Add an institution for more precise campus discovery, or leave it blank for a state-wide listing.</small></div>
-                            <div><label for="listingArea">Campus area</label><input id="listingArea" name="campus_area" maxlength="100" placeholder="e.g. OAU main gate, hostel B"></div>
+                            <div><label for="listingSchool">Institution <span class="campus-help">(optional location)</span></label><select id="listingSchool" name="school"><option value="">Choose a state first</option></select><small class="campus-help">Choose an institution to clarify the location, or leave it blank for a state-wide listing.</small></div>
+                            <div><label for="listingArea">Nearby area</label><input id="listingArea" name="campus_area" maxlength="100" placeholder="e.g. Near the main gate, Block B"></div>
                             <div><label for="listingContact">Preferred contact</label><input id="listingContact" name="contact" maxlength="120" placeholder="WhatsApp number or in-app message"></div>
                             <div class="full-width campus-boost-box">
                                 <label class="campus-checkbox"><input id="listingBoost" name="boost" type="checkbox" value="true"> <span><strong>Boost this listing as an ad</strong><small>₦999 · appears as Hot sale after admin approves your payment</small></span></label>

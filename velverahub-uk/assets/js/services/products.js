@@ -207,9 +207,8 @@ const ProductsService = {
 
     matchesSchool(product, school) {
         if (!school) return true;
-        // A state-wide shop listing is relevant to the surrounding campus
-        // market. A student listing is only relevant when it names the
-        // selected institution, keeping campus discovery precise by default.
+        // An institution is optional location context. Listings without a
+        // selected institution remain visible in institution-based searches.
         return product.school_slug === school || !product.school_slug;
     },
 
@@ -696,7 +695,6 @@ const ProductsService = {
             formattedPrice: window.RegionService?.formatPrice
                 ? window.RegionService.formatPrice(p.price)
                 : String(p.price ?? ''),
-            listing_type: p.listing_type || (p.shop_id ? 'shop' : 'student_item'),
             condition: p.condition || null,
             is_priority_ad: Boolean(p.is_priority_ad || p.ad_status === 'approved'),
             ad_status: p.ad_status || null,

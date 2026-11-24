@@ -140,7 +140,6 @@ CREATE TABLE IF NOT EXISTS products (
     delivery_options JSONB NOT NULL DEFAULT '{}'::jsonb,
     seller_display_name TEXT,
     seller_avatar_url TEXT,
-    listing_type TEXT NOT NULL DEFAULT 'shop' CHECK (listing_type IN ('shop', 'student_item', 'student_ad')),
     condition TEXT CHECK (condition IS NULL OR condition IN ('new', 'used', 'fairly_used')),
     sku TEXT,
     stock INTEGER DEFAULT 0,
@@ -372,7 +371,6 @@ BEGIN
     END IF;
 END;
 $$;
-ALTER TABLE public.products ADD COLUMN IF NOT EXISTS listing_type TEXT DEFAULT 'shop';
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS condition TEXT;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS search_vector tsvector;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS processing_days INTEGER DEFAULT 1;
@@ -402,7 +400,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS profiles_user_id_key
 CREATE INDEX IF NOT EXISTS idx_products_shop_id ON products(shop_id);
 CREATE INDEX IF NOT EXISTS idx_products_seller_id ON products(seller_id);
 CREATE INDEX IF NOT EXISTS idx_products_school_slug ON products(school_slug);
-CREATE INDEX IF NOT EXISTS idx_products_listing_type ON products(listing_type);
 CREATE INDEX IF NOT EXISTS idx_products_location_school ON products(location, school_slug);
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
 CREATE INDEX IF NOT EXISTS idx_products_status ON products(status);

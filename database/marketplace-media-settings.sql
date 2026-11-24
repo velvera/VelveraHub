@@ -6,14 +6,10 @@
 BEGIN;
 
 ALTER TABLE public.marketplace_settings
-    ADD COLUMN IF NOT EXISTS student_listing_media_limit INTEGER NOT NULL DEFAULT 10,
     ADD COLUMN IF NOT EXISTS product_image_max_bytes BIGINT NOT NULL DEFAULT 41943040,
     ADD COLUMN IF NOT EXISTS product_video_max_bytes BIGINT NOT NULL DEFAULT 41943040;
 
 ALTER TABLE public.marketplace_settings
-    DROP CONSTRAINT IF EXISTS marketplace_settings_student_listing_media_limit_check,
-    ADD CONSTRAINT marketplace_settings_student_listing_media_limit_check
-        CHECK (student_listing_media_limit BETWEEN 1 AND 100),
     DROP CONSTRAINT IF EXISTS marketplace_settings_product_image_max_bytes_check,
     ADD CONSTRAINT marketplace_settings_product_image_max_bytes_check
         CHECK (product_image_max_bytes BETWEEN 5242880 AND 41943040),
@@ -24,11 +20,10 @@ ALTER TABLE public.marketplace_settings
 INSERT INTO public.marketplace_settings (
     id,
     product_image_limit,
-    student_listing_media_limit,
     product_image_max_bytes,
     product_video_max_bytes
 )
-VALUES (1, 10, 10, 41943040, 41943040)
+VALUES (1, 10, 41943040, 41943040)
 ON CONFLICT (id) DO NOTHING;
 
 -- Storage ceilings allow bounded admin adjustments. The database trigger below
@@ -67,12 +62,9 @@ SET search_path = ''
 SET row_security = off
 AS $function$
 DECLARE
-    product_shop_id UUID;
-    product_listing_type TEXT;
     configured_limit INTEGER;
 BEGIN
-    SELECT product.shop_id, product.listing_type
-    INTO product_shop_id, product_listing_type
+    PERFORM 1
     FROM public.products AS product
     WHERE product.id = p_product_id;
 
@@ -80,14 +72,7 @@ BEGIN
         RETURN NULL;
     END IF;
 
-    SELECT CASE
-        WHEN product_shop_id IS NULL
-             AND product_listing_type IN ('student_item', 'student_ad')
-            THEN settings.student_listing_media_limit
-        WHEN product_shop_id IS NOT NULL
-            THEN settings.product_image_limit
-        ELSE NULL
-    END
+    SELECT settings.product_image_limit
     INTO configured_limit
     FROM public.marketplace_settings AS settings
     WHERE settings.id = 1
@@ -107,7 +92,6 @@ SET row_security = off
 AS $function$
     SELECT pg_catalog.jsonb_build_object(
         'product_image_limit', settings.product_image_limit,
-        'student_listing_media_limit', settings.student_listing_media_limit,
         'product_image_max_bytes', settings.product_image_max_bytes,
         'product_video_max_bytes', settings.product_video_max_bytes
     )
@@ -115,9 +99,10 @@ AS $function$
     WHERE settings.id = 1
 $function$;
 
+DROP FUNCTION IF EXISTS public.admin_update_marketplace_media_limits(INTEGER, INTEGER, INTEGER, INTEGER);
+
 CREATE OR REPLACE FUNCTION public.admin_update_marketplace_media_limits(
     p_product_image_limit INTEGER,
-    p_student_listing_media_limit INTEGER,
     p_product_image_max_mib INTEGER,
     p_product_video_max_mib INTEGER
 )
@@ -134,7 +119,6 @@ BEGIN
     END IF;
 
     IF p_product_image_limit IS NULL OR p_product_image_limit NOT BETWEEN 1 AND 100
-       OR p_student_listing_media_limit IS NULL OR p_student_listing_media_limit NOT BETWEEN 1 AND 100
        OR p_product_image_max_mib IS NULL OR p_product_image_max_mib NOT BETWEEN 5 AND 40
        OR p_product_video_max_mib IS NULL OR p_product_video_max_mib NOT BETWEEN 5 AND 40 THEN
         RAISE EXCEPTION 'Media settings are outside the supported ranges'
@@ -143,7 +127,6 @@ BEGIN
 
     UPDATE public.marketplace_settings
     SET product_image_limit = p_product_image_limit,
-        student_listing_media_limit = p_student_listing_media_limit,
         product_image_max_bytes = p_product_image_max_mib::BIGINT * 1048576,
         product_video_max_bytes = p_product_video_max_mib::BIGINT * 1048576,
         updated_at = pg_catalog.now()
@@ -228,9 +211,9 @@ REVOKE ALL ON FUNCTION public.product_image_limit_for(UUID) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.product_image_limit_for(UUID) TO authenticated;
 REVOKE ALL ON FUNCTION public.get_marketplace_media_limits() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_marketplace_media_limits() TO anon, authenticated;
-REVOKE ALL ON FUNCTION public.admin_update_marketplace_media_limits(INTEGER, INTEGER, INTEGER, INTEGER)
+REVOKE ALL ON FUNCTION public.admin_update_marketplace_media_limits(INTEGER, INTEGER, INTEGER)
     FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.admin_update_marketplace_media_limits(INTEGER, INTEGER, INTEGER, INTEGER)
+GRANT EXECUTE ON FUNCTION public.admin_update_marketplace_media_limits(INTEGER, INTEGER, INTEGER)
     TO authenticated;
 REVOKE ALL ON FUNCTION public.enforce_marketplace_product_media_size() FROM PUBLIC, anon, authenticated;
 

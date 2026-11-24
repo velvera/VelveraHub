@@ -117,8 +117,7 @@ const UI = {
         const imageMarkup = responsiveImageMarkup(product, { width: 480, height: 480 });
         const shop = product.shops || {};
         const seller = product.seller || {};
-        const isStudentListing = product.listing_type === 'student_item' || product.listing_type === 'student_ad';
-        const sellerName = seller.display_name || (isStudentListing ? 'Student seller' : shop.name || 'VelveraHub Store');
+        const sellerName = seller.display_name || shop.name || 'Seller';
         const sellerAvatar = safeMediaUrl(seller.avatar_url || shop.logo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(sellerName)}&size=40&background=6D28D9&color=fff`);
         const hasDiscount = product.discount_percent > 0;
         const isInWishlist = window.Store?.isInWishlist(product.id);
@@ -127,7 +126,7 @@ const UI = {
         const origPriceDisplay = hasDiscount && region ? region.formatPrice(product.original_price) : hasDiscount ? '$' + parseFloat(product.original_price).toFixed(2) : '';
         const coverageAreas = shop.coverage_areas;
         const coverageLabel = product.school_name
-            ? `Campus · ${product.school_name}${product.school_city ? `, ${product.school_city}` : ''}`
+            ? `Near ${product.school_name}${product.school_city ? `, ${product.school_city}` : ''}`
             : Array.isArray(coverageAreas) && coverageAreas.length > 0
             ? coverageAreas.slice(0, 2).join(', ') + (coverageAreas.length > 2 ? ` +${coverageAreas.length - 2}` : '')
             : '';
@@ -176,11 +175,10 @@ const UI = {
                     ` : ''}
                 </div>
                 <div class="product-info">
-                    <div class="product-shop${isStudentListing ? ' student-seller' : ''}">
+                    <div class="product-shop">
                         <img src="${sellerAvatar}" alt="${escapeProductHtml(sellerName)}" class="shop-avatar">
                         <div style="display:flex;flex-direction:column;overflow:hidden;min-width:0;">
                             <span class="shop-name">${escapeProductHtml(sellerName)}</span>
-                            ${isStudentListing ? '<span class="seller-type"><i class="fas fa-user-graduate"></i> Student seller</span>' : ''}
                             ${coverageLabel ? `<span class="shop-location"><i class="fas fa-map-marker-alt"></i>${coverageLabel}</span>` : ''}
                         </div>
                     </div>

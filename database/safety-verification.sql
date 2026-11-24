@@ -916,8 +916,7 @@ SELECT
     order_row.order_number,
     count(item.id) AS item_count,
     count(item.id) FILTER (
-        WHERE coalesce(product.listing_type, 'shop') <> 'shop'
-           OR product.shop_id IS NULL
+        WHERE product.shop_id IS NULL
            OR item.shop_id IS DISTINCT FROM product.shop_id
            OR shop.status <> 'active'
            OR shop.verified IS NOT TRUE
@@ -933,8 +932,7 @@ WHERE lower(trim(coalesce(order_row.payment_method, ''))) = 'bank_transfer'
 GROUP BY order_row.id, order_row.order_number
 HAVING count(item.id) = 0
     OR count(item.id) FILTER (
-        WHERE coalesce(product.listing_type, 'shop') <> 'shop'
-           OR product.shop_id IS NULL
+        WHERE product.shop_id IS NULL
            OR item.shop_id IS DISTINCT FROM product.shop_id
            OR shop.status <> 'active'
            OR shop.verified IS NOT TRUE

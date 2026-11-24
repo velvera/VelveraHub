@@ -103,22 +103,20 @@ AS $$
 DECLARE
     v_payment_method TEXT;
     v_product_shop_id UUID;
-    v_listing_type TEXT;
 BEGIN
     SELECT payment_method
       INTO v_payment_method
       FROM public.orders
      WHERE id = NEW.order_id;
 
-    SELECT product.shop_id, product.listing_type
-      INTO v_product_shop_id, v_listing_type
+    SELECT product.shop_id
+      INTO v_product_shop_id
       FROM public.products AS product
      WHERE product.id = NEW.product_id;
 
     IF lower(trim(coalesce(v_payment_method, ''))) = 'bank_transfer'
        AND (
-            coalesce(v_listing_type, 'shop') <> 'shop'
-            OR v_product_shop_id IS NULL
+            v_product_shop_id IS NULL
              OR v_product_shop_id IS DISTINCT FROM NEW.shop_id
             OR NOT EXISTS (
                 SELECT 1
@@ -197,8 +195,7 @@ BEGIN
           ON shop.id = product.shop_id
         WHERE item.order_id = p_order_id
           AND (
-              coalesce(product.listing_type, 'shop') <> 'shop'
-              OR product.shop_id IS NULL
+              product.shop_id IS NULL
               OR item.shop_id IS DISTINCT FROM product.shop_id
               OR shop.status <> 'active'
               OR shop.verified IS NOT TRUE

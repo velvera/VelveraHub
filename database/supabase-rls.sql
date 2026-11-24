@@ -7,7 +7,6 @@
 -- Run schema.sql first when creating a new project.
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS user_id UUID;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS seller_id UUID;
-ALTER TABLE public.products ADD COLUMN IF NOT EXISTS listing_type TEXT DEFAULT 'shop';
 
 CREATE TABLE IF NOT EXISTS public.marketplace_settings (
     id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
@@ -22,7 +21,7 @@ ON CONFLICT (id) DO NOTHING;
 -- Product images are intentionally public because storefront product cards use
 -- public Storage URLs. The restrictive write policies below require owned
 -- product UUID folders, generated UUID filenames, and a locked per-product
--- quota. Shop products use the admin-set image cap; student listings stay at 6.
+-- quota. All listings use the same admin-set media cap.
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES (
     'product-images',
@@ -125,15 +124,14 @@ WITH CHECK (
     )
 );
 
--- Authenticated customers can publish independent campus listings without
--- opening a shop. A student listing must be seller-owned and shop-less.
+-- Authenticated sellers can manage shop-less listings they own.
 DROP POLICY IF EXISTS "students can manage their own listings" ON public.products;
-CREATE POLICY "students can manage their own listings"
+DROP POLICY IF EXISTS "sellers can manage their own listings" ON public.products;
+CREATE POLICY "sellers can manage their own listings"
 ON public.products FOR ALL
 TO authenticated
 USING (
     shop_id IS NULL
-    AND listing_type IN ('student_item', 'student_ad')
     AND (
         seller_id = auth.uid()
         OR EXISTS (
@@ -145,7 +143,6 @@ USING (
 )
 WITH CHECK (
     shop_id IS NULL
-    AND listing_type IN ('student_item', 'student_ad')
     AND (
         seller_id = auth.uid()
         OR EXISTS (
@@ -167,7 +164,7 @@ USING (
           AND product.status = 'active'
           AND product.moderation_status = 'approved'
           AND (
-              product.listing_type <> 'shop'
+              product.shop_id IS NULL
               OR EXISTS (
                   SELECT 1 FROM public.shops shop
                   WHERE shop.id = product.shop_id
@@ -217,7 +214,8 @@ WITH CHECK (
 );
 
 DROP POLICY IF EXISTS "students can manage their listing images" ON public.product_images;
-CREATE POLICY "students can manage their listing images"
+DROP POLICY IF EXISTS "sellers can manage their listing images" ON public.product_images;
+CREATE POLICY "sellers can manage their listing images"
 ON public.product_images FOR ALL
 TO authenticated
 USING (
@@ -226,7 +224,6 @@ USING (
         FROM public.products product
         WHERE product.id = product_images.product_id
           AND product.shop_id IS NULL
-          AND product.listing_type IN ('student_item', 'student_ad')
           AND (
               product.seller_id = auth.uid()
               OR EXISTS (
@@ -243,7 +240,6 @@ WITH CHECK (
         FROM public.products product
         WHERE product.id = product_images.product_id
           AND product.shop_id IS NULL
-          AND product.listing_type IN ('student_item', 'student_ad')
           AND (
               product.seller_id = auth.uid()
               OR EXISTS (
@@ -285,7 +281,6 @@ AS $function$
           AND (
               (
                   product.shop_id IS NULL
-                  AND product.listing_type IN ('student_item', 'student_ad')
                   AND (
                       product.seller_id = auth.uid()
                       OR EXISTS (
@@ -327,23 +322,13 @@ SET search_path = ''
 SET row_security = off
 AS $function$
 DECLARE
-    product_shop_id UUID;
-    product_listing_type TEXT;
     configured_limit INTEGER;
 BEGIN
-    SELECT product.shop_id, product.listing_type
-    INTO product_shop_id, product_listing_type
+    PERFORM 1
     FROM public.products AS product
     WHERE product.id = p_product_id;
 
     IF NOT FOUND THEN
-        RETURN NULL;
-    END IF;
-
-    IF product_shop_id IS NULL THEN
-        IF product_listing_type IN ('student_item', 'student_ad') THEN
-            RETURN 6;
-        END IF;
         RETURN NULL;
     END IF;
 
@@ -381,8 +366,7 @@ ALTER TABLE public.product_media_quota_objects ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE public.product_media_quota_usage FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON TABLE public.product_media_quota_objects FROM PUBLIC, anon, authenticated;
 
--- Account for objects that already exist when this policy file is first
--- applied. Count student images + videos together; shop quotas apply to images.
+-- Account for existing objects and enforce one shared product-media quota.
 INSERT INTO public.product_media_quota_objects (
     bucket_id, object_name, product_id, counts_toward_quota
 )
@@ -390,7 +374,7 @@ SELECT
     stored_object.bucket_id,
     stored_object.name,
     product.id,
-    stored_object.bucket_id = 'product-images' OR product.shop_id IS NULL
+    TRUE
 FROM storage.objects AS stored_object
 JOIN public.products AS product
   ON product.id::TEXT = pg_catalog.split_part(stored_object.name, '/', 1)
@@ -414,7 +398,6 @@ SET row_security = off
 AS $function$
 DECLARE
     product_id UUID;
-    product_shop_id UUID;
 BEGIN
     IF NOT public.is_product_media_path(p_bucket_id, p_object_name) THEN
         RETURN FALSE;
@@ -422,15 +405,6 @@ BEGIN
 
     product_id := split_part(p_object_name, '/', 1)::UUID;
     IF NOT public.can_manage_product_media(product_id) THEN
-        RETURN FALSE;
-    END IF;
-
-    SELECT product.shop_id
-    INTO product_shop_id
-    FROM public.products AS product
-    WHERE product.id = product_id;
-
-    IF p_bucket_id = 'product-videos' AND product_shop_id IS NOT NULL THEN
         RETURN FALSE;
     END IF;
 
@@ -449,7 +423,6 @@ SET row_security = off
 AS $function$
 DECLARE
     v_product_id UUID;
-    product_shop_id UUID;
     media_limit INTEGER;
     resulting_count INTEGER;
     counts_toward_quota BOOLEAN;
@@ -490,23 +463,12 @@ BEGIN
                 USING ERRCODE = '42501';
         END IF;
 
-        SELECT product.shop_id
-        INTO product_shop_id
-        FROM public.products AS product
-        WHERE product.id = v_product_id;
-
-        IF NEW.bucket_id = 'product-videos' AND product_shop_id IS NOT NULL THEN
-            RAISE EXCEPTION 'Videos are only allowed on independent listings'
-                USING ERRCODE = '23514';
-        END IF;
-
-        media_limit := public.product_image_limit_for(product_id);
+        media_limit := public.product_image_limit_for(v_product_id);
         IF media_limit IS NULL THEN
             RAISE EXCEPTION 'Product media limit is unavailable for this listing'
                 USING ERRCODE = '23514';
         END IF;
-        counts_toward_quota := NEW.bucket_id = 'product-images'
-            OR product_shop_id IS NULL;
+        counts_toward_quota := TRUE;
 
         -- An upsert of an existing object must not reserve a second slot. The
         -- unique key also serializes simultaneous attempts to create one path.
@@ -683,7 +645,8 @@ WITH CHECK (
 );
 
 DROP POLICY IF EXISTS "students can upload listing images" ON storage.objects;
-CREATE POLICY "students can upload listing images"
+DROP POLICY IF EXISTS "sellers can upload listing images" ON storage.objects;
+CREATE POLICY "sellers can upload listing images"
 ON storage.objects FOR INSERT
 TO authenticated
 WITH CHECK (
@@ -692,7 +655,6 @@ WITH CHECK (
         SELECT 1 FROM public.products product
         WHERE product.id::text = (storage.foldername(name))[1]
           AND product.shop_id IS NULL
-          AND product.listing_type IN ('student_item', 'student_ad')
           AND (
               product.seller_id = auth.uid()
               OR EXISTS (
@@ -750,7 +712,8 @@ WITH CHECK (
 );
 
 DROP POLICY IF EXISTS "students can update listing images" ON storage.objects;
-CREATE POLICY "students can update listing images"
+DROP POLICY IF EXISTS "sellers can update listing images" ON storage.objects;
+CREATE POLICY "sellers can update listing images"
 ON storage.objects FOR UPDATE
 TO authenticated
 USING (
@@ -759,7 +722,6 @@ USING (
         SELECT 1 FROM public.products product
         WHERE product.id::text = (storage.foldername(name))[1]
           AND product.shop_id IS NULL
-          AND product.listing_type IN ('student_item', 'student_ad')
           AND (
               product.seller_id = auth.uid()
               OR EXISTS (
@@ -776,7 +738,6 @@ WITH CHECK (
         SELECT 1 FROM public.products product
         WHERE product.id::text = (storage.foldername(name))[1]
           AND product.shop_id IS NULL
-          AND product.listing_type IN ('student_item', 'student_ad')
           AND (
               product.seller_id = auth.uid()
               OR EXISTS (
@@ -812,7 +773,8 @@ USING (
 );
 
 DROP POLICY IF EXISTS "students can delete listing images" ON storage.objects;
-CREATE POLICY "students can delete listing images"
+DROP POLICY IF EXISTS "sellers can delete listing images" ON storage.objects;
+CREATE POLICY "sellers can delete listing images"
 ON storage.objects FOR DELETE
 TO authenticated
 USING (
@@ -821,7 +783,6 @@ USING (
         SELECT 1 FROM public.products product
         WHERE product.id::text = (storage.foldername(name))[1]
           AND product.shop_id IS NULL
-          AND product.listing_type IN ('student_item', 'student_ad')
           AND (
               product.seller_id = auth.uid()
               OR EXISTS (
@@ -834,7 +795,8 @@ USING (
 );
 
 DROP POLICY IF EXISTS "students can upload listing videos" ON storage.objects;
-CREATE POLICY "students can upload listing videos"
+DROP POLICY IF EXISTS "sellers can upload listing videos" ON storage.objects;
+CREATE POLICY "sellers can upload listing videos"
 ON storage.objects FOR INSERT
 TO authenticated
 WITH CHECK (
@@ -842,8 +804,6 @@ WITH CHECK (
     AND EXISTS (
         SELECT 1 FROM public.products product
         WHERE product.id::text = (storage.foldername(name))[1]
-          AND product.shop_id IS NULL
-          AND product.listing_type IN ('student_item', 'student_ad')
           AND (
               product.seller_id = auth.uid()
               OR EXISTS (
@@ -887,7 +847,8 @@ WITH CHECK (
 DROP POLICY IF EXISTS "public can read product video objects" ON storage.objects;
 
 DROP POLICY IF EXISTS "students can delete listing videos" ON storage.objects;
-CREATE POLICY "students can delete listing videos"
+DROP POLICY IF EXISTS "sellers can manage listing videos" ON storage.objects;
+CREATE POLICY "sellers can manage listing videos"
 ON storage.objects FOR DELETE
 TO authenticated
 USING (
@@ -895,8 +856,6 @@ USING (
     AND EXISTS (
         SELECT 1 FROM public.products product
         WHERE product.id::text = (storage.foldername(name))[1]
-          AND product.shop_id IS NULL
-          AND product.listing_type IN ('student_item', 'student_ad')
           AND (
               product.seller_id = auth.uid()
               OR EXISTS (

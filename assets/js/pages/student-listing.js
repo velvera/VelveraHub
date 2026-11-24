@@ -4,7 +4,7 @@
     const $ = (id) => document.getElementById(id);
     const stateSelect = $('listingState');
     const schoolSelect = $('listingSchool');
-    const form = $('studentListingForm');
+    const form = $('listingForm');
     const status = $('listingStatus');
     const gate = $('listingAuthGate');
     const formWrap = $('listingFormWrap');
@@ -28,14 +28,14 @@
                 const { data, error } = await supabase.rpc('get_marketplace_media_limits');
                 if (error) throw error;
                 const limits = {
-                    student_listing_media_limit: Number(data?.student_listing_media_limit),
+                    product_image_limit: Number(data?.product_image_limit),
                     product_image_max_bytes: Number(data?.product_image_max_bytes),
                     product_video_max_bytes: Number(data?.product_video_max_bytes)
                 };
                 if (
-                    !Number.isInteger(limits.student_listing_media_limit) ||
-                    limits.student_listing_media_limit < 1 ||
-                    limits.student_listing_media_limit > 100 ||
+                    !Number.isInteger(limits.product_image_limit) ||
+                    limits.product_image_limit < 1 ||
+                    limits.product_image_limit > 100 ||
                     !Number.isSafeInteger(limits.product_image_max_bytes) ||
                     limits.product_image_max_bytes < 5 * 1024 * 1024 ||
                     limits.product_image_max_bytes > 40 * 1024 * 1024 ||
@@ -58,8 +58,8 @@
 
     function mediaSelectionError(files, limits) {
         if (!limits) return 'Marketplace upload settings are unavailable. Refresh and try again.';
-        if (files.length > limits.student_listing_media_limit) {
-            return `Choose no more than ${limits.student_listing_media_limit} photos or videos for one listing.`;
+        if (files.length > limits.product_image_limit) {
+            return `Choose no more than ${limits.product_image_limit} photos or videos for one listing.`;
         }
         for (const file of files) {
             if (IMAGE_TYPES.has(file.type)) {
@@ -239,8 +239,8 @@
                 const cleanup = await supabase.storage.from(bucket).remove([path]);
                 if (cleanup.error) {
                     window.AsyncFeedback?.log(
-                        'student-listing-media-cleanup',
-                        window.AsyncFeedback?.createRequestId('student-listing-media-cleanup'),
+                        'listing-media-cleanup',
+                        window.AsyncFeedback?.createRequestId('listing-media-cleanup'),
                         cleanup.error
                     );
                 }
@@ -248,7 +248,7 @@
             }
             return { bucket, path, url: publicUrl, mediaType };
         }).catch((error) => {
-            const requestId = window.AsyncFeedback?.createRequestId('student-listing-media-upload') || 'media-upload';
+            const requestId = window.AsyncFeedback?.createRequestId('listing-media-upload') || 'media-upload';
             const diagnostic = window.Observability?.formatErrorDiagnostic?.(error) ||
                 'Storage request failed; diagnostic formatter is unavailable.';
             const status = Number(error?.statusCode ?? error?.status);
@@ -260,9 +260,9 @@
                 httpStatus: Number.isFinite(status) && status > 0 ? status : null,
                 diagnostic
             });
-            window.AsyncFeedback?.log('student-listing-media-upload', requestId, error, {
+            window.AsyncFeedback?.log('listing-media-upload', requestId, error, {
                 source: 'storage-upload',
-                action: 'student-listing-media-upload',
+                action: 'listing-media-upload',
                 bucket,
                 mediaType,
                 stage: 'upload',
@@ -341,12 +341,12 @@
                 if (error) {
                     failed = true;
                     errorCode = errorCode || error.code || null;
-                    window.AsyncFeedback?.log('student-listing-media-cleanup', window.AsyncFeedback?.createRequestId('student-listing-media-cleanup'), error);
+                    window.AsyncFeedback?.log('listing-media-cleanup', window.AsyncFeedback?.createRequestId('listing-media-cleanup'), error);
                 }
             } catch (error) {
                 failed = true;
                 errorCode = errorCode || error?.code || null;
-                window.AsyncFeedback?.log('student-listing-media-cleanup', window.AsyncFeedback?.createRequestId('student-listing-media-cleanup'), error);
+                    window.AsyncFeedback?.log('listing-media-cleanup', window.AsyncFeedback?.createRequestId('listing-media-cleanup'), error);
             }
         }
         return { failed, errorCode };
@@ -354,7 +354,7 @@
 
     function profileName(profile, user) {
         const name = [profile?.first_name || profile?.firstName, profile?.last_name || profile?.lastName].filter(Boolean).join(' ');
-        return name || profile?.display_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Student seller';
+        return name || profile?.display_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Seller';
     }
 
     async function init() {
@@ -414,7 +414,7 @@
                     boostPayment.hidden = false;
                 }
             } catch (error) {
-                window.AsyncFeedback?.log('student-listing-payment-settings', window.AsyncFeedback?.createRequestId('student-listing-payment-settings'), error);
+                window.AsyncFeedback?.log('listing-payment-settings', window.AsyncFeedback?.createRequestId('listing-payment-settings'), error);
                 if (boostPayment) {
                     boostPayment.textContent = 'Payment details could not be loaded. Please try again before submitting.';
                     boostPayment.hidden = false;
@@ -433,7 +433,7 @@
                 const limits = await loadMarketplaceMediaLimits(window.SupabaseClient?.get());
                 const mediaHelp = $('listingMediaLimitHelp');
                 if (mediaHelp) {
-                    mediaHelp.textContent = `Current limit: ${limits.student_listing_media_limit} files per listing; compressed photos up to ${Math.floor(limits.product_image_max_bytes / 1048576)} MiB; videos up to ${Math.floor(limits.product_video_max_bytes / 1048576)} MiB. Original photos may be up to 40 MiB.`;
+                    mediaHelp.textContent = `Current limit: ${limits.product_image_limit} photos and videos per listing; compressed photos up to ${Math.floor(limits.product_image_max_bytes / 1048576)} MiB; videos up to ${Math.floor(limits.product_video_max_bytes / 1048576)} MiB. Original photos may be up to 40 MiB.`;
                 }
                 const validationError = mediaSelectionError(files, limits);
                 if (validationError) {
@@ -451,7 +451,7 @@
                 setStatus(window.AsyncFeedback?.errorMessage(
                     error,
                     'Marketplace upload settings could not be loaded. Refresh and try again.',
-                    'student-listing-media-settings'
+                    'listing-media-settings'
                 ) || 'Marketplace upload settings could not be loaded. Refresh and try again.', 'error');
                 imageInput.value = '';
                 return;
@@ -465,11 +465,10 @@
             setStatus('');
             if (!form.reportValidity()) return;
             const selectedSchool = window.CampusService?.find(schoolSelect.value);
-            const listingType = new FormData(form).get('listingType');
             const supabase = window.SupabaseClient?.get();
             if (!supabase || !window.SupabaseClient.isConfigured()) {
                 const error = new Error('Marketplace database client is not configured.');
-                window.AsyncFeedback?.log('student-listing-config', window.AsyncFeedback?.createRequestId('student-listing-config'), error);
+                window.AsyncFeedback?.log('listing-config', window.AsyncFeedback?.createRequestId('listing-config'), error);
                 return setStatus('Listing submission is temporarily unavailable. Please try again later.', 'error');
             }
 
@@ -515,7 +514,6 @@
                     seller_id: user.id,
                     seller_display_name: profileName(profile, user),
                     seller_avatar_url: profile.avatar_url || user.user_metadata?.avatar_url || null,
-                    listing_type: listingType,
                     title: String(data.get('title')).trim(),
                     category: data.get('category'),
                     condition: data.get('condition'),
@@ -562,8 +560,8 @@
                         (cleanupError) => {
                             cancelledUploadCleanupFailed = true;
                             window.AsyncFeedback?.log(
-                                'student-listing-media-cancel',
-                                window.AsyncFeedback?.createRequestId('student-listing-media-cancel'),
+                                'listing-media-cancel',
+                                window.AsyncFeedback?.createRequestId('listing-media-cancel'),
                                 cleanupError,
                                 {
                                     source: 'storage-upload',
@@ -618,7 +616,7 @@
                         if (adError) throw adError;
                         adMessage = ' Your boost request is pending admin payment approval.';
                     } catch (error) {
-                        window.AsyncFeedback?.log('student-listing-boost', window.AsyncFeedback?.createRequestId('student-listing-boost'), error);
+                        window.AsyncFeedback?.log('listing-boost', window.AsyncFeedback?.createRequestId('listing-boost'), error);
                         adNeedsAttention = true;
                         adMessage = ' The listing is awaiting review, but the boost request could not be submitted. You can review it from your account.';
                     }
@@ -640,11 +638,11 @@
                 window.CustomSelect?.refresh(stateSelect);
                 window.CustomSelect?.refresh(schoolSelect);
             } catch (error) {
-                window.Observability?.track('seller_publish_error', { action: 'student_listing' });
-                const requestId = window.AsyncFeedback?.createRequestId('student-listing-submit') || 'student-listing-submit';
-                window.AsyncFeedback?.log('student-listing-submit', requestId, error, {
+                window.Observability?.track('seller_publish_error', { action: 'listing' });
+                const requestId = window.AsyncFeedback?.createRequestId('listing-submit') || 'listing-submit';
+                window.AsyncFeedback?.log('listing-submit', requestId, error, {
                     source: 'listing-submit',
-                    action: 'student-listing',
+                    action: 'listing',
                     stage: failureStage,
                     mediaType: failureMediaType,
                     mediaCount: failureMediaCount

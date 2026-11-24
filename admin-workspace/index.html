@@ -205,16 +205,12 @@
                 <form class="marketplace-payment-form marketplace-media-form" id="marketplaceMediaSettingsForm">
                     <div class="marketplace-payment-form-heading">
                         <h2>Marketplace media settings</h2>
-                        <p>Default limits are 10 photos per shop product, 10 media files per independent listing, and 40 MiB per individual compressed photo or video.</p>
+                        <p>Default limits are 10 photos or videos per listing and 40 MiB per individual file.</p>
                     </div>
                     <div class="marketplace-payment-fields">
                         <div class="marketplace-payment-field">
-                            <label for="shopProductImageLimit">Shop product images per listing</label>
-                            <input id="shopProductImageLimit" name="product_image_limit" type="number" min="1" max="100" step="1" required>
-                        </div>
-                        <div class="marketplace-payment-field">
-                            <label for="independentListingMediaLimit">Independent listing media files</label>
-                            <input id="independentListingMediaLimit" name="student_listing_media_limit" type="number" min="1" max="100" step="1" required>
+                            <label for="productMediaLimit">Photos and videos per listing</label>
+                            <input id="productMediaLimit" name="product_image_limit" type="number" min="1" max="100" step="1" required>
                         </div>
                         <div class="marketplace-payment-field">
                             <label for="productImageMaxMib">Compressed photo limit (MiB)</label>
@@ -225,7 +221,7 @@
                             <input id="productVideoMaxMib" name="product_video_max_mib" type="number" min="5" max="40" step="1" required>
                         </div>
                     </div>
-                    <p class="marketplace-media-note">The default quota remains 10 photos per shop product and 10 files per independent listing. Each product photo or video can be configured up to 40 MiB. The project plan and global Storage limit must support 40 MiB before this setting is enabled. Original photos up to 40 MiB are compressed before upload. Allowed formats remain JPEG, PNG, or WebP photos and MP4, WebM, or QuickTime videos; uploaded photos are stored as WebP.</p>
+                    <p class="marketplace-media-note">The same photo-and-video count applies to every listing. Each file can be configured up to 40 MiB. The project plan and global Storage limit must support 40 MiB before this setting is enabled. Original photos up to 40 MiB are compressed before upload. Allowed formats remain JPEG, PNG, or WebP photos and MP4, WebM, or QuickTime videos; uploaded photos are stored as WebP.</p>
                     <p class="admin-global-message" id="marketplaceMediaSettingsMessage" role="status" aria-live="polite" hidden></p>
                     <button class="admin-primary-button" id="saveMarketplaceMediaSettings" type="submit">Save media limits</button>
                 </form>

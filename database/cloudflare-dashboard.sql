@@ -154,7 +154,7 @@ using (
     and moderation_status = 'approved'
     and coalesce(stock, 0) > 0
     and (
-        listing_type <> 'shop'
+        shop_id is null
         or exists (
             select 1 from public.shops shop
             where shop.id = products.shop_id
@@ -250,13 +250,13 @@ begin
             new.original_price, new.discount_percent, new.category, new.category_id,
             new.location, new.school_id, new.school_slug, new.school_name,
             new.school_city, new.campus_area, new.condition, new.delivery_options,
-            new.specifications, new.tags, to_jsonb(new) -> 'image_url', new.listing_type
+            new.specifications, new.tags, to_jsonb(new) -> 'image_url'
         ) is distinct from row(
             old.title, old.description, old.short_description, old.price,
             old.original_price, old.discount_percent, old.category, old.category_id,
             old.location, old.school_id, old.school_slug, old.school_name,
             old.school_city, old.campus_area, old.condition, old.delivery_options,
-            old.specifications, old.tags, to_jsonb(old) -> 'image_url', old.listing_type
+            old.specifications, old.tags, to_jsonb(old) -> 'image_url'
         );
     review_fields_changed :=
         row(new.moderation_status, new.moderation_note, new.moderated_by, new.moderated_at)
@@ -338,7 +338,7 @@ begin
           and product.status = 'active'
           and product.moderation_status = 'approved'
           and (
-              product.listing_type <> 'shop'
+              product.shop_id is null
               or exists (
                   select 1 from public.shops shop
                   where shop.id = product.shop_id and shop.status = 'active'

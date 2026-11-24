@@ -686,7 +686,7 @@ BEGIN
     -- Preserve the existing public product policy while disabled: shop
     -- listings must still belong to an active shop, and listings must have
     -- stock. The feature must not broaden or narrow the old public catalog.
-    IF product_row.listing_type = 'shop'
+    IF product_row.shop_id IS NOT NULL
        AND NOT EXISTS (
            SELECT 1
              FROM public.shops AS shop
@@ -708,7 +708,7 @@ BEGIN
     -- A shop listing still needs the existing KYC approval. Independent
     -- seller listings can become public as soon as email and phone are
     -- verified.
-    IF product_row.listing_type = 'shop' THEN
+    IF product_row.shop_id IS NOT NULL THEN
         RETURN EXISTS (
             SELECT 1
               FROM public.shops AS shop
@@ -777,7 +777,7 @@ AS $function$
                AND product.status = 'active'
                AND product.moderation_status = 'approved'
                AND (
-                   product.listing_type <> 'shop'
+                   product.shop_id IS NULL
                    OR EXISTS (
                        SELECT 1
                          FROM public.shops AS shop

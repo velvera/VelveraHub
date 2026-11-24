@@ -112,14 +112,12 @@
         const image = primaryImage(product);
         const categoryKey = String(product.category || '').toLowerCase();
         const icon = ICONS[categoryKey] || ICONS.other;
-        const typeLabel = product.listing_type === 'student_ad' ? 'Direct ad' : 'Item for sale';
         const location = listingLocation(product);
         const date = formatDate(product.updated_at || product.created_at);
         const price = formatPrice(product.price);
         const editUrl = listingEditUrl(product);
         const title = escapeHtml(product.title || 'Untitled listing');
         const category = escapeHtml(product.category || 'Other');
-        const kind = escapeHtml(typeLabel);
         const imageAlt = `${product.title || 'Listing'} listing photo`;
         let statusAction = '';
 
@@ -142,7 +140,6 @@
                 <div class="ml-card-main">
                     <div class="ml-card-title-row">
                         <span class="ml-card-title">${title}</span>
-                        <span class="ml-kind">${kind}</span>
                     </div>
                     <div class="ml-card-meta">
                         <span>${category}</span>
@@ -207,7 +204,6 @@
                 listing.campus_area,
                 listing.location,
                 listing.school_name,
-                listing.listing_type
             ].filter(Boolean).join(' ').toLocaleLowerCase();
             return searchable.includes(search);
         });
@@ -292,18 +288,16 @@
         try {
             const { data, error } = await supabase
                 .from('products')
-                .select('id,seller_id,shop_id,listing_type,title,category,condition,price,stock,status,moderation_status,moderation_note,moderated_at,location,campus_area,school_name,created_at,updated_at,view_count,sales_count,ad_status,is_priority_ad,product_images(url,is_primary,display_order)')
+                .select('id,seller_id,shop_id,title,category,condition,price,stock,status,moderation_status,moderation_note,moderated_at,location,campus_area,school_name,created_at,updated_at,view_count,sales_count,ad_status,is_priority_ad,product_images(url,is_primary,display_order)')
                 .in('seller_id', ownerIds)
                 .is('shop_id', null)
-                .in('listing_type', ['student_item', 'student_ad'])
                 .order('updated_at', { ascending: false, nullsFirst: false });
             if (error) throw error;
             state.listings = Array.isArray(data) ? data : [];
             await window.ProductsService?.resolvePrivateProductMedia(state.listings);
             state.listings = state.listings.filter((listing) =>
                 ownerIds.includes(listing.seller_id) &&
-                listing.shop_id == null &&
-                ['student_item', 'student_ad'].includes(listing.listing_type)
+                listing.shop_id == null
             );
             state.listings.sort((first, second) =>
                 new Date(second.updated_at || second.created_at || 0).getTime() -
@@ -349,7 +343,6 @@
                 .eq('id', productId)
                 .in('seller_id', state.ownerIds)
                 .is('shop_id', null)
-                .in('listing_type', ['student_item', 'student_ad'])
                 .eq('status', expectedStatus)
                 .select('id,status')
                 .maybeSingle();

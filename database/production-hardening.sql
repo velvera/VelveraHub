@@ -147,7 +147,6 @@ BEGIN
         END IF;
 
         SELECT product.id, product.title, product.price, product.stock, product.shop_id,
-               product.listing_type,
                shop.status AS shop_status,
                shop.verified AS shop_verified
         INTO v_product
@@ -176,8 +175,7 @@ BEGIN
             JOIN public.products AS product
               ON product.id = (item->>'product_id')::UUID
             LEFT JOIN public.shops AS shop ON shop.id = product.shop_id
-            WHERE coalesce(product.listing_type, 'shop') <> 'shop'
-               OR product.shop_id IS NULL
+            WHERE product.shop_id IS NULL
                OR shop.status <> 'active'
                OR shop.verified IS NOT TRUE
        ) THEN

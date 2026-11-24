@@ -2107,7 +2107,7 @@ app.post('/api/orders', async (req, res) => {
             seenProductIds.add(productId);
 
             const productResult = await client.query(`
-                SELECT p.id, p.title, p.price, p.stock, p.shop_id, p.listing_type,
+                SELECT p.id, p.title, p.price, p.stock, p.shop_id,
                        s.status AS shop_status, s.verified AS shop_verified,
                        (SELECT pi.url FROM product_images pi
                         WHERE pi.product_id = p.id
@@ -2135,8 +2135,7 @@ app.post('/api/orders', async (req, res) => {
         }
 
         if (payment_method === 'bank_transfer' && orderItems.some(({ product }) => (
-            product.listing_type !== 'shop'
-            || !product.shop_id
+            !product.shop_id
             || product.shop_status !== 'active'
             || product.shop_verified !== true
         ))) {

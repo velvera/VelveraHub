@@ -317,8 +317,7 @@ BEGIN
           ON verification.shop_id = shop.id
         WHERE item.order_id = v_order_id
           AND (
-              coalesce(product.listing_type, 'shop') <> 'shop'
-              OR product.shop_id IS NULL
+              product.shop_id IS NULL
               OR item.shop_id IS DISTINCT FROM product.shop_id
               OR shop.status <> 'active'
               OR shop.verified IS NOT TRUE

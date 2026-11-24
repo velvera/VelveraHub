@@ -37,13 +37,13 @@ BEGIN
             NEW.original_price, NEW.discount_percent, NEW.category, NEW.category_id,
             NEW.location, NEW.school_id, NEW.school_slug, NEW.school_name,
             NEW.school_city, NEW.campus_area, NEW.condition, NEW.delivery_options,
-            NEW.specifications, NEW.tags, to_jsonb(NEW) -> 'image_url', NEW.listing_type
+            NEW.specifications, NEW.tags, to_jsonb(NEW) -> 'image_url'
         ) IS DISTINCT FROM ROW(
             OLD.title, OLD.description, OLD.short_description, OLD.price,
             OLD.original_price, OLD.discount_percent, OLD.category, OLD.category_id,
             OLD.location, OLD.school_id, OLD.school_slug, OLD.school_name,
             OLD.school_city, OLD.campus_area, OLD.condition, OLD.delivery_options,
-            OLD.specifications, OLD.tags, to_jsonb(OLD) -> 'image_url', OLD.listing_type
+            OLD.specifications, OLD.tags, to_jsonb(OLD) -> 'image_url'
         );
     review_fields_changed :=
         ROW(NEW.moderation_status, NEW.moderation_note, NEW.moderated_by, NEW.moderated_at)

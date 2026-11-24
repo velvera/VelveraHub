@@ -669,8 +669,7 @@
     function renderMarketplaceMediaLimits() {
         const limits = state.mediaLimits;
         if (!limits) return;
-        byId('shopProductImageLimit').value = String(limits.product_image_limit);
-        byId('independentListingMediaLimit').value = String(limits.student_listing_media_limit);
+        byId('productMediaLimit').value = String(limits.product_image_limit);
         byId('productImageMaxMib').value = String(limits.product_image_max_bytes / 1048576);
         byId('productVideoMaxMib').value = String(limits.product_video_max_bytes / 1048576);
     }
@@ -689,13 +688,11 @@
             }
             const limits = {
                 product_image_limit: Number(data.product_image_limit),
-                student_listing_media_limit: Number(data.student_listing_media_limit),
                 product_image_max_bytes: Number(data.product_image_max_bytes),
                 product_video_max_bytes: Number(data.product_video_max_bytes)
             };
             if (
                 !Number.isInteger(limits.product_image_limit) ||
-                !Number.isInteger(limits.student_listing_media_limit) ||
                 !Number.isInteger(limits.product_image_max_bytes) ||
                 !Number.isInteger(limits.product_video_max_bytes) ||
                 limits.product_image_max_bytes % 1048576 !== 0 ||
@@ -731,8 +728,7 @@
         message.classList.remove('is-error');
         try {
             const { data, error } = await state.supabase.rpc('admin_update_marketplace_media_limits', {
-                p_product_image_limit: Number(byId('shopProductImageLimit').value),
-                p_student_listing_media_limit: Number(byId('independentListingMediaLimit').value),
+                p_product_image_limit: Number(byId('productMediaLimit').value),
                 p_product_image_max_mib: Number(byId('productImageMaxMib').value),
                 p_product_video_max_mib: Number(byId('productVideoMaxMib').value)
             });

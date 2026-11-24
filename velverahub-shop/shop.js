@@ -681,7 +681,7 @@ function scopeSellerProducts(query, context) {
 }
 
 function sellerListingLabel(context) {
-    return isStoreOwner(context) ? 'Store owner' : 'Independent seller';
+    return isStoreOwner(context) ? 'Store owner' : 'Seller';
 }
 
 const SELLER_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -2183,12 +2183,11 @@ function initProductForm() {
                 } else {
                     const baseFields = {
                         ...(shop
-                            ? { shop_id: shop.id, listing_type: 'shop' }
+                            ? { shop_id: shop.id }
                             : {
                                 shop_id: null,
                                 seller_id: supabaseContext.user.id,
-                                listing_type: 'student_item',
-                                seller_display_name: [supabaseContext.profile?.first_name, supabaseContext.profile?.last_name].filter(Boolean).join(' ') || supabaseContext.user.email?.split('@')[0] || 'Independent seller',
+                                seller_display_name: [supabaseContext.profile?.first_name, supabaseContext.profile?.last_name].filter(Boolean).join(' ') || supabaseContext.user.email?.split('@')[0] || 'Seller',
                                 seller_avatar_url: supabaseContext.profile?.avatar_url || supabaseContext.user.user_metadata?.avatar_url || null
                             }),
                         title, category, location, price, stock,

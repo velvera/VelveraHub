@@ -299,7 +299,7 @@ CREATE POLICY shop_approval_required_to_publish
 ON public.products AS RESTRICTIVE FOR ALL TO authenticated
 USING (TRUE)
 WITH CHECK (
-    listing_type <> 'shop'
+    shop_id IS NULL
     OR status <> 'active'
     OR EXISTS (
         SELECT 1

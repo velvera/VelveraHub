@@ -845,7 +845,7 @@
             let restricted = cart.some((item) => {
                 const product = item.product || item;
                 const shop = product.shops || {};
-                return product.listing_type !== 'shop' || !shop.id || shop.verified !== true;
+                return !product.shop_id || !shop.id || shop.verified !== true;
             });
             let needsVelveraHubAccount = false;
             if (!restricted) {
