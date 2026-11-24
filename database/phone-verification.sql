@@ -8,6 +8,9 @@ BEGIN;
 ALTER TABLE public.marketplace_settings
     ADD COLUMN IF NOT EXISTS phone_verification_enabled BOOLEAN NOT NULL DEFAULT FALSE;
 
+ALTER TABLE public.marketplace_settings ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.marketplace_settings FROM PUBLIC, anon, authenticated;
+
 UPDATE public.marketplace_settings
    SET phone_verification_enabled = FALSE
  WHERE id = 1
@@ -548,9 +551,10 @@ BEGIN
 END;
 $$;
 
--- Shared predicate used by the product, image-record, and Storage-object
--- policies. With the feature disabled, this exactly retains the existing
--- active/approved/stock/active-shop visibility rule.
+-- Product visibility follows the existing active + approved rule while the
+-- feature is off. Once enabled, approved listings and active KYC-approved
+-- shops remain public; other active listings require confirmed email and a
+-- server-owned verified phone.
 CREATE OR REPLACE FUNCTION public.phone_verification_product_is_public(p_product_id UUID)
 RETURNS BOOLEAN
 LANGUAGE PLPGSQL
@@ -570,18 +574,7 @@ BEGIN
      WHERE product.id = p_product_id;
     IF NOT FOUND
        OR product_row.status IS DISTINCT FROM 'active'
-       OR COALESCE(product_row.stock, 0) <= 0
        OR product_row.moderation_status = 'rejected' THEN
-        RETURN FALSE;
-    END IF;
-
-    IF product_row.listing_type = 'shop'
-       AND NOT EXISTS (
-            SELECT 1
-              FROM public.shops AS shop
-             WHERE shop.id = product_row.shop_id
-               AND shop.status = 'active'
-       ) THEN
         RETURN FALSE;
     END IF;
 
@@ -594,17 +587,18 @@ BEGIN
         RETURN FALSE;
     END IF;
 
-    -- Preserve public access for existing KYC-approved active shops even if
-    -- a listing is awaiting review. Rejected and inactive rows were excluded.
+    -- A shop listing still needs the existing KYC approval. Independent
+    -- seller listings can become public as soon as email and phone are
+    -- verified.
     IF product_row.shop_id IS NOT NULL
-       AND EXISTS (
+       THEN
+        RETURN EXISTS (
             SELECT 1
               FROM public.shops AS shop
              WHERE shop.id = product_row.shop_id
                AND shop.status = 'active'
                AND shop.verified IS TRUE
-       ) THEN
-        RETURN TRUE;
+        );
     END IF;
 
     SELECT COALESCE(
@@ -645,8 +639,36 @@ BEGIN
 END;
 $function$;
 
+-- The original image-record policy also required an active shop for shop
+-- media. Keep that rule, then apply the same verified-seller visibility
+-- predicate used by public product details.
+CREATE OR REPLACE FUNCTION public.phone_verification_product_media_is_public(p_product_id UUID)
+RETURNS BOOLEAN
+LANGUAGE SQL
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+SET row_security = off
+AS $function$
+    SELECT public.phone_verification_product_is_public(p_product_id)
+       AND NOT EXISTS (
+            SELECT 1
+              FROM public.products AS product
+             WHERE product.id = p_product_id
+               AND product.listing_type = 'shop'
+               AND NOT EXISTS (
+                    SELECT 1
+                      FROM public.shops AS shop
+                     WHERE shop.id = product.shop_id
+                       AND shop.status = 'active'
+               )
+       )
+$function$;
+
 REVOKE ALL ON FUNCTION public.phone_verification_product_is_public(UUID) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.phone_verification_product_is_public(UUID) TO anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.phone_verification_product_media_is_public(UUID) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.phone_verification_product_media_is_public(UUID) TO anon, authenticated, service_role;
 
 DROP POLICY IF EXISTS "public can read active products" ON public.products;
 CREATE POLICY "public can read active products"
@@ -658,7 +680,41 @@ DROP POLICY IF EXISTS "public can read product images" ON public.product_images;
 CREATE POLICY "public can read product images"
 ON public.product_images FOR SELECT
 TO anon, authenticated
-USING (public.phone_verification_product_is_public(product_id));
+USING (public.phone_verification_product_media_is_public(product_id));
+
+-- Both product-media buckets are private while verification is enabled.
+-- Signed URLs can be created only for an eligible public listing or by its
+-- authenticated owner; the Edge Function toggles bucket mode around the
+-- server-side feature flag.
+DROP POLICY IF EXISTS "public can read eligible product media objects" ON storage.objects;
+CREATE POLICY "public can read eligible product media objects"
+ON storage.objects FOR SELECT
+TO anon, authenticated
+USING (
+    bucket_id IN ('product-images', 'product-videos')
+    AND CASE
+        WHEN pg_catalog.split_part(name, '/', 1) ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+        THEN public.phone_verification_product_media_is_public(
+            pg_catalog.split_part(name, '/', 1)::UUID
+        )
+        ELSE FALSE
+    END
+);
+
+DROP POLICY IF EXISTS "owners can read their product media objects" ON storage.objects;
+CREATE POLICY "owners can read their product media objects"
+ON storage.objects FOR SELECT
+TO authenticated
+USING (
+    bucket_id IN ('product-images', 'product-videos')
+    AND CASE
+        WHEN pg_catalog.split_part(name, '/', 1) ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+        THEN public.can_manage_product_media(
+            pg_catalog.split_part(name, '/', 1)::UUID
+        )
+        ELSE FALSE
+    END
+);
 
 DROP POLICY IF EXISTS "public can read verified seller contact" ON public.seller_public_contacts;
 CREATE POLICY "public can read verified seller contact"

@@ -32,7 +32,9 @@
         if (!error) return data || {};
         let response = null;
         try { response = await error.context?.clone?.().json(); } catch (_) {}
-        throw new Error(response?.error || error.message || 'Phone verification failed. Please try again.');
+        const requestError = new Error(response?.error || error.message || 'Phone verification failed. Please try again.');
+        requestError.code = response?.code;
+        throw requestError;
     }
     function ensureStyles() {
         if (document.getElementById('phoneVerificationDialogStyles')) return;
@@ -94,7 +96,7 @@
                     refreshResend();
                     timer = window.setInterval(refreshResend, 1000);
                     codeInput.focus();
-                } catch (error) { setMessage(error.message || 'The code could not be sent. Please try again.'); sendButton.disabled = false; sendButton.textContent = 'Send code'; }
+                } catch (error) { if (error?.code === 'PHONE_VERIFICATION_DISABLED') { finish(null); return; } setMessage(error.message || 'The code could not be sent. Please try again.'); sendButton.disabled = false; sendButton.textContent = 'Send code'; }
             });
             verifyButton.addEventListener('click', async () => {
                 const code = codeInput.value.trim();
@@ -113,7 +115,7 @@
                         setMessage('Phone verified. Creating your account…', 'success');
                         finish({ phone: result.phone, ticket: result.ticket });
                     }
-                } catch (error) { setMessage(error.message || 'That code could not be verified. Please try again.'); verifyButton.disabled = false; }
+                } catch (error) { if (error?.code === 'PHONE_VERIFICATION_DISABLED') { finish(null); return; } setMessage(error.message || 'That code could not be verified. Please try again.'); verifyButton.disabled = false; }
             });
         });
     }

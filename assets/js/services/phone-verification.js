@@ -56,7 +56,9 @@
             if (error.context?.clone) response = await error.context.clone().json();
             else if (error.context?.json) response = await error.context.json();
         } catch (_) {}
-        throw new Error(response?.error || error.message || 'Phone verification failed. Please try again.');
+        const requestError = new Error(response?.error || error.message || 'Phone verification failed. Please try again.');
+        requestError.code = response?.code;
+        throw requestError;
     }
 
     function ensureDialogStyles() {
@@ -177,6 +179,10 @@
                     timer = window.setInterval(refreshResend, 1000);
                     codeInput.focus();
                 } catch (error) {
+                    if (error?.code === 'PHONE_VERIFICATION_DISABLED') {
+                        finish(null);
+                        return;
+                    }
                     setMessage(error.message || 'The code could not be sent. Please try again.');
                     sendButton.disabled = false;
                     sendButton.textContent = 'Send code';
@@ -214,6 +220,10 @@
                         finish({ phone: result.phone, ticket: result.ticket });
                     }
                 } catch (error) {
+                    if (error?.code === 'PHONE_VERIFICATION_DISABLED') {
+                        finish(null);
+                        return;
+                    }
                     setMessage(error.message || 'That code could not be verified. Please try again.');
                     verifyButton.disabled = false;
                     if (/expired|five attempts|60 seconds/i.test(error.message || '')) {

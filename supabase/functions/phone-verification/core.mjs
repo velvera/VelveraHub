@@ -1,4 +1,6 @@
 const TERMII_API = 'https://api.ng.termii.com/api/sms/otp';
+const TERMII_BASE = 'https://api.ng.termii.com/api';
+const PRODUCT_MEDIA_BUCKETS = ['product-images', 'product-videos'];
 
 export function normalizeNigerianPhone(value) {
     const input = String(value || '').trim();
@@ -16,13 +18,13 @@ export function termiiVerified(payload) {
     return value === true || String(value || '').trim().toLowerCase() === 'true';
 }
 
-function json(payload, status = 200, requestOrigin = '*') {
+function json(payload, status = 200, _requestOrigin = '*') {
     return new Response(JSON.stringify(payload), {
         status,
         headers: {
             'Content-Type': 'application/json; charset=utf-8',
             'Cache-Control': 'no-store',
-            'Access-Control-Allow-Origin': requestOrigin || '*',
+            'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info',
             'Access-Control-Allow-Methods': 'POST, OPTIONS',
             'Vary': 'Origin'
@@ -163,6 +165,124 @@ export function createPhoneVerificationHandler({
         throw errorResult('That code is incorrect. Check it and try again.', 400, 'OTP_INCORRECT');
     }
 
+    async function validateTermiiConfiguration() {
+        if (!config.ready) {
+            throw errorResult(
+                'Add the required Supabase and Termii Function secrets before enabling phone verification.',
+                503,
+                'PROVIDER_NOT_CONFIGURED'
+            );
+        }
+
+        const timeoutSignal = () => AbortSignal.timeout(8000);
+        const balanceUrl = new URL(`${TERMII_BASE}/get-balance`);
+        balanceUrl.searchParams.set('api_key', config.termiiKey);
+        const balanceResponse = await fetchImpl(balanceUrl, {
+            method: 'GET',
+            headers: { Accept: 'application/json' },
+            signal: timeoutSignal()
+        });
+        let balance = null;
+        try { balance = await balanceResponse.json(); } catch { balance = null; }
+        if (!balanceResponse.ok || !Number.isFinite(Number(balance?.balance))) {
+            throw errorResult(
+                'Termii could not validate the configured API key. Check the Termii Function secrets.',
+                503,
+                'TERMII_KEY_INVALID'
+            );
+        }
+
+        const senderUrl = new URL(`${TERMII_BASE}/sender-id`);
+        senderUrl.searchParams.set('api_key', config.termiiKey);
+        senderUrl.searchParams.set('sender_id', config.termiiSenderId);
+        const senderResponse = await fetchImpl(senderUrl, {
+            method: 'GET',
+            headers: { Accept: 'application/json' },
+            signal: timeoutSignal()
+        });
+        let senderPayload = null;
+        try { senderPayload = await senderResponse.json(); } catch { senderPayload = null; }
+        const senderRows = Array.isArray(senderPayload)
+            ? senderPayload
+            : Array.isArray(senderPayload?.data)
+                ? senderPayload.data
+                : Array.isArray(senderPayload?.content)
+                    ? senderPayload.content
+                    : Array.isArray(senderPayload?.content?.data)
+                        ? senderPayload.content.data
+                        : [];
+        const configuredSender = senderRows.find((sender) =>
+            String(sender?.sender_id || '').trim().toLowerCase() === config.termiiSenderId.toLowerCase()
+        );
+        const senderStatus = String(configuredSender?.status || '').trim().toLowerCase();
+        if (!senderResponse.ok || !configuredSender || !['active', 'approved', 'unblock', 'unblocked'].includes(senderStatus)) {
+            throw errorResult(
+                'The configured Termii Sender ID is not active. Use an approved Sender ID before enabling verification.',
+                503,
+                'TERMII_SENDER_NOT_ACTIVE'
+            );
+        }
+    }
+
+    async function setProductMediaBucketsPublic(isPublic) {
+        const updatedBuckets = [];
+        try {
+            for (const bucket of PRODUCT_MEDIA_BUCKETS) {
+                const response = await fetchImpl(`${config.url}/storage/v1/bucket/${bucket}`, {
+                    method: 'PUT',
+                    headers: {
+                        apikey: config.serviceKey,
+                        Authorization: `Bearer ${config.serviceKey}`,
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json'
+                    },
+                    body: JSON.stringify({ public: isPublic })
+                });
+                if (!response.ok) {
+                    throw errorResult('Product media access could not be updated safely.', 503, 'MEDIA_ACCESS_UPDATE_FAILED');
+                }
+                updatedBuckets.push(bucket);
+            }
+        } catch (error) {
+            // If the second bucket fails, restore the first to its previous
+            // mode so photos and videos do not end up with different access.
+            for (const bucket of updatedBuckets.reverse()) {
+                try {
+                    await fetchImpl(`${config.url}/storage/v1/bucket/${bucket}`, {
+                        method: 'PUT',
+                        headers: {
+                            apikey: config.serviceKey,
+                            Authorization: `Bearer ${config.serviceKey}`,
+                            'Content-Type': 'application/json',
+                            Accept: 'application/json'
+                        },
+                        body: JSON.stringify({ public: !isPublic })
+                    });
+                } catch (_) {}
+            }
+            throw error;
+        }
+    }
+
+    async function productMediaModeMatches(isEnabled) {
+        if (!config.url || !config.serviceKey) return false;
+        for (const bucket of PRODUCT_MEDIA_BUCKETS) {
+            const response = await fetchImpl(`${config.url}/storage/v1/bucket/${bucket}`, {
+                method: 'GET',
+                headers: {
+                    apikey: config.serviceKey,
+                    Authorization: `Bearer ${config.serviceKey}`,
+                    Accept: 'application/json'
+                }
+            });
+            if (!response.ok) return false;
+            let details = null;
+            try { details = await response.json(); } catch { details = null; }
+            if (typeof details?.public !== 'boolean' || details.public === isEnabled) return false;
+        }
+        return true;
+    }
+
     async function startChallenge(mode, body, request) {
         const isSignup = mode === 'signup';
         const user = isSignup ? null : (await requireUser(request)).user;
@@ -283,29 +403,54 @@ export function createPhoneVerificationHandler({
             if (action === 'admin_status') {
                 await requireAdmin(request);
                 const isEnabled = await enabled();
+                let configurationReady = config.ready;
+                const mediaAccessReady = await productMediaModeMatches(isEnabled);
+                configurationReady = configurationReady && mediaAccessReady;
+                if (isEnabled && configurationReady) {
+                    try {
+                        await validateTermiiConfiguration();
+                    } catch (_) {
+                        configurationReady = false;
+                    }
+                }
                 return json({
                     enabled: isEnabled,
                     mode: isEnabled ? 'Enabled' : 'Disabled',
                     provider: 'Termii',
                     providerConfigured: config.termiiConfigured,
-                    configurationReady: config.ready,
+                    configurationReady,
+                    mediaAccessStatus: mediaAccessReady ? (isEnabled ? 'Private' : 'Public') : 'Needs attention',
                     providerStatus: config.termiiConfigured ? 'Configured' : 'Not configured'
                 }, 200, origin);
             }
             if (action === 'admin_set') {
                 await requireAdmin(request);
                 const nextEnabled = body.enabled === true;
-                if (nextEnabled && !config.ready) {
-                    throw errorResult('Add the required Supabase and Termii function secrets before enabling phone verification.', 503, 'PROVIDER_NOT_CONFIGURED');
+                if (nextEnabled) {
+                    await validateTermiiConfiguration();
+                    await setProductMediaBucketsPublic(false);
+                    try {
+                        const updated = await rpc('admin_update_phone_verification', { p_enabled: true });
+                        if (updated !== true) throw errorResult('The setting could not be saved.', 503, 'SETTINGS_SAVE_FAILED');
+                    } catch (error) {
+                        try { await setProductMediaBucketsPublic(true); } catch (_) {}
+                        throw error;
+                    }
+                } else {
+                    const updated = await rpc('admin_update_phone_verification', { p_enabled: false });
+                    if (updated !== true) throw errorResult('The setting could not be saved.', 503, 'SETTINGS_SAVE_FAILED');
+                    // Disable server enforcement first; making media public is
+                    // a second step so a failure cannot expose new unverified
+                    // listings while the feature is still active.
+                    await setProductMediaBucketsPublic(true);
                 }
-                const updated = await rpc('admin_update_phone_verification', { p_enabled: nextEnabled });
-                if (updated !== true) throw errorResult('The setting could not be saved.', 503, 'SETTINGS_SAVE_FAILED');
                 return json({
                     enabled: nextEnabled,
                     mode: nextEnabled ? 'Enabled' : 'Disabled',
                     provider: 'Termii',
                     providerConfigured: config.termiiConfigured,
-                    configurationReady: config.ready,
+                    configurationReady: true,
+                    mediaAccessStatus: nextEnabled ? 'Private' : 'Public',
                     providerStatus: config.termiiConfigured ? 'Configured' : 'Not configured'
                 }, 200, origin);
             }

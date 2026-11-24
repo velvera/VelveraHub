@@ -299,6 +299,7 @@
                 .order('updated_at', { ascending: false, nullsFirst: false });
             if (error) throw error;
             state.listings = Array.isArray(data) ? data : [];
+            await window.ProductsService?.resolvePrivateProductMedia(state.listings);
             state.listings = state.listings.filter((listing) =>
                 ownerIds.includes(listing.seller_id) &&
                 listing.shop_id == null &&

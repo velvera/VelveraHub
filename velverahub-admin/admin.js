@@ -760,10 +760,12 @@
         byId('phoneVerificationEnabled').checked = settings.enabled === true;
         byId('phoneVerificationMode').textContent = settings.mode || (settings.enabled ? 'Enabled' : 'Disabled');
         byId('phoneVerificationProviderStatus').textContent = settings.providerStatus || 'Not configured';
+        byId('phoneVerificationMediaAccess').textContent = settings.mediaAccessStatus || 'Unavailable';
         byId('phoneVerificationReadiness').textContent = settings.configurationReady
-            ? 'Ready to activate'
-            : 'Not ready — configure Supabase and Termii Function secrets';
-        byId('savePhoneVerificationSettings').disabled = settings.configurationReady !== true
+            ? (settings.enabled ? 'Active configuration verified' : 'Ready to activate')
+            : 'Not ready — check Supabase bucket access and Termii Function secrets';
+        byId('savePhoneVerificationSettings').disabled = byId('phoneVerificationEnabled').checked
+            && settings.configurationReady !== true
             && settings.enabled !== true;
     }
 
@@ -796,6 +798,7 @@
             byId('phoneVerificationReadiness').textContent = 'Unavailable';
             byId('phoneVerificationProviderStatus').textContent = 'Unavailable';
             byId('phoneVerificationMode').textContent = 'Unavailable';
+            byId('phoneVerificationMediaAccess').textContent = 'Unavailable';
             byId('savePhoneVerificationSettings').disabled = true;
         } finally {
             state.phoneVerificationSettingsLoading = false;

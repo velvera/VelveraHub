@@ -850,6 +850,7 @@ async function loadRealData() {
 
         if (productsError) throw productsError;
         if (ordersError) window.AsyncFeedback?.log('seller-orders-load', window.AsyncFeedback?.createRequestId('seller-orders-load'), ordersError);
+        await window.ProductsService?.resolvePrivateProductMedia(products || []);
 
         const liveProducts = (products || []).map(product => ({
                 ...product,
@@ -2325,6 +2326,7 @@ async function loadProductsTable() {
                 .order('created_at', { ascending: false })
                 .limit(100);
             if (error) throw error;
+            await window.ProductsService?.resolvePrivateProductMedia(data || []);
             currentProducts = (data || []).map((product) => ({
                 ...product,
                 image_url: product.image_url || getPrimaryImage(product)

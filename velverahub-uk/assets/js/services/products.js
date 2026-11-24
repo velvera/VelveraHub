@@ -1,3 +1,5 @@
+let privateMediaFeatureCache = { enabled: false, expiresAt: 0 };
+
 const ProductsService = {
     getLocation(options = {}) {
         return options.location || window.RegionService?.location || 'all';
@@ -53,6 +55,95 @@ const ProductsService = {
             avif: this.getTransformedImageUrl(original, { ...options, format: 'avif' }),
             webp: this.getTransformedImageUrl(original, { ...options, format: 'webp' })
         };
+    },
+
+    async resolvePrivateProductMedia(products = []) {
+        const rows = Array.isArray(products) ? products : [products];
+        if (!rows.length || !window.SupabaseClient?.isConfigured()) return products;
+        const supabase = window.SupabaseClient.get();
+        if (privateMediaFeatureCache.expiresAt <= Date.now()) {
+            try {
+                const { data, error } = await supabase.rpc('get_phone_verification_enabled');
+                if (error) throw error;
+                privateMediaFeatureCache = { enabled: data === true, expiresAt: Date.now() + 10000 };
+            } catch (error) {
+                privateMediaFeatureCache = { enabled: false, expiresAt: Date.now() + 3000 };
+                window.Observability?.reportError(
+                    'private-product-media-status',
+                    `private-media-${Date.now().toString(36)}`,
+                    error,
+                    { source: 'catalogue-service' }
+                );
+            }
+        }
+        if (!privateMediaFeatureCache.enabled) return products;
+
+        const projectUrl = String(window.VELVERAHUB_CONFIG?.SUPABASE_URL || '').replace(/\/+$/, '');
+        let projectOrigin = '';
+        try { projectOrigin = new URL(projectUrl).origin; } catch (_) {}
+        if (!projectOrigin) return products;
+
+        const pending = new Map();
+        const parseStoragePath = (value) => {
+            try {
+                const url = new URL(String(value || ''), window.location.origin);
+                if (url.origin !== projectOrigin) return null;
+                const match = url.pathname.match(/\/storage\/v1\/object\/(?:public|sign|authenticated)\/(product-images|product-videos)\/(.+)$/);
+                if (!match) return null;
+                return { bucket: match[1], path: decodeURIComponent(match[2]) };
+            } catch (_) {
+                return null;
+            }
+        };
+        const addTarget = (product, value, setter) => {
+            const reference = parseStoragePath(value);
+            if (!reference || !product?.id || !reference.path.startsWith(`${product.id}/`)) return;
+            if (!pending.has(reference.bucket)) pending.set(reference.bucket, new Map());
+            const paths = pending.get(reference.bucket);
+            if (!paths.has(reference.path)) paths.set(reference.path, []);
+            paths.get(reference.path).push(setter);
+        };
+
+        rows.forEach((product) => {
+            ['image', 'image_url'].forEach((key) => {
+                if (typeof product?.[key] === 'string') {
+                    addTarget(product, product[key], (value) => { product[key] = value; });
+                }
+            });
+            ['product_images', 'images'].forEach((key) => {
+                (Array.isArray(product?.[key]) ? product[key] : []).forEach((image) => {
+                    if (typeof image === 'string') return;
+                    if (typeof image?.url === 'string') {
+                        addTarget(product, image.url, (value) => { image.url = value; });
+                    }
+                });
+            });
+        });
+
+        for (const [bucket, pathTargets] of pending) {
+            const paths = [...pathTargets.keys()];
+            for (let offset = 0; offset < paths.length; offset += 100) {
+                const batch = paths.slice(offset, offset + 100);
+                const { data, error } = await supabase.storage.from(bucket).createSignedUrls(batch, 3600);
+                const signedByPath = new Map((data || []).map((entry) => [entry.path, entry.signedUrl]));
+                if (error) {
+                    window.Observability?.reportError(
+                        'private-product-media-sign',
+                        `private-media-sign-${Date.now().toString(36)}`,
+                        error,
+                        { source: 'catalogue-service', bucket }
+                    );
+                }
+                batch.forEach((path) => {
+                    const signedUrl = signedByPath.get(path);
+                    const replacement = signedUrl
+                        ? (signedUrl.startsWith('http') ? signedUrl : new URL(signedUrl, `${projectUrl}/storage/v1/`).href)
+                        : '/img/product-placeholder.svg';
+                    pathTargets.get(path).forEach((setter) => setter(replacement));
+                });
+            }
+        }
+        return products;
     },
 
     normaliseLocation(value) {
@@ -244,6 +335,7 @@ const ProductsService = {
                         ? available
                         : available.slice(options.offset || 0, (options.offset || 0) + (options.limit || available.length));
                     const formatted = paged.map(p => this.formatSupabaseProduct(p));
+                    await this.resolvePrivateProductMedia(formatted);
                     this.rememberProducts(formatted);
                     return {
                         data: formatted,
@@ -271,6 +363,7 @@ const ProductsService = {
         try {
             const data = await this.requestProducts(options);
             const formatted = (data.products || []).map(p => this.formatProduct(p));
+            await this.resolvePrivateProductMedia(formatted);
             this.rememberProducts(formatted);
             return {
                 data: formatted,
@@ -328,6 +421,7 @@ const ProductsService = {
                 }
                 if (!error && data) {
                     const formatted = this.formatSupabaseProduct(data);
+                    await this.resolvePrivateProductMedia([formatted]);
                     if (!data.shop_id && data.seller_id) {
                         const { data: contact, error: contactError } = await supabase
                             .from('seller_public_contacts')
@@ -372,6 +466,7 @@ const ProductsService = {
             if (!response.ok) throw new Error('Product not found');
             const data = await response.json();
             const formatted = this.formatProduct(data);
+            await this.resolvePrivateProductMedia([formatted]);
             this.rememberProducts([formatted]);
             return { data: formatted, error: null };
         } catch (error) {

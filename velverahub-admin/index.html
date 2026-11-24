@@ -250,13 +250,14 @@
                     <div class="phone-verification-admin-status" aria-live="polite">
                         <p><strong>SMS provider:</strong> <span id="phoneVerificationProviderStatus">Loading…</span></p>
                         <p><strong>Mode:</strong> <span id="phoneVerificationMode">Loading…</span></p>
+                        <p><strong>Product media access:</strong> <span id="phoneVerificationMediaAccess">Checking…</span></p>
                         <p><strong>Configuration readiness:</strong> <span id="phoneVerificationReadiness">Checking…</span></p>
                     </div>
                     <label class="marketplace-payment-enabled">
                         <input id="phoneVerificationEnabled" name="enabled" type="checkbox">
                         <span>Enable phone verification across VelveraHub</span>
                     </label>
-                    <p class="marketplace-media-note">Termii API credentials remain in Supabase Function secrets and are never displayed here. “Configured” confirms the required secrets are present; a live SMS delivery is confirmed only when a code is sent.</p>
+                    <p class="marketplace-media-note">Termii credentials remain in Supabase Function secrets and are never displayed here. Activation checks the API key and approved Sender ID. Product photos and videos become private while verification is enabled; only eligible listings and their owners can access them.</p>
                     <p class="admin-global-message" id="phoneVerificationSettingsMessage" role="status" aria-live="polite" hidden></p>
                     <button class="admin-primary-button" id="savePhoneVerificationSettings" type="submit">Save phone verification setting</button>
                 </form>
