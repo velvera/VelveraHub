@@ -264,6 +264,11 @@
     padding: 0 1.5rem;
 }
 
+.popular-grid.is-auto-scrolling {
+    scroll-snap-type: none;
+    scroll-behavior: auto;
+}
+
 .popular-grid::-webkit-scrollbar,
 .yml-grid::-webkit-scrollbar {
     display: none;

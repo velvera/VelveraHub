@@ -85,16 +85,20 @@ async function loadInitialData() {
     ]);
 }
 
+let popularProductsRequestId = 0;
+
 async function loadPopularInRegion() {
     const region = window.RegionService;
     const isNG = !region || region.region === 'ng';
 
-    const headerEl = document.getElementById('popularHeader');
     const flagEl = document.getElementById('popularFlag');
     const titleEl = document.getElementById('popularTitle');
     const container = document.getElementById('popularProducts');
 
     if (!container) return;
+
+    const requestId = ++popularProductsRequestId;
+    window.PopularCarousel?.destroy(container);
 
     if (flagEl) flagEl.textContent = isNG ? '🇳🇬' : '🇬🇧';
     if (titleEl) titleEl.textContent = isNG ? 'Trending in Nigeria' : 'Popular in UK';
@@ -110,6 +114,8 @@ async function loadPopularInRegion() {
     } catch (error) {
         window.AsyncFeedback?.log('popular-products-load', window.AsyncFeedback?.createRequestId('popular-products-load'), error);
     }
+
+    if (requestId !== popularProductsRequestId) return;
 
     container.innerHTML = products.length ? products.map(p => `
         <a href="${p.id ? (window.VelveraHubDomains?.productUrl?.(p.id) || `/veeve/product.html?id=${encodeURIComponent(p.id)}`) : '#'}" class="popular-card">
@@ -127,7 +133,266 @@ async function loadPopularInRegion() {
             <span>Try another location or check back after sellers publish listings.</span>
         </div>
     `;
+
+    window.PopularCarousel?.mount(container, {
+        enabled: region?.region === 'ng'
+    });
 }
+
+const popularCarouselControllers = new WeakMap();
+const POPULAR_CAROUSEL_SPEED = 24;
+const POPULAR_CAROUSEL_RESUME_DELAY = 1400;
+
+function destroyPopularCarousel(container) {
+    const controller = container && popularCarouselControllers.get(container);
+    if (!controller) return;
+    controller.destroy();
+    popularCarouselControllers.delete(container);
+}
+
+function mountPopularCarousel(container, { enabled = false } = {}) {
+    destroyPopularCarousel(container);
+    if (!container || !enabled || !container.isConnected) return;
+
+    const originalCards = Array.from(container.children)
+        .filter((child) => child.matches?.('.popular-card'));
+    if (!originalCards.length) return;
+
+    const doc = container.ownerDocument || document;
+    const win = doc.defaultView || window;
+    if (typeof win.requestAnimationFrame !== 'function') return;
+
+    const priorAttributes = ['tabindex', 'role', 'aria-label'].reduce((saved, name) => {
+        saved[name] = container.getAttribute(name);
+        return saved;
+    }, {});
+    const motionPreference = win.matchMedia?.('(prefers-reduced-motion: reduce)') || null;
+    const listenerRecords = [];
+    let loopDistance = 0;
+    let precisePosition = 0;
+    let frameId = null;
+    let previousFrameTime = null;
+    let interactionTimer = null;
+    let resizeTimer = null;
+    let pausedUntil = 0;
+    let pointerInside = false;
+    let focusInside = Boolean(container.contains(doc.activeElement));
+    let destroyed = false;
+    let removalObserver = null;
+
+    const addListener = (target, type, handler, options) => {
+        target.addEventListener(type, handler, options);
+        listenerRecords.push({ target, type, handler, options });
+    };
+    const removeCopies = () => {
+        container.querySelectorAll('[data-popular-carousel-copy]').forEach((copy) => copy.remove());
+        container.classList.remove('is-auto-scrolling');
+    };
+    const appendCopySet = () => {
+        originalCards.forEach((card) => {
+            const copy = card.cloneNode(true);
+            copy.removeAttribute('id');
+            copy.querySelectorAll('[id]').forEach((element) => element.removeAttribute('id'));
+            copy.setAttribute('data-popular-carousel-copy', 'true');
+            copy.setAttribute('aria-hidden', 'true');
+            copy.setAttribute('tabindex', '-1');
+            copy.querySelectorAll('a, button, input, select, textarea, [tabindex]').forEach((element) => {
+                element.setAttribute('tabindex', '-1');
+            });
+            container.appendChild(copy);
+        });
+    };
+    const buildCopies = (preserveProgress = false) => {
+        const progress = preserveProgress && loopDistance > 0
+            ? (container.scrollLeft % loopDistance) / loopDistance
+            : 0;
+        removeCopies();
+        loopDistance = 0;
+        container.scrollLeft = 0;
+        precisePosition = 0;
+
+        if (motionPreference?.matches || !container.isConnected) return;
+
+        appendCopySet();
+        const firstCopy = container.querySelector('[data-popular-carousel-copy].popular-card');
+        const firstOriginal = originalCards[0];
+        loopDistance = firstCopy && firstOriginal
+            ? firstCopy.getBoundingClientRect().left - firstOriginal.getBoundingClientRect().left
+            : 0;
+        if (!Number.isFinite(loopDistance) || loopDistance <= 0) {
+            removeCopies();
+            loopDistance = 0;
+            return;
+        }
+
+        const copiesNeeded = Math.max(1, Math.ceil(container.clientWidth / loopDistance) + 1);
+        for (let setIndex = 1; setIndex < copiesNeeded; setIndex += 1) {
+            appendCopySet();
+        }
+        let safetyCopies = 20;
+        while (container.scrollWidth - container.clientWidth < loopDistance && safetyCopies > 0) {
+            appendCopySet();
+            safetyCopies -= 1;
+        }
+        if (container.scrollWidth - container.clientWidth < loopDistance) {
+            removeCopies();
+            loopDistance = 0;
+            return;
+        }
+
+        container.classList.add('is-auto-scrolling');
+        container.scrollLeft = progress * loopDistance;
+        precisePosition = container.scrollLeft;
+    };
+    const stopFrame = () => {
+        if (frameId !== null) win.cancelAnimationFrame(frameId);
+        frameId = null;
+        previousFrameTime = null;
+    };
+    const canAnimate = () => !destroyed &&
+        container.isConnected &&
+        loopDistance > 0 &&
+        !doc.hidden &&
+        !motionPreference?.matches &&
+        !pointerInside &&
+        !focusInside &&
+        Date.now() >= pausedUntil;
+    const animate = (timestamp) => {
+        frameId = null;
+        if (!canAnimate()) return;
+
+        if (previousFrameTime !== null) {
+            const elapsed = Math.min(50, Math.max(0, timestamp - previousFrameTime));
+            const nextPosition = precisePosition + (POPULAR_CAROUSEL_SPEED * elapsed / 1000);
+            precisePosition = nextPosition >= loopDistance
+                ? nextPosition % loopDistance
+                : nextPosition;
+            container.scrollLeft = Math.round(precisePosition);
+        }
+        previousFrameTime = timestamp;
+        frameId = win.requestAnimationFrame(animate);
+    };
+    const syncAnimation = () => {
+        if (!canAnimate()) {
+            stopFrame();
+            return;
+        }
+        if (frameId === null) {
+            previousFrameTime = null;
+            frameId = win.requestAnimationFrame(animate);
+        }
+    };
+    const pauseForInteraction = () => {
+        precisePosition = container.scrollLeft;
+        pausedUntil = Date.now() + POPULAR_CAROUSEL_RESUME_DELAY;
+        stopFrame();
+        win.clearTimeout(interactionTimer);
+        interactionTimer = win.setTimeout(syncAnimation, POPULAR_CAROUSEL_RESUME_DELAY);
+    };
+    const onPointerEnter = (event) => {
+        if (event.pointerType === 'touch') return;
+        pointerInside = true;
+        syncAnimation();
+    };
+    const onPointerLeave = (event) => {
+        if (event.pointerType === 'touch') return;
+        pointerInside = false;
+        syncAnimation();
+    };
+    const onFocusIn = () => {
+        focusInside = true;
+        syncAnimation();
+    };
+    const onFocusOut = (event) => {
+        focusInside = container.contains(event.relatedTarget);
+        syncAnimation();
+    };
+    const onKeyboardScroll = (event) => {
+        if (['ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) {
+            pauseForInteraction();
+        }
+    };
+    const onVisibilityChange = () => syncAnimation();
+    const onMotionChange = () => {
+        buildCopies(true);
+        syncAnimation();
+    };
+    const onResize = () => {
+        win.clearTimeout(resizeTimer);
+        resizeTimer = win.setTimeout(() => {
+            if (!container.isConnected) {
+                destroyPopularCarousel(container);
+                return;
+            }
+            buildCopies(true);
+            syncAnimation();
+        }, 100);
+    };
+
+    container.setAttribute('tabindex', '0');
+    container.setAttribute('role', 'region');
+    container.setAttribute('aria-label', 'Trending products in Nigeria');
+    try {
+        pointerInside = container.matches(':hover');
+    } catch (_) {
+        pointerInside = false;
+    }
+    buildCopies();
+
+    addListener(container, 'pointerenter', onPointerEnter);
+    addListener(container, 'pointerleave', onPointerLeave);
+    addListener(container, 'focusin', onFocusIn);
+    addListener(container, 'focusout', onFocusOut);
+    addListener(container, 'keydown', onKeyboardScroll);
+    addListener(container, 'wheel', pauseForInteraction, { passive: true });
+    addListener(container, 'touchstart', pauseForInteraction, { passive: true });
+    addListener(container, 'touchmove', pauseForInteraction, { passive: true });
+    addListener(container, 'touchend', pauseForInteraction, { passive: true });
+    addListener(container, 'pointerdown', pauseForInteraction);
+    addListener(container, 'pointerup', pauseForInteraction);
+    addListener(doc, 'visibilitychange', onVisibilityChange);
+    addListener(win, 'resize', onResize);
+    if (motionPreference?.addEventListener) {
+        addListener(motionPreference, 'change', onMotionChange);
+    } else if (motionPreference?.addListener) {
+        motionPreference.addListener(onMotionChange);
+        listenerRecords.push({ target: motionPreference, type: 'change', handler: onMotionChange, legacyMedia: true });
+    }
+
+    if (typeof win.MutationObserver === 'function' && doc.documentElement) {
+        removalObserver = new win.MutationObserver(() => {
+            if (!container.isConnected) destroyPopularCarousel(container);
+        });
+        removalObserver.observe(doc.documentElement, { childList: true, subtree: true });
+    }
+
+    const controller = {
+        destroy() {
+            if (destroyed) return;
+            destroyed = true;
+            stopFrame();
+            win.clearTimeout(interactionTimer);
+            win.clearTimeout(resizeTimer);
+            removalObserver?.disconnect();
+            listenerRecords.forEach(({ target, type, handler, options, legacyMedia }) => {
+                if (legacyMedia) target.removeListener(handler);
+                else target.removeEventListener(type, handler, options);
+            });
+            removeCopies();
+            Object.entries(priorAttributes).forEach(([name, value]) => {
+                if (value === null) container.removeAttribute(name);
+                else container.setAttribute(name, value);
+            });
+        }
+    };
+    popularCarouselControllers.set(container, controller);
+    syncAnimation();
+}
+
+window.PopularCarousel = {
+    mount: mountPopularCarousel,
+    destroy: destroyPopularCarousel
+};
 
 /* ── You May Like (live Supabase products only) ───────────────────── */
 

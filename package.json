@@ -14,6 +14,7 @@
     "test:manual-payments": "node scripts/manual-payment-safety.test.mjs",
     "test:category-images": "node scripts/category-subcategory-images.test.mjs",
     "test:domain-routing": "node scripts/domain-routing.test.mjs",
+    "test:trending-carousel": "node scripts/trending-carousel.test.mjs",
     "test:phone-verification": "node scripts/phone-verification.test.mjs",
     "auth:browser": "node scripts/authenticated-browser.mjs",
     "auth:seller:acceptance": "node scripts/authenticated-browser.mjs --seller-acceptance",
