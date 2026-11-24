@@ -760,9 +760,12 @@
         byId('phoneVerificationEnabled').checked = settings.enabled === true;
         byId('phoneVerificationMode').textContent = settings.mode || (settings.enabled ? 'Enabled' : 'Disabled');
         byId('phoneVerificationProviderStatus').textContent = settings.providerStatus || 'Not configured';
+        byId('phoneVerificationProviderValidation').textContent = settings.providerValidation || 'Not checked';
         byId('phoneVerificationMediaAccess').textContent = settings.mediaAccessStatus || 'Unavailable';
         byId('phoneVerificationReadiness').textContent = settings.configurationReady
-            ? (settings.enabled ? 'Active configuration verified' : 'Ready to activate')
+            ? (settings.enabled
+                ? 'Active configuration validated'
+                : 'Secrets present; Termii will be checked on activation')
             : 'Not ready — check Supabase bucket access and Termii Function secrets';
         byId('savePhoneVerificationSettings').disabled = byId('phoneVerificationEnabled').checked
             && settings.configurationReady !== true
@@ -797,6 +800,7 @@
             message.hidden = false;
             byId('phoneVerificationReadiness').textContent = 'Unavailable';
             byId('phoneVerificationProviderStatus').textContent = 'Unavailable';
+            byId('phoneVerificationProviderValidation').textContent = 'Unavailable';
             byId('phoneVerificationMode').textContent = 'Unavailable';
             byId('phoneVerificationMediaAccess').textContent = 'Unavailable';
             byId('savePhoneVerificationSettings').disabled = true;

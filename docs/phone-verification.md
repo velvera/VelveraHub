@@ -4,7 +4,9 @@ Phone verification is optional, server-enforced, and **disabled by default**.
 While disabled, the buyer and seller flows keep their existing email/password,
 email-confirmation, publishing, and moderation behavior. No OTP is sent. Admins
 can enable or disable it in the VelveraHub admin panel without redeploying any
-website or Edge Function.
+website or Edge Function. While disabled, the panel checks whether Termii
+secrets are present but makes no Termii requests; it validates the API key and
+approved Sender ID only when an administrator attempts activation.
 
 ## Install
 
@@ -37,10 +39,12 @@ website or Edge Function.
 
 The feature remains off until an authorized administrator enables it. Turning
 it off preserves phone records and verification status and stops new OTP
-requests before attempting to restore public product-media access. If enabling
-fails, the previous bucket state is restored where possible. If turning off
-succeeds but Storage cannot restore or confirm public media access, the admin
-panel reports the repair needed while the feature remains disabled.
+requests before restoring each product-media bucket to the exact public/private
+state it had before activation. If enabling fails, the previous bucket state is
+restored where possible. If turning off succeeds but Storage cannot restore the
+saved state, the admin panel reports the repair needed while the feature remains
+disabled. Saving the disabled setting before the first activation does not
+change either bucket.
 
 ## Behavior and security
 
@@ -68,6 +72,9 @@ panel reports the repair needed while the feature remains disabled.
 - The admin control requires an authenticated account whose server-side
   profile role is `admin`. Direct browser writes to the global setting and
   verification state are revoked.
+- Before the first activation, both Storage buckets remain untouched. On
+  activation their prior public/private modes are saved and restored exactly
+  when the feature is disabled.
 
 ## Verification
 

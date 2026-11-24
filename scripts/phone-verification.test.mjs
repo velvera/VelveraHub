@@ -15,15 +15,20 @@ function createHarness(options = {}) {
     const state = {
         enabled: options.enabled === true,
         roleByToken: { 'admin-token': 'admin', 'user-token': 'seller' },
-        media: { 'product-images': true, 'product-videos': true },
+        media: { 'product-images': true, 'product-videos': true, ...(options.media || {}) },
+        restoreMedia: options.restoreMedia
+            || (options.enabled ? { 'product-images': true, 'product-videos': true } : null),
         profilePhones: new Set(options.profilePhones || []),
         challenge: null,
         now: 1_000_000,
         sends: 0,
         verifies: 0,
+        termiiChecks: 0,
         lastSms: null,
         failMediaBucket: '',
         failSettingsWrite: false,
+        disableAfterReserve: options.disableAfterReserve === true,
+        disableAfterAttempt: options.disableAfterAttempt === true,
         termiiSenderStatus: options.termiiSenderStatus || 'active',
         termiiBalanceAvailable: options.termiiBalanceAvailable !== false,
         otpResult: 'wrong',
@@ -54,6 +59,12 @@ function createHarness(options = {}) {
             switch (rpcMatch[1]) {
                 case 'get_phone_verification_enabled':
                     return json(state.enabled);
+                case 'get_phone_verification_media_restore_state':
+                    return json({
+                        saved: Boolean(state.restoreMedia),
+                        product_images_public: state.restoreMedia?.['product-images'] ?? null,
+                        product_videos_public: state.restoreMedia?.['product-videos'] ?? null
+                    });
                 case 'current_profile_role': {
                     const token = (headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
                     return json(state.roleByToken[token] || null);
@@ -80,6 +91,7 @@ function createHarness(options = {}) {
                         attempts: 0,
                         pinId: null
                     };
+                    if (state.disableAfterReserve) state.enabled = false;
                     return json({ ok: true, expires_in_seconds: 300, resend_after_seconds: 60 });
                 }
                 case 'phone_verification_store_pin':
@@ -94,6 +106,7 @@ function createHarness(options = {}) {
                     if (challenge.expiresAt <= state.now) return json({ ok: false, code: 'expired' });
                     if (challenge.attempts >= 5) return json({ ok: false, code: 'attempts_exceeded' });
                     challenge.attempts += 1;
+                    if (state.disableAfterAttempt) state.enabled = false;
                     return json({
                         ok: true,
                         pin_id: challenge.pinId,
@@ -111,8 +124,20 @@ function createHarness(options = {}) {
                     return json(true);
                 case 'admin_update_phone_verification':
                     if (state.failSettingsWrite) return json({ message: 'write failed' }, 500);
+                    if (body.p_enabled === true && !state.enabled) {
+                        state.restoreMedia = {
+                            'product-images': body.p_product_images_public,
+                            'product-videos': body.p_product_videos_public
+                        };
+                    }
                     state.enabled = body.p_enabled === true;
-                    return json(true);
+                    return json({
+                        ok: true,
+                        enabled: state.enabled,
+                        media_state_saved: Boolean(state.restoreMedia),
+                        product_images_public: state.restoreMedia?.['product-images'] ?? null,
+                        product_videos_public: state.restoreMedia?.['product-videos'] ?? null
+                    });
                 default:
                     return json({ message: `Unexpected RPC ${rpcMatch[1]}` }, 404);
             }
@@ -139,13 +164,19 @@ function createHarness(options = {}) {
             if (state.otpResult === 'expired') return json({ verified: 'Expired' }, 400);
             return json({ verified: body.pin === '123456' && state.otpResult === 'correct' });
         }
-        if (url.includes('/api/get-balance')) return state.termiiBalanceAvailable
-            ? json({ balance: 100 })
-            : json({ message: 'invalid key' }, 401);
-        if (url.includes('/api/sender-id')) return json([{
-            sender_id: 'VELVERAHUB',
-            status: state.termiiSenderStatus
-        }]);
+        if (url.includes('/api/get-balance')) {
+            state.termiiChecks += 1;
+            return state.termiiBalanceAvailable
+                ? json({ balance: 100 })
+                : json({ message: 'invalid key' }, 401);
+        }
+        if (url.includes('/api/sender-id')) {
+            state.termiiChecks += 1;
+            return json([{
+                sender_id: 'VELVERAHUB',
+                status: state.termiiSenderStatus
+            }]);
+        }
 
         return json({ message: `Unexpected request ${method} ${url}` }, 404);
     };
@@ -225,6 +256,31 @@ test('resend cooldown is enforced before another SMS is sent', async () => {
     assert.equal(second.body.code, 'RESEND_COOLDOWN');
     assert.match(second.body.error, /60 seconds/i);
     assert.equal(state.sends, 1);
+});
+
+test('a mid-request deactivation blocks OTP send and verification calls to Termii', async () => {
+    const sending = createHarness({ enabled: true, disableAfterReserve: true });
+    const sendResult = await call(sending.handler, 'send_signup', {
+        phone: '0801 234 5678',
+        email: 'buyer@example.test'
+    });
+    assert.equal(sendResult.status, 409);
+    assert.equal(sendResult.body.code, 'PHONE_VERIFICATION_DISABLED');
+    assert.equal(sending.state.sends, 0);
+
+    const verifying = createHarness({ enabled: true, disableAfterAttempt: true });
+    await call(verifying.handler, 'send_signup', {
+        phone: '0801 234 5678',
+        email: 'buyer@example.test'
+    });
+    const verifyResult = await call(verifying.handler, 'verify_signup', {
+        phone: '0801 234 5678',
+        email: 'buyer@example.test',
+        code: '123456'
+    });
+    assert.equal(verifyResult.status, 409);
+    assert.equal(verifyResult.body.code, 'PHONE_VERIFICATION_DISABLED');
+    assert.equal(verifying.state.verifies, 0);
 });
 
 test('duplicate account phone numbers are rejected', async () => {
@@ -319,20 +375,23 @@ test('only an administrator can read or change the global setting', async () => 
     assert.equal(state.enabled, false);
 });
 
-test('admin status checks actual Termii and media configuration while disabled', async () => {
+test('disabled admin status reports secret presence without contacting Termii', async () => {
     const ready = createHarness();
     const status = await call(ready.handler, 'admin_status', {}, 'admin-token');
     assert.equal(status.status, 200);
     assert.equal(status.body.enabled, false);
     assert.equal(status.body.providerStatus, 'Configured');
     assert.equal(status.body.configurationReady, true);
-    assert.equal(status.body.mediaAccessStatus, 'Public');
+    assert.equal(status.body.mediaAccessStatus, 'Unchanged (Public)');
+    assert.equal(status.body.providerValidation, 'Will validate on activation');
+    assert.equal(ready.state.termiiChecks, 0);
 
     const invalid = createHarness({ termiiSenderStatus: 'pending' });
     const invalidStatus = await call(invalid.handler, 'admin_status', {}, 'admin-token');
     assert.equal(invalidStatus.status, 200);
     assert.equal(invalidStatus.body.providerStatus, 'Configured');
-    assert.equal(invalidStatus.body.configurationReady, false);
+    assert.equal(invalidStatus.body.configurationReady, true);
+    assert.equal(invalid.state.termiiChecks, 0);
 });
 
 test('activation validates Termii, privately configures media, and takes effect without redeploy', async () => {
@@ -342,7 +401,7 @@ test('activation validates Termii, privately configures media, and takes effect 
     assert.equal(state.enabled, true);
     assert.deepEqual(state.media, { 'product-images': false, 'product-videos': false });
     assert.equal(activated.body.configurationReady, true);
-    assert.equal(activated.body.mediaAccessStatus, 'Private');
+    assert.equal(activated.body.mediaAccessStatus, 'Private (eligible listings only)');
 
     const sent = await call(handler, 'send_signup', {
         phone: '0801 234 5678',
@@ -363,6 +422,16 @@ test('activation fails when Termii secrets are missing', async () => {
     assert.deepEqual(state.media, { 'product-images': true, 'product-videos': true });
 });
 
+test('activation validates the actual Termii Sender ID before changing settings', async () => {
+    const { handler, state } = createHarness({ termiiSenderStatus: 'pending' });
+    const result = await call(handler, 'admin_set', { enabled: true }, 'admin-token');
+    assert.equal(result.status, 503);
+    assert.equal(result.body.code, 'TERMII_SENDER_NOT_ACTIVE');
+    assert.equal(state.enabled, false);
+    assert.deepEqual(state.media, { 'product-images': true, 'product-videos': true });
+    assert.equal(state.sends, 0);
+});
+
 test('a partial media update rolls back to the exact previous bucket state', async () => {
     const { handler, state } = createHarness();
     state.failMediaBucket = 'product-videos';
@@ -381,7 +450,7 @@ test('a failed database toggle restores prior media access and keeps the setting
     assert.deepEqual(state.media, { 'product-images': true, 'product-videos': true });
 });
 
-test('deactivation restores public media, stops OTPs, and retains verification records', async () => {
+test('deactivation restores the saved media modes, stops OTPs, and retains verification records', async () => {
     const { handler, state } = createHarness({ enabled: true });
     state.media = { 'product-images': false, 'product-videos': false };
     state.challenge = { phone: '+2348012345678', signupTicket: 'preserved-ticket' };
@@ -394,6 +463,7 @@ test('deactivation restores public media, stops OTPs, and retains verification r
     assert.equal(send.status, 409);
     assert.equal(send.body.code, 'PHONE_VERIFICATION_DISABLED');
     assert.equal(state.sends, 0);
+    assert.equal(state.termiiChecks, 0);
 });
 
 test('failed deactivation restores private media and leaves server enforcement enabled', async () => {
@@ -406,6 +476,34 @@ test('failed deactivation restores private media and leaves server enforcement e
     assert.deepEqual(state.media, { 'product-images': false, 'product-videos': false });
 });
 
+test('activation and deactivation preserve originally private and mixed media settings', async () => {
+    for (const original of [
+        { 'product-images': false, 'product-videos': false },
+        { 'product-images': true, 'product-videos': false }
+    ]) {
+        const { handler, state } = createHarness({ media: original });
+        const activated = await call(handler, 'admin_set', { enabled: true }, 'admin-token');
+        assert.equal(activated.status, 200);
+        assert.deepEqual(state.media, { 'product-images': false, 'product-videos': false });
+        assert.deepEqual(state.restoreMedia, original);
+
+        const disabled = await call(handler, 'admin_set', { enabled: false }, 'admin-token');
+        assert.equal(disabled.status, 200);
+        assert.deepEqual(state.media, original);
+        assert.match(disabled.body.mediaAccessStatus, /Restored/);
+    }
+});
+
+test('saving disabled mode without a prior activation does not change media access', async () => {
+    const original = { 'product-images': false, 'product-videos': true };
+    const { handler, state } = createHarness({ media: original });
+    const result = await call(handler, 'admin_set', { enabled: false }, 'admin-token');
+    assert.equal(result.status, 200);
+    assert.equal(state.enabled, false);
+    assert.deepEqual(state.media, original);
+    assert.equal(state.restoreMedia, null);
+});
+
 test('deactivation stops OTPs even when product media cannot be made public', async () => {
     const { handler, state } = createHarness({ enabled: true });
     state.media = { 'product-images': false, 'product-videos': false };
@@ -416,7 +514,7 @@ test('deactivation stops OTPs even when product media cannot be made public', as
     assert.equal(result.body.configurationReady, false);
     assert.equal(result.body.mediaAccessStatus, 'Needs attention');
     assert.match(result.body.warning, /new OTPs have stopped/i);
-    assert.match(result.body.warning, /could not be confirmed or restored/i);
+    assert.match(result.body.warning, /could not be restored/i);
     assert.equal(state.enabled, false);
 
     const blocked = await call(handler, 'send_signup', {
@@ -431,9 +529,11 @@ test('migration and browser wiring keep disabled state invisible and server-owne
     const read = (path) => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
     const migration = read('database/phone-verification.sql');
     assert.match(migration, /phone_verification_enabled BOOLEAN NOT NULL DEFAULT FALSE/i);
+    assert.match(migration, /phone_verification_restore_product_images_public BOOLEAN/i);
+    assert.match(migration, /phone_verification_restore_product_videos_public BOOLEAN/i);
     assert.match(migration, /CREATE UNIQUE INDEX IF NOT EXISTS profiles_phone_e164_unique/i);
     assert.match(migration, /phone_verification_challenges ENABLE ROW LEVEL SECURITY/i);
-    assert.match(migration, /REVOKE ALL ON FUNCTION public\.admin_update_phone_verification\(BOOLEAN\) FROM PUBLIC, anon, authenticated/i);
+    assert.match(migration, /REVOKE ALL ON FUNCTION public\.admin_update_phone_verification\(BOOLEAN, BOOLEAN, BOOLEAN\) FROM PUBLIC, anon, authenticated/i);
     assert.match(migration, /CREATE TRIGGER enforce_phone_verification_before_publish/i);
     assert.match(migration, /phone_verification_product_media_is_public/i);
     assert.match(migration, /product_row\.status IS DISTINCT FROM 'active'/i);
@@ -442,6 +542,8 @@ test('migration and browser wiring keep disabled state invisible and server-owne
     assert.match(migration, /profile\.phone_verified IS TRUE/i);
     assert.match(migration, /auth_user\.email_confirmed_at IS NOT NULL/i);
     assert.match(migration, /shop\.verified IS TRUE/i);
+    assert.match(migration, /ELSIF NEW\.phone IS DISTINCT FROM OLD\.phone THEN/i);
+    assert.match(migration, /NEW\.phone_verified := FALSE;/i);
     assert.match(migration, /IF NOT feature_enabled THEN\s+RETURN FALSE;\s+END IF;/i);
     const roots = [
         ['assets/js/services/phone-verification.js', 'assets/js/services/auth.js', 'veeve/account.html'],
@@ -461,6 +563,14 @@ test('migration and browser wiring keep disabled state invisible and server-owne
             assert.match(page, /id="accountPhoneVerification" hidden/, pagePath);
         }
     }
+
+    const adminSource = read('admin-workspace/admin.js');
+    const adminGenerated = read('velverahub-admin/admin.js');
+    const adminPage = read('admin-workspace/index.html');
+    assert.equal(adminGenerated, adminSource, 'generated admin dashboard must include the source settings controls');
+    assert.match(adminSource, /loadPhoneVerificationSettings/);
+    assert.match(adminPage, /id="phoneVerificationSettingsTab"/);
+    assert.match(adminPage, /id="phoneVerificationProviderValidation"/);
 
     const listingRoots = [
         ['.', 'veeve/sell.html'],

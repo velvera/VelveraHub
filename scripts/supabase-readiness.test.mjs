@@ -91,7 +91,7 @@ assert.match(phoneVerificationMigration, /enforce_phone_verification_signup/i);
 assert.match(phoneVerificationMigration, /enforce_phone_verification_before_publish/i);
 assert.match(phoneVerificationMigration, /phone_verification_product_is_public/i);
 assert.match(phoneVerificationMigration, /phone_verification_product_media_is_public/i);
-assert.match(phoneVerificationMigration, /REVOKE ALL ON FUNCTION public\.admin_update_phone_verification\(BOOLEAN\) FROM PUBLIC, anon, authenticated/i);
+assert.match(phoneVerificationMigration, /REVOKE ALL ON FUNCTION public\.admin_update_phone_verification\(BOOLEAN, BOOLEAN, BOOLEAN\) FROM PUBLIC, anon, authenticated/i);
 assert.match(read('supabase/functions/phone-verification/core.mjs'), /await requireAdmin\(request\)/);
 assert.match(read('supabase/functions/phone-verification/core.mjs'), /TERMII_API_KEY/);
 assert.match(read('docs/phone-verification.md'), /TERMII_API_KEY/);

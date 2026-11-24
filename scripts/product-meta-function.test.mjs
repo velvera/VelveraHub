@@ -12,7 +12,12 @@ const anonKey = 'test-public-anon-key';
 const originalFetch = globalThis.fetch;
 const staticHtml = '<!doctype html><html><head><title>VelveraHub Product</title><meta name="description" content="Browse products"><meta property="og:type" content="website"><meta property="og:title" content="VelveraHub"><link rel="canonical" href="https://velverahub.com/veeve/product.html"></head><body><main id="productDetail">Listing</main></body></html>';
 
-function createContext(url, { method = 'GET', productRows = null, fetchError = false } = {}) {
+function createContext(url, {
+    method = 'GET',
+    productRows = null,
+    fetchError = false,
+    phoneVerificationEnabled = false
+} = {}) {
     const calls = [];
     const assetConfig = `const SUPABASE_URL = "${supabaseUrl}";\nconst SUPABASE_ANON_KEY = "${anonKey}";`;
     const staticResponse = () => new Response(staticHtml, {
@@ -52,6 +57,12 @@ function createContext(url, { method = 'GET', productRows = null, fetchError = f
                 headers: { 'content-type': 'application/json' }
             });
         }
+        if (requestUrl.pathname.endsWith('/rest/v1/rpc/get_phone_verification_enabled')) {
+            return new Response(JSON.stringify(phoneVerificationEnabled), {
+                status: 200,
+                headers: { 'content-type': 'application/json' }
+            });
+        }
         if (requestUrl.pathname.endsWith('/rest/v1/product_images')) {
             return new Response(JSON.stringify([{
                 url: `${supabaseUrl}/storage/v1/object/public/product-images/${productId}/cover.jpg`,
@@ -59,6 +70,14 @@ function createContext(url, { method = 'GET', productRows = null, fetchError = f
                 is_primary: true,
                 display_order: 0
             }]), {
+                status: 200,
+                headers: { 'content-type': 'application/json' }
+            });
+        }
+        if (requestUrl.pathname.includes('/storage/v1/object/sign/')) {
+            return new Response(JSON.stringify({
+                signedURL: `/object/sign/product-images/${productId}/cover.jpg?token=short-lived-test`
+            }), {
                 status: 200,
                 headers: { 'content-type': 'application/json' }
             });
@@ -84,12 +103,40 @@ try {
         assert.match(html, /property="product:price:amount" content="90000"/);
         assert.match(html, /property="product:price:currency" content="NGN"/);
         assert.match(html, /name="twitter:card" content="summary_large_image"/);
-        assert.equal(calls.length, 2);
+        assert.equal(calls.length, 3);
         assert.equal(calls[0].url.searchParams.get('status'), 'eq.active');
-        assert.equal(calls[0].url.searchParams.get('moderation_status'), 'eq.approved');
+        assert.equal(calls[0].url.searchParams.get('moderation_status'), null);
         assert.equal(calls[0].url.searchParams.get('stock'), 'gt.0');
         assert.equal(calls[0].init.headers.apikey, anonKey);
-        console.log('PASS product metadata uses active public catalogue fields, escapes content, and includes NG price and image');
+        console.log('PASS product metadata leaves public eligibility to RLS and includes NG price and image');
+    }
+
+    {
+        const { context, calls } = createContext(
+            `https://velverahub.com/veeve/product.html?id=${productId}`,
+            {
+                phoneVerificationEnabled: true,
+                productRows: [{
+                    id: productId,
+                    title: 'Verified Seller Listing',
+                    description: 'Visible before moderation approval',
+                    price: 100,
+                    category: 'Power',
+                    location: 'Ikeja',
+                    stock: 2,
+                    status: 'active',
+                    moderation_status: 'pending'
+                }]
+            }
+        );
+        const html = await (await onRequest(context)).text();
+        assert.match(html, /Verified Seller Listing - VelveraHub/);
+        assert.match(html, /property="og:image" content="https:\/\/catalogue\.example\.supabase\.co\/storage\/v1\/object\/sign\/product-images\//);
+        assert.match(html, /token=short-lived-test/);
+        const signingRequest = calls.find((call) => call.url.pathname.includes('/storage/v1/object/sign/'));
+        assert.ok(signingRequest, 'eligible private media should receive a signed anonymous URL');
+        assert.equal(JSON.parse(signingRequest.init.body).expiresIn, 3600);
+        console.log('PASS enabled mode enriches RLS-approved, not-yet-moderated listings with signed product images');
     }
 
     {

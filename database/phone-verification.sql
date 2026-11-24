@@ -6,7 +6,9 @@
 BEGIN;
 
 ALTER TABLE public.marketplace_settings
-    ADD COLUMN IF NOT EXISTS phone_verification_enabled BOOLEAN NOT NULL DEFAULT FALSE;
+    ADD COLUMN IF NOT EXISTS phone_verification_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS phone_verification_restore_product_images_public BOOLEAN,
+    ADD COLUMN IF NOT EXISTS phone_verification_restore_product_videos_public BOOLEAN;
 
 INSERT INTO public.marketplace_settings (id, product_image_limit, phone_verification_enabled)
 VALUES (1, 10, FALSE)
@@ -19,6 +21,17 @@ UPDATE public.marketplace_settings
    SET phone_verification_enabled = FALSE
  WHERE id = 1
    AND phone_verification_enabled IS NULL;
+
+-- Older installations of this feature enabled private buckets before storing
+-- their previous state. The base marketplace migration creates both buckets
+-- public, so use that original mode when upgrading an already-enabled install.
+UPDATE public.marketplace_settings
+   SET phone_verification_restore_product_images_public =
+           COALESCE(phone_verification_restore_product_images_public, TRUE),
+       phone_verification_restore_product_videos_public =
+           COALESCE(phone_verification_restore_product_videos_public, TRUE)
+ WHERE id = 1
+   AND phone_verification_enabled IS TRUE;
 
 ALTER TABLE public.profiles
     ADD COLUMN IF NOT EXISTS phone_e164 TEXT,
@@ -86,6 +99,38 @@ $function$;
 
 REVOKE ALL ON FUNCTION public.get_phone_verification_enabled() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_phone_verification_enabled() TO anon, authenticated, service_role;
+
+CREATE OR REPLACE FUNCTION public.get_phone_verification_media_restore_state()
+RETURNS JSONB
+LANGUAGE PLPGSQL
+SECURITY DEFINER
+SET search_path = ''
+SET row_security = off
+AS $function$
+DECLARE
+    image_public BOOLEAN;
+    video_public BOOLEAN;
+BEGIN
+    IF COALESCE(auth.role(), '') <> 'service_role' THEN
+        RAISE EXCEPTION 'Server access required' USING ERRCODE = '42501';
+    END IF;
+
+    SELECT settings.phone_verification_restore_product_images_public,
+           settings.phone_verification_restore_product_videos_public
+      INTO image_public, video_public
+      FROM public.marketplace_settings AS settings
+     WHERE settings.id = 1;
+
+    RETURN jsonb_build_object(
+        'saved', image_public IS NOT NULL AND video_public IS NOT NULL,
+        'product_images_public', image_public,
+        'product_videos_public', video_public
+    );
+END;
+$function$;
+
+REVOKE ALL ON FUNCTION public.get_phone_verification_media_restore_state() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.get_phone_verification_media_restore_state() TO service_role;
 
 CREATE OR REPLACE FUNCTION public.phone_verification_reserve(
     p_phone_e164 TEXT,
@@ -366,26 +411,67 @@ EXCEPTION
 END;
 $function$;
 
+DROP FUNCTION IF EXISTS public.admin_update_phone_verification(BOOLEAN);
 CREATE OR REPLACE FUNCTION public.admin_update_phone_verification(
-    p_enabled BOOLEAN
+    p_enabled BOOLEAN,
+    p_product_images_public BOOLEAN DEFAULT NULL,
+    p_product_videos_public BOOLEAN DEFAULT NULL
 )
-RETURNS BOOLEAN
+RETURNS JSONB
 LANGUAGE PLPGSQL
 SECURITY DEFINER
 SET search_path = ''
 SET row_security = off
 AS $function$
+DECLARE
+    was_enabled BOOLEAN;
+    image_public BOOLEAN;
+    video_public BOOLEAN;
 BEGIN
     -- This RPC is Edge-Function-only. That function verifies the actual
     -- administrator session and checks Termii configuration before enabling.
     IF COALESCE(auth.role(), '') <> 'service_role' THEN
         RAISE EXCEPTION 'Server access required' USING ERRCODE = '42501';
     END IF;
-    UPDATE public.marketplace_settings
-       SET phone_verification_enabled = COALESCE(p_enabled, FALSE),
-           updated_at = now()
-     WHERE id = 1;
-    RETURN FOUND;
+
+    SELECT settings.phone_verification_enabled,
+           settings.phone_verification_restore_product_images_public,
+           settings.phone_verification_restore_product_videos_public
+      INTO was_enabled, image_public, video_public
+      FROM public.marketplace_settings AS settings
+     WHERE settings.id = 1
+     FOR UPDATE;
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('ok', FALSE, 'code', 'settings_not_found');
+    END IF;
+
+    IF COALESCE(p_enabled, FALSE) THEN
+        IF NOT was_enabled AND (p_product_images_public IS NULL OR p_product_videos_public IS NULL) THEN
+            RAISE EXCEPTION 'Original product-media settings are required before activation'
+                USING ERRCODE = '22023';
+        END IF;
+        UPDATE public.marketplace_settings
+           SET phone_verification_enabled = TRUE,
+               phone_verification_restore_product_images_public =
+                   CASE WHEN was_enabled THEN image_public ELSE p_product_images_public END,
+               phone_verification_restore_product_videos_public =
+                   CASE WHEN was_enabled THEN video_public ELSE p_product_videos_public END,
+               updated_at = now()
+         WHERE id = 1;
+    ELSE
+        UPDATE public.marketplace_settings
+           SET phone_verification_enabled = FALSE,
+               updated_at = now()
+         WHERE id = 1;
+    END IF;
+
+    RETURN jsonb_build_object(
+        'ok', TRUE,
+        'enabled', COALESCE(p_enabled, FALSE),
+        'media_state_saved', image_public IS NOT NULL AND video_public IS NOT NULL,
+        'product_images_public', image_public,
+        'product_videos_public', video_public
+    );
 END;
 $function$;
 
@@ -394,13 +480,13 @@ REVOKE ALL ON FUNCTION public.phone_verification_store_pin(TEXT, TEXT, UUID, TEX
 REVOKE ALL ON FUNCTION public.phone_verification_begin_attempt(TEXT, TEXT, UUID) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.phone_verification_complete_signup(TEXT, TEXT, TEXT) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.phone_verification_complete_update(TEXT, UUID) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.admin_update_phone_verification(BOOLEAN) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.admin_update_phone_verification(BOOLEAN, BOOLEAN, BOOLEAN) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.phone_verification_reserve(TEXT, TEXT, UUID) TO service_role;
 GRANT EXECUTE ON FUNCTION public.phone_verification_store_pin(TEXT, TEXT, UUID, TEXT) TO service_role;
 GRANT EXECUTE ON FUNCTION public.phone_verification_begin_attempt(TEXT, TEXT, UUID) TO service_role;
 GRANT EXECUTE ON FUNCTION public.phone_verification_complete_signup(TEXT, TEXT, TEXT) TO service_role;
 GRANT EXECUTE ON FUNCTION public.phone_verification_complete_update(TEXT, UUID) TO service_role;
-GRANT EXECUTE ON FUNCTION public.admin_update_phone_verification(BOOLEAN) TO service_role;
+GRANT EXECUTE ON FUNCTION public.admin_update_phone_verification(BOOLEAN, BOOLEAN, BOOLEAN) TO service_role;
 
 -- Supabase Auth signup tickets are single-use, short-lived, bound to the
 -- normalized email and phone, and stripped before auth metadata is persisted.
@@ -531,10 +617,24 @@ AS $$
 BEGIN
     IF COALESCE(auth.role(), '') <> 'service_role' THEN
         IF auth.uid() IS NOT NULL THEN
-            NEW.phone := OLD.phone;
-            NEW.phone_e164 := OLD.phone_e164;
-            NEW.phone_verified := OLD.phone_verified;
-            NEW.phone_verified_at := OLD.phone_verified_at;
+            IF public.get_phone_verification_enabled() THEN
+                -- Once the feature is active, a number can only be changed by
+                -- the trusted OTP function.
+                NEW.phone := OLD.phone;
+                NEW.phone_e164 := OLD.phone_e164;
+                NEW.phone_verified := OLD.phone_verified;
+                NEW.phone_verified_at := OLD.phone_verified_at;
+            ELSIF NEW.phone IS DISTINCT FROM OLD.phone THEN
+                -- Keep legacy phone editing available while disabled, but do
+                -- not carry a verification proof over to a different number.
+                NEW.phone_e164 := NULL;
+                NEW.phone_verified := FALSE;
+                NEW.phone_verified_at := NULL;
+            ELSE
+                NEW.phone_e164 := OLD.phone_e164;
+                NEW.phone_verified := OLD.phone_verified;
+                NEW.phone_verified_at := OLD.phone_verified_at;
+            END IF;
         END IF;
 
         IF public.current_profile_role() IS DISTINCT FROM 'admin' THEN
