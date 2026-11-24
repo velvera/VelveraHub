@@ -678,7 +678,21 @@ BEGIN
      WHERE product.id = p_product_id;
     IF NOT FOUND
        OR product_row.status IS DISTINCT FROM 'active'
-       OR product_row.moderation_status = 'rejected' THEN
+       OR product_row.moderation_status = 'rejected'
+       OR COALESCE(product_row.stock, 0) <= 0 THEN
+        RETURN FALSE;
+    END IF;
+
+    -- Preserve the existing public product policy while disabled: shop
+    -- listings must still belong to an active shop, and listings must have
+    -- stock. The feature must not broaden or narrow the old public catalog.
+    IF product_row.listing_type = 'shop'
+       AND NOT EXISTS (
+           SELECT 1
+             FROM public.shops AS shop
+            WHERE shop.id = product_row.shop_id
+              AND shop.status = 'active'
+       ) THEN
         RETURN FALSE;
     END IF;
 
@@ -694,8 +708,7 @@ BEGIN
     -- A shop listing still needs the existing KYC approval. Independent
     -- seller listings can become public as soon as email and phone are
     -- verified.
-    IF product_row.shop_id IS NOT NULL
-       THEN
+    IF product_row.listing_type = 'shop' THEN
         RETURN EXISTS (
             SELECT 1
               FROM public.shops AS shop
@@ -754,19 +767,27 @@ SECURITY DEFINER
 SET search_path = ''
 SET row_security = off
 AS $function$
-    SELECT public.phone_verification_product_is_public(p_product_id)
-       AND NOT EXISTS (
+    SELECT CASE
+        -- Preserve the existing product-image row policy while disabled.
+        -- This deliberately does not impose the product-list stock filter.
+        WHEN NOT public.get_phone_verification_enabled() THEN EXISTS (
             SELECT 1
               FROM public.products AS product
              WHERE product.id = p_product_id
-               AND product.listing_type = 'shop'
-               AND NOT EXISTS (
-                    SELECT 1
-                      FROM public.shops AS shop
-                     WHERE shop.id = product.shop_id
-                       AND shop.status = 'active'
+               AND product.status = 'active'
+               AND product.moderation_status = 'approved'
+               AND (
+                   product.listing_type <> 'shop'
+                   OR EXISTS (
+                       SELECT 1
+                         FROM public.shops AS shop
+                        WHERE shop.id = product.shop_id
+                          AND shop.status = 'active'
+                   )
                )
-       )
+        )
+        ELSE public.phone_verification_product_is_public(p_product_id)
+    END
 $function$;
 
 REVOKE ALL ON FUNCTION public.phone_verification_product_is_public(UUID) FROM PUBLIC;
@@ -796,6 +817,9 @@ ON storage.objects FOR SELECT
 TO anon, authenticated
 USING (
     bucket_id IN ('product-images', 'product-videos')
+    -- Private buckets must not become publicly readable again after
+    -- deactivation. Public buckets continue serving known URLs on their own.
+    AND public.get_phone_verification_enabled()
     AND CASE
         WHEN pg_catalog.split_part(name, '/', 1) ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
         THEN public.phone_verification_product_media_is_public(
@@ -826,13 +850,23 @@ ON public.seller_public_contacts FOR SELECT
 TO anon, authenticated
 USING (
     is_public
-    AND EXISTS (
-        SELECT 1
-          FROM public.products AS product
-         WHERE product.seller_id = seller_public_contacts.seller_id
-           AND product.shop_id IS NULL
-           AND public.phone_verification_product_is_public(product.id)
-    )
+    AND CASE
+        -- Keep the pre-feature contact visibility unchanged while disabled.
+        WHEN NOT public.get_phone_verification_enabled() THEN EXISTS (
+            SELECT 1
+              FROM public.products AS product
+             WHERE product.seller_id = seller_public_contacts.seller_id
+               AND product.shop_id IS NULL
+               AND product.status = 'active'
+        )
+        ELSE EXISTS (
+            SELECT 1
+              FROM public.products AS product
+             WHERE product.seller_id = seller_public_contacts.seller_id
+               AND product.shop_id IS NULL
+               AND public.phone_verification_product_is_public(product.id)
+        )
+    END
 );
 
 CREATE OR REPLACE FUNCTION public.enforce_phone_verification_before_publish()

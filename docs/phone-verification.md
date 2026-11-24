@@ -68,7 +68,9 @@ change either bucket.
 - Eligible active listings from email-confirmed, phone-verified independent
   sellers can be publicly read with their media. Existing approved listings
   and active KYC-verified shop listings remain public. Inactive, rejected, and
-  ineligible listings remain private.
+  ineligible listings remain private. Existing stock and active-shop visibility
+  rules continue to apply, and the migration preserves public seller-contact
+  visibility while the feature is disabled.
 - The admin control requires an authenticated account whose server-side
   profile role is `admin`. Direct browser writes to the global setting and
   verification state are revoked.
