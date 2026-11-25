@@ -735,7 +735,6 @@ async function assertSellerListingPublish(page, root, width) {
                 return {
                     data: {
                         product_image_limit: 10,
-                        student_listing_media_limit: 10,
                         product_image_max_bytes: 41943040,
                         product_video_max_bytes: 41943040,
                     },
@@ -834,7 +833,7 @@ async function assertSellerListingPublish(page, root, width) {
         document.querySelector('#listingStatus')?.textContent.includes('Your listing was submitted for review') ||
         document.querySelector('#listingStatus')?.textContent.length > 0
     ).catch(async (error) => {
-        const formState = await page.locator('#studentListingForm').evaluate((form) => ({
+        const formState = await page.locator('#listingForm').evaluate((form) => ({
             valid: form.checkValidity(),
             invalidFields: [...form.elements]
                 .filter((element) => element.willValidate && !element.checkValidity())
@@ -1109,16 +1108,19 @@ async function assertProductActionRow(page, root, width) {
     await target.waitFor({ state: 'attached' });
     await target.evaluate((node) => {
         node.innerHTML = `
+            <section class="product-gallery" aria-label="Product media">
+                <div class="product-detail-image" aria-hidden="true"></div>
+                <button class="product-share-button" id="shareProductButton" type="button" aria-label="Share product link" title="Share product link"><i aria-hidden="true"></i></button>
+            </section>
             <section class="product-detail-copy">
                 <div class="product-detail-title-row">
                     <div class="product-detail-title-copy"><p class="eyebrow">Test listing</p><h1>Solar Power Generator for Mobile Share Test</h1></div>
-                    <button class="product-share-button" id="shareProductButton" type="button" aria-label="Copy product link" title="Copy product link"><i aria-hidden="true"></i><span data-share-label>Share</span></button>
                 </div>
                 <span id="productShareStatus" role="status" aria-live="polite"></span>
                 <div class="product-action-row">
                     <label class="quantity-control">Qty <input type="number" value="1" aria-label="Quantity"></label>
                     <button class="btn btn-primary" type="button"><i aria-hidden="true"></i><span>Add to cart</span></button>
-                    <button class="btn btn-secondary" type="button"><i aria-hidden="true"></i><span>Save</span></button>
+                    <button class="btn btn-secondary product-save-button" type="button" aria-label="Save product" title="Save product" aria-pressed="false"><i aria-hidden="true"></i></button>
                 </div>
             </section>`;
         Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined });
@@ -1148,24 +1150,29 @@ async function assertProductActionRow(page, root, width) {
             { title: product.title, text: '₦90,000', url: shareUrl }
         );
     });
-    const shareLayout = await page.locator('.product-detail-title-row').evaluate((row) => {
-        const rowRect = row.getBoundingClientRect();
-        const button = row.querySelector('#shareProductButton');
+    const shareLayout = await page.locator('.product-gallery').evaluate((gallery) => {
+        const galleryRect = gallery.getBoundingClientRect();
+        const button = gallery.querySelector('#shareProductButton');
         const buttonRect = button.getBoundingClientRect();
         return {
-            rowLeft: rowRect.left,
-            rowRight: rowRect.right,
+            galleryLeft: galleryRect.left,
+            galleryRight: galleryRect.right,
+            galleryTop: galleryRect.top,
             buttonLeft: buttonRect.left,
             buttonRight: buttonRect.right,
+            buttonTop: buttonRect.top,
             buttonWidth: buttonRect.width,
             buttonHeight: buttonRect.height,
-            buttonText: button.innerText.trim()
+            buttonText: button.innerText.trim(),
+            topOffset: buttonRect.top - galleryRect.top,
+            rightOffset: galleryRect.right - buttonRect.right
         };
     });
-    if (shareLayout.buttonWidth < 72 || shareLayout.buttonHeight < 40 ||
-        shareLayout.rowLeft < 0 || shareLayout.rowRight > width + 1 ||
-        shareLayout.buttonLeft < shareLayout.rowLeft || shareLayout.buttonRight > shareLayout.rowRight) {
-        throw new Error(`${root.name} ${width}px product share control is clipped or unusable`);
+    if (shareLayout.buttonWidth < 40 || shareLayout.buttonHeight < 40 ||
+        shareLayout.galleryLeft < 0 || shareLayout.galleryRight > width + 1 ||
+        shareLayout.buttonLeft < shareLayout.galleryLeft || shareLayout.buttonRight > shareLayout.galleryRight ||
+        shareLayout.topOffset > 24 || shareLayout.rightOffset > 24 || shareLayout.buttonText) {
+        throw new Error(`${root.name} ${width}px product share icon is not icon-only at the gallery's top-right`);
     }
     await page.locator('#shareProductButton').click();
     await page.waitForFunction(() => window.__mobileCopiedUrl && document.getElementById('productShareStatus')?.textContent.includes('copied'));
@@ -1185,7 +1192,14 @@ async function assertProductActionRow(page, root, width) {
         const rowRect = row.getBoundingClientRect();
         const controls = [...row.children].map((control) => {
             const rect = control.getBoundingClientRect();
-            return { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right, width: rect.width };
+            return {
+                top: rect.top,
+                bottom: rect.bottom,
+                left: rect.left,
+                right: rect.right,
+                width: rect.width,
+                text: control.classList.contains('product-save-button') ? control.innerText.trim() : undefined
+            };
         });
         return {
             rowWidth: rowRect.width,
@@ -1194,7 +1208,7 @@ async function assertProductActionRow(page, root, width) {
             controls,
         };
     });
-    if (layout.controls.length !== 3 ||
+    if (layout.controls.length !== 3 || layout.controls[2].text !== '' ||
         layout.controls.some((control) => control.width < 40 || Math.abs(control.top - layout.controls[0].top) > 1.5 ||
             Math.abs(control.bottom - layout.controls[0].bottom) > 1.5 || control.left < 0 ||
             control.right > width + 1)) {
@@ -1202,6 +1216,29 @@ async function assertProductActionRow(page, root, width) {
     }
     if (layout.scrollWidth > layout.clientWidth + 1) {
         throw new Error(`${root.name} ${width}px product action row overflows horizontally`);
+    }
+    await page.locator('.related-products-grid').evaluate((grid) => {
+        grid.innerHTML = `
+            <article class="product-card" data-product-id="catalogue-layout-regression">
+                <div class="product-image"><img src="/img/product-placeholder.svg" alt=""></div>
+                <div class="product-info"><h3>Catalogue layout check</h3><strong>₦1,000</strong></div>
+            </article>`;
+    });
+    const catalogueLayout = await page.locator('.related-products-grid').evaluate((grid) => {
+        const gridRect = grid.getBoundingClientRect();
+        const cardRect = grid.querySelector('.product-card').getBoundingClientRect();
+        return {
+            gridWidth: gridRect.width,
+            gridScrollWidth: grid.scrollWidth,
+            cardWidth: cardRect.width,
+            cardRight: cardRect.right,
+            gridRight: gridRect.right
+        };
+    });
+    if (catalogueLayout.cardWidth < Math.min(200, catalogueLayout.gridWidth * .65) ||
+        catalogueLayout.gridScrollWidth > catalogueLayout.gridWidth + 1 ||
+        catalogueLayout.cardRight > catalogueLayout.gridRight + 1) {
+        throw new Error(`${root.name} ${width}px related catalogue card is narrow or overflows its section`);
     }
     pass(`${root.name} ${width}px product quantity/cart/save row`);
 }

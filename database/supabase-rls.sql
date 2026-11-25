@@ -796,7 +796,8 @@ USING (
 
 DROP POLICY IF EXISTS "students can upload listing videos" ON storage.objects;
 DROP POLICY IF EXISTS "sellers can upload listing videos" ON storage.objects;
-CREATE POLICY "sellers can upload listing videos"
+DROP POLICY IF EXISTS "owners can upload product videos" ON storage.objects;
+CREATE POLICY "owners can upload product videos"
 ON storage.objects FOR INSERT
 TO authenticated
 WITH CHECK (
@@ -804,14 +805,7 @@ WITH CHECK (
     AND EXISTS (
         SELECT 1 FROM public.products product
         WHERE product.id::text = (storage.foldername(name))[1]
-          AND (
-              product.seller_id = auth.uid()
-              OR EXISTS (
-                  SELECT 1 FROM public.profiles profile
-                  WHERE profile.id = product.seller_id
-                    AND profile.user_id = auth.uid()
-              )
-          )
+          AND public.can_manage_product_media(product.id)
     )
 );
 
@@ -847,8 +841,30 @@ WITH CHECK (
 DROP POLICY IF EXISTS "public can read product video objects" ON storage.objects;
 
 DROP POLICY IF EXISTS "students can delete listing videos" ON storage.objects;
+DROP POLICY IF EXISTS "owners can update product videos" ON storage.objects;
+CREATE POLICY "owners can update product videos"
+ON storage.objects FOR UPDATE
+TO authenticated
+USING (
+    bucket_id = 'product-videos'
+    AND EXISTS (
+        SELECT 1 FROM public.products product
+        WHERE product.id::text = (storage.foldername(name))[1]
+          AND public.can_manage_product_media(product.id)
+    )
+)
+WITH CHECK (
+    bucket_id = 'product-videos'
+    AND EXISTS (
+        SELECT 1 FROM public.products product
+        WHERE product.id::text = (storage.foldername(name))[1]
+          AND public.can_manage_product_media(product.id)
+    )
+);
+
 DROP POLICY IF EXISTS "sellers can manage listing videos" ON storage.objects;
-CREATE POLICY "sellers can manage listing videos"
+DROP POLICY IF EXISTS "owners can delete product videos" ON storage.objects;
+CREATE POLICY "owners can delete product videos"
 ON storage.objects FOR DELETE
 TO authenticated
 USING (
@@ -856,13 +872,6 @@ USING (
     AND EXISTS (
         SELECT 1 FROM public.products product
         WHERE product.id::text = (storage.foldername(name))[1]
-          AND (
-              product.seller_id = auth.uid()
-              OR EXISTS (
-                  SELECT 1 FROM public.profiles profile
-                  WHERE profile.id = product.seller_id
-                    AND profile.user_id = auth.uid()
-              )
-          )
+          AND public.can_manage_product_media(product.id)
     )
 );

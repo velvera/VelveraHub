@@ -11,7 +11,7 @@ the authenticated behavior tests.
    project reference with the production configuration without copying keys or
    tokens into notes, screenshots, or chat.
 2. Use dedicated disposable owner A, owner B, customer, and administrator
-   accounts. Create a student listing and products specifically for the test.
+   accounts. Create ordinary marketplace listings specifically for the test.
    Use synthetic names, addresses, and contact details.
 3. Keep staging credentials in the workspace’s secure secrets store. Never put
    service-role keys or bearer tokens in browser code, command arguments,
@@ -45,13 +45,12 @@ the authenticated behavior tests.
 
 Before applying migration 15 to staging, confirm the project's plan and global
 Storage file-size limit are at least 40 MiB (41,943,040 bytes). Then use the
-authenticated staging admin workspace to verify the defaults: 10 shop photos
-per product, 10 media files per independent listing, and 40 MiB per product
-photo or video. Original photos up to 40 MiB are compressed by the upload form.
-Temporarily set both listing counts to 7 and both size limits to 6 MiB; verify
-the admin form saves, both listing flows reflect the changed count, and Storage
-rejects objects above the selected size. Restore the defaults. MIME types must
-remain fixed regardless of these settings.
+authenticated staging admin workspace to verify the defaults: 10 photos or
+videos per listing and 40 MiB per individual file. Original photos up to 40 MiB
+are compressed by the upload form. Temporarily set the shared listing limit to
+7 and both size limits to 6 MiB; verify every listing form reflects the new
+count and Storage rejects objects above the selected size. Restore the defaults.
+MIME types must remain fixed regardless of these settings.
 
 ## Storage ownership, validation, and quota
 
@@ -74,7 +73,7 @@ as server-side content enforcement.
 | Standard upload boundary | Upload a valid file of exactly 6 MiB (6,291,456 bytes) | Accepted through the standard upload path |
 | Resumable upload | Upload a valid file one byte above 6 MiB and one close to 40 MiB | Accepted; TUS progress, retry, and resume work |
 | Cancel and recover | Cancel one upload, then separately interrupt and restore network access during TUS | Cancellation stops the upload; network recovery resumes the same upload without duplicate objects |
-| Concurrent quota | Owner A concurrently uploads eleven distinct valid media files to a fresh student listing | Exactly ten accepted at the default; at least one rejected |
+| Concurrent quota | Owner A concurrently uploads eleven distinct valid media files to a fresh listing | Exactly ten accepted at the default; at least one rejected |
 
 Capture only statuses and sanitized references. Delete successful test objects
 with owner A and confirm quota usage returns to its pre-test level. Do not use

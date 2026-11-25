@@ -1430,8 +1430,7 @@
     top: .75rem;
     right: .75rem;
     display: inline-grid;
-    align-items: center;
-    justify-content: center;
+    place-items: center;
     flex: 0 0 auto;
     width: 2.75rem;
     height: 2.75rem;

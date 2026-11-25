@@ -70,32 +70,10 @@
         ['authBusinessName', 'authBusinessState'].forEach((id) => $(id)?.toggleAttribute('required', isSeller));
     }
 
-    function syncInstitutionOptions() {
-        const stateSelect = $('authBusinessState');
-        const institutionSelect = $('authBusinessInstitution');
-        if (!stateSelect || !institutionSelect) return;
-
-        const state = stateSelect.value;
-        const previousValue = institutionSelect.value;
-        const institutions = state ? (window.CampusService?.getByState?.(state) || []) : [];
-        institutionSelect.innerHTML = [
-            '<option value="">No institution</option>',
-            ...institutions.map((institution) =>
-                `<option value="${window.CampusService.slugify(institution.name)}">${institution.name}</option>`
-            )
-        ].join('');
-        institutionSelect.value = institutions.some((institution) =>
-            window.CampusService.slugify(institution.name) === previousValue
-        ) ? previousValue : '';
-        institutionSelect.disabled = !state;
-        window.CustomSelect?.refresh?.(institutionSelect);
-    }
-
     async function init() {
         if (window.RegionService) {
             window.RegionService.appendLocationOptions($('authBusinessState'), false);
         }
-        syncInstitutionOptions();
         await window.AuthService?.init?.();
         if (window.AuthService?.isLoggedIn()) {
             redirectAfterAuth();
@@ -109,7 +87,6 @@
         document.querySelectorAll('input[name="accountType"]').forEach((input) => {
             input.addEventListener('change', syncSellerFields);
         });
-        $('authBusinessState')?.addEventListener('change', syncInstitutionOptions);
         syncSellerFields();
 
         $('authLoginForm')?.addEventListener('submit', async (event) => {
@@ -159,8 +136,7 @@
                         termsAccepted: form.elements.terms.checked,
                         businessName: form.businessName?.value.trim() || '',
                         businessPhone: form.businessPhone?.value.trim() || '',
-                        businessState: form.businessState?.value || '',
-                        businessInstitution: form.businessInstitution?.value || ''
+                        businessState: form.businessState?.value || ''
                     }
                 );
                 if (error) {

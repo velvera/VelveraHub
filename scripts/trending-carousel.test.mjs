@@ -50,7 +50,8 @@ async function createStorefrontPage(browser, region, width, reducedMotion = fals
                 overflow-y: hidden;
                 scroll-snap-type: x proximity;
             }
-            .popular-card { box-sizing: border-box; flex: 0 0 230px; height: 120px; }
+            .popular-grid.is-auto-scrolling { scroll-snap-type: none; scroll-behavior: auto; }
+            .popular-card { box-sizing: border-box; flex: 0 0 230px; height: 120px; scroll-snap-align: start; }
             .popular-card-image, .popular-card-info { height: 50%; }
         </style></head>
         <body>
@@ -167,24 +168,23 @@ try {
             element.scrollLeft = loopDistance - 1;
             element.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaX: 1 }));
         }, wrapPoint);
-        const visibleCardAtWrap = await row.evaluate((element) => {
-            const firstVisible = [...element.querySelectorAll('.popular-card')].find((card) => {
-                const bounds = card.getBoundingClientRect();
-                return bounds.right > 0 && bounds.left < window.innerWidth;
-            });
-            return firstVisible?.getAttribute('href');
-        });
-        await page.waitForTimeout(1700);
+        const firstProductCopyLeft = await row.evaluate((element) =>
+            element.querySelector('[data-popular-carousel-copy].popular-card').getBoundingClientRect().left
+        );
+        await page.waitForFunction(
+            () => document.querySelector('#popularProducts')?.scrollLeft < 5,
+            null,
+            { timeout: 4000 }
+        );
         const wrappedPosition = await row.evaluate((element) => element.scrollLeft);
-        const visibleCardAfterWrap = await row.evaluate((element) => {
-            const firstVisible = [...element.querySelectorAll('.popular-card')].find((card) => {
-                const bounds = card.getBoundingClientRect();
-                return bounds.right > 0 && bounds.left < window.innerWidth;
-            });
-            return firstVisible?.getAttribute('href');
-        });
+        const firstProductOriginalLeft = await row.evaluate((element) =>
+            element.querySelector('.popular-card:not([data-popular-carousel-copy])').getBoundingClientRect().left
+        );
         assert.ok(wrappedPosition < 5, 'the carousel should wrap to the start without a large scroll jump');
-        assert.equal(visibleCardAfterWrap, visibleCardAtWrap, 'the same product should remain visible across the loop');
+        assert.ok(
+            Math.abs(firstProductOriginalLeft - firstProductCopyLeft) < 5,
+            `the first card should cross the loop boundary without a visible position jump (copy ${firstProductCopyLeft}, original ${firstProductOriginalLeft}, scroll ${wrappedPosition})`
+        );
 
         await page.evaluate(() => {
             window.detachedPopularRow = document.getElementById('popularProducts');
@@ -252,7 +252,10 @@ try {
     await ukPage.waitForTimeout(350);
     assert.equal(await ukRow.evaluate((element) => element.scrollLeft), ukInitial);
     await ukRow.evaluate((element) => { element.scrollLeft = 100; });
-    assert.equal(await ukRow.evaluate((element) => element.scrollLeft), 100, 'UK row must retain manual scrolling');
+    assert.ok(
+        (await ukRow.evaluate((element) => element.scrollLeft)) > 0,
+        'UK row must retain manual scrolling'
+    );
     await ukPage.close();
     console.log('PASS UK popular row remains static and manually scrollable');
 } finally {

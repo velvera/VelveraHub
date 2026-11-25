@@ -35,8 +35,8 @@ code or run schema changes from a storefront.
 Before applying step 15 to any Supabase project, verify the project's actual
 plan and global Storage file-size limit in the dashboard. Both must support at
 least 40 MiB (41,943,040 bytes). The documented Free-plan maximum is not
-evidence of a target project's configured limit. Keep the 10-item listing
-quotas; the 40 MiB value is a per-file ceiling.
+evidence of a target project's configured limit. Keep the shared 10-file media
+limit for every listing; the 40 MiB value is a per-file ceiling.
 
 The order keeps the security helpers ahead of dashboard RPCs, checkout
 hardening ahead of shop-owner payment functions, verification before seller

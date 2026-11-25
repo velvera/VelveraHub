@@ -858,7 +858,7 @@ function authIdentityIds(user) {
 // API Routes
 app.post('/api/auth/register', async (req, res) => {
     try {
-        const { email, password, firstName, lastName, phone, accountType = 'customer', businessName = '', businessState = '', businessInstitution = '', ageConfirmed, termsAccepted } = req.body;
+        const { email, password, firstName, lastName, phone, accountType = 'customer', businessName = '', businessState = '', ageConfirmed, termsAccepted } = req.body;
         const normalizedEmail = String(email || '').trim().toLowerCase();
         if (!normalizedEmail || !password || String(password).length < 8) {
             return res.status(400).json({ error: 'Email and a password of at least 8 characters are required.' });
@@ -872,9 +872,9 @@ app.post('/api/auth/register', async (req, res) => {
         }
         const hashedPassword = await bcrypt.hash(password, 10);
         const result = await pool.query(
-            `INSERT INTO profiles (email, password_hash, first_name, last_name, phone, account_type, business_name, business_state, business_institution, role)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $6) RETURNING id, email, first_name, last_name, phone, account_type, business_name, business_state, business_institution, role`,
-            [normalizedEmail, hashedPassword, String(firstName || '').trim(), String(lastName || '').trim(), String(phone || '').trim(), accountType === 'seller' ? 'seller' : 'customer', String(businessName || '').trim(), String(businessState || '').trim(), String(businessInstitution || '').trim()]
+            `INSERT INTO profiles (email, password_hash, first_name, last_name, phone, account_type, business_name, business_state, role)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $6) RETURNING id, email, first_name, last_name, phone, account_type, business_name, business_state, role`,
+            [normalizedEmail, hashedPassword, String(firstName || '').trim(), String(lastName || '').trim(), String(phone || '').trim(), accountType === 'seller' ? 'seller' : 'customer', String(businessName || '').trim(), String(businessState || '').trim()]
         );
         const user = result.rows[0];
         const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '6h' });

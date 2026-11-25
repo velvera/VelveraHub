@@ -103,7 +103,7 @@ CREATE TABLE IF NOT EXISTS rental_contracts (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Curated campus directory. Admins can add institutions without changing
+-- Curated institution directory. Admins can add institutions without changing
 -- product URLs; school_slug is also stored on listings for fast filtering.
 CREATE TABLE IF NOT EXISTS schools (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -390,7 +390,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS orders_idempotency_key
     ON public.orders (idempotency_key)
     WHERE idempotency_key IS NOT NULL;
 
--- seller_id is the Supabase Auth UUID for new student and seller listings.
+-- seller_id is the Supabase Auth UUID for new marketplace listings.
 -- Existing profile-id values remain readable until they are migrated.
 CREATE UNIQUE INDEX IF NOT EXISTS profiles_user_id_key
     ON public.profiles (user_id)

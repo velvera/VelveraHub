@@ -101,7 +101,7 @@ const AuthService = {
         try {
             const { data: profile, error } = await supabase
                 .from('profiles')
-                .select('id, user_id, email, first_name, last_name, avatar_url, phone, phone_e164, phone_verified, phone_verified_at, role, business_name, business_state, business_institution')
+                .select('id, user_id, email, first_name, last_name, avatar_url, phone, phone_e164, phone_verified, phone_verified_at, role, business_name, business_state')
                 .or(`user_id.eq.${user.id},id.eq.${user.id}`)
                 .limit(1)
                 .maybeSingle();
@@ -343,7 +343,6 @@ const AuthService = {
                     accountType: userData.accountType || 'customer',
                     businessName: userData.businessName || '',
                     businessState: userData.businessState || '',
-                    businessInstitution: userData.businessInstitution || '',
                     ageConfirmed: userData.ageConfirmed === true,
                     termsAccepted: userData.termsAccepted === true
                 })

@@ -539,7 +539,7 @@ test('migration and browser wiring keep disabled state invisible and server-owne
     assert.match(migration, /product_row\.status IS DISTINCT FROM 'active'/i);
     assert.match(migration, /product_row\.moderation_status = 'rejected'/i);
     assert.match(migration, /COALESCE\(product_row\.stock, 0\) <= 0/i);
-    assert.match(migration, /product_row\.listing_type = 'shop'[\s\S]*?shop\.status = 'active'/i);
+    assert.match(migration, /product_row\.shop_id IS NOT NULL[\s\S]*?shop\.status = 'active'/i);
     assert.match(migration, /product_row\.moderation_status = 'approved'/i);
     assert.match(migration, /WHEN NOT public\.get_phone_verification_enabled\(\) THEN EXISTS[\s\S]*?product\.moderation_status = 'approved'/i);
     assert.match(migration, /AND public\.get_phone_verification_enabled\(\)\s+AND CASE[\s\S]*?phone_verification_product_media_is_public/i);
@@ -586,7 +586,7 @@ test('migration and browser wiring keep disabled state invisible and server-owne
         const page = read(pagePath);
         const listing = read(`${root === '.' ? '' : `${root}/`}assets/js/pages/student-listing.js`);
         assert.match(page, /services\/phone-verification\.js/, pagePath);
-        assert.match(listing, /PhoneVerification\.requireVerifiedPhone/, `${root} student listing`);
+        assert.match(listing, /PhoneVerification\.requireVerifiedPhone/, `${root} listing form`);
         const sellerPage = read(`${root === '.' ? '' : `${root}/`}assets/js/pages/seller-dashboard.js`);
         assert.match(sellerPage, /PhoneVerification\.requireVerifiedPhone/, `${root} seller dashboard`);
     }

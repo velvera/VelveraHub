@@ -14,7 +14,6 @@ SET row_security = off
 AS $function$
 DECLARE
     v_product_id UUID;
-    product_shop_id UUID;
     media_limit INTEGER;
     resulting_count INTEGER;
     counts_toward_quota BOOLEAN;
@@ -55,23 +54,12 @@ BEGIN
                 USING ERRCODE = '42501';
         END IF;
 
-        SELECT product.shop_id
-        INTO product_shop_id
-        FROM public.products AS product
-        WHERE product.id = v_product_id;
-
-        IF NEW.bucket_id = 'product-videos' AND product_shop_id IS NOT NULL THEN
-            RAISE EXCEPTION 'Videos are only allowed on independent listings'
-                USING ERRCODE = '23514';
-        END IF;
-
         media_limit := public.product_image_limit_for(v_product_id);
         IF media_limit IS NULL THEN
             RAISE EXCEPTION 'Product media limit is unavailable for this listing'
                 USING ERRCODE = '23514';
         END IF;
-        counts_toward_quota := NEW.bucket_id = 'product-images'
-            OR product_shop_id IS NULL;
+        counts_toward_quota := TRUE;
 
         INSERT INTO public.product_media_quota_objects (
             bucket_id, object_name, product_id, counts_toward_quota

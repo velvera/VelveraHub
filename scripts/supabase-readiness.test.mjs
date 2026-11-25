@@ -40,6 +40,7 @@ assert.doesNotMatch(readOnlySql, /^\s*(INSERT|UPDATE|DELETE|ALTER|DROP|CREATE|GR
 for (const check of [
     'product media buckets enforce platform ceilings and MIME types',
     'product media uploads require owner policies and restrictive validation',
+    'obsolete student-only listing policies are removed',
     'atomic product media quota tables and storage triggers exist',
     'product media quota state is private to server-side policies',
     'account deletion request table is protected by RLS',
@@ -65,7 +66,7 @@ for (const check of [
     assert.ok(verificationSql.includes(check), `read-only preflight must report: ${check}`);
 }
 
-assert.match(storagePolicies, /CREATE POLICY "students can upload listing images"/);
+assert.match(storagePolicies, /CREATE POLICY "sellers can upload listing images"/);
 assert.match(storagePolicies, /CREATE POLICY "restrict product media uploads"/);
 assert.match(storagePolicies, /CREATE TRIGGER enforce_product_media_object_quota/);
 assert.match(storagePolicies, /CREATE TRIGGER release_product_media_quota/);
@@ -114,6 +115,10 @@ assert.match(adminWorkspaceJs, /admin_update_marketplace_media_limits/);
 assert.match(sellerDashboard, /loadSellerMediaLimits/);
 assert.match(studentListing, /loadMarketplaceMediaLimits/);
 assert.match(studentListing, /product_video_max_bytes/);
+assert.doesNotMatch(studentListing, /listing_type|student_item|student_ad/);
+assert.doesNotMatch(storagePolicies, /listing_type|student_item|student_ad/);
+assert.match(mediaSettingsMigration, /p_product_image_limit INTEGER/);
+assert.doesNotMatch(mediaSettingsMigration, /student_listing_media_limit/);
 assert.match(stagingGuide, /Do not run the write tests against production/);
 assert.match(cloudflareGuide, /Staging upload-policy acceptance/);
 assert.match(cloudflareGuide, /Never run these\s+write tests against production/);

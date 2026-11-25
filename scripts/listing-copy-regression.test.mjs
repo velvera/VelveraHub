@@ -1,0 +1,77 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+
+const read = (path) => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
+const roots = [
+    '',
+    'velverahub-ng/',
+    'velverahub-uk/',
+    'velverahub-shop/',
+    'velverahub-admin/',
+];
+const storefrontRoots = roots.slice(0, 3);
+const forbiddenPublicLabels =
+    /student\s+(?:seller|listing|shop)|independent seller|private conversation|view more products|velverahub marketplace seller/i;
+
+for (const root of storefrontRoots) {
+    for (const page of ['index.html', 'veeve/products.html', 'veeve/product.html', 'veeve/sell.html', 'veeve/my-listings.html', 'veeve/auth.html', 'veeve/seller.html']) {
+        const source = read(`${root}${page}`);
+        assert.doesNotMatch(source, forbiddenPublicLabels, `${root || 'root'} ${page} must use general marketplace copy`);
+    }
+
+    const product = read(`${root}veeve/product.html`);
+    const gallery = product.match(/<section class="product-gallery"[\s\S]*?<\/section>/)?.[0];
+    const actions = product.match(/<div class="product-action-row">([\s\S]*?)<\/div>/)?.[1];
+    assert.ok(gallery, `${root || 'root'} product page must have a media gallery`);
+    assert.match(gallery, /<button class="product-share-button"[^>]*aria-label="Share product link"[^>]*><i[^>]*><\/i><\/button>/);
+    assert.ok(actions, `${root || 'root'} product page must have purchase actions`);
+    assert.match(actions, /id="addToCart"/);
+    assert.match(actions, /class="btn btn-secondary product-save-button"[^>]*aria-label="Save product"[^>]*><i[^>]*><\/i><\/button>/);
+    assert.doesNotMatch(actions, />\s*Save\s*</i);
+    assert.doesNotMatch(product, /listing_type|Listing type|Private conversation|Independent seller|View more products/i);
+    assert.match(product, />View more<\/a>/);
+}
+
+for (const root of roots) {
+    for (const file of [
+        'assets/js/components/ui.js',
+        'assets/js/services/products.js',
+        'assets/js/pages/seller-dashboard.js',
+        'assets/js/pages/student-listing.js',
+        'assets/js/pages/auth-page.js',
+        'assets/js/services/auth.js',
+    ]) {
+        const source = read(`${root}${file}`);
+        assert.doesNotMatch(source, /listing_type|student_item|student_ad|Student seller|businessInstitution/);
+    }
+}
+
+for (const root of storefrontRoots) {
+    const sell = read(`${root}veeve/sell.html`);
+    const sellerWorkspace = read(`${root}veeve/seller.html`);
+    for (const [source, label] of [[sell, 'sell form'], [sellerWorkspace, 'seller workspace']]) {
+        assert.match(
+            source,
+            /Institution(?:\s*<span[^>]*>\(optional location\)<\/span>|\s+\(optional location\))/,
+            `${root || 'root'} ${label} keeps institution as optional location`,
+        );
+        assert.match(source, /Nearby area/, `${root || 'root'} ${label} keeps nearby location details`);
+    }
+}
+
+for (const root of ['admin-workspace/', 'velverahub-admin/']) {
+    const adminPage = read(`${root}index.html`);
+    const adminScript = read(`${root}admin.js`);
+    assert.match(adminPage, /id="productMediaLimit"/);
+    assert.doesNotMatch(adminPage, /student_listing_media_limit|independentListingMediaLimit|shopProductImageLimit/);
+    assert.doesNotMatch(adminScript, /student_listing_media_limit|p_student_listing_media_limit/);
+}
+
+for (const root of storefrontRoots) {
+    const css = read(`${root}veeve/pages.css`);
+    assert.match(css, /\.related-products-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(auto-fill,\s*minmax\(min\(100%,\s*220px\),\s*1fr\)\)/);
+    assert.match(css, /\.related-products-grid \.product-card\s*\{[\s\S]*?width:\s*100%;[\s\S]*?min-width:\s*0;/);
+}
+
+assert.match(read('docs/listing-copy-audit.md'), /Root[\s\S]*Nigeria[\s\S]*UK[\s\S]*Shop owner[\s\S]*Admin/);
+console.log('PASS general listing copy, optional institution context, icon-only product actions, and shared media controls');

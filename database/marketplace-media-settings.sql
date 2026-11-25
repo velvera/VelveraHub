@@ -1,4 +1,4 @@
--- Admin-controlled seller media limits with fixed Storage safety ceilings.
+-- Admin-controlled listing media limits with fixed Storage safety ceilings.
 -- Apply after database/marketplace-manual-payments.sql.
 -- Before applying to any target, verify its Supabase plan and Storage global
 -- file-size limit are at least 40 MiB (41,943,040 bytes).

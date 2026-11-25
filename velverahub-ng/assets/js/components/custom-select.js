@@ -254,7 +254,7 @@
             if (schools.length && places.length) {
                 var schoolSection = document.createElement('li');
                 schoolSection.className = 'cs-location-section';
-                schoolSection.textContent = 'SCHOOLS & CAMPUSES';
+                schoolSection.textContent = 'INSTITUTIONS';
                 schoolSection.setAttribute('aria-hidden', 'true');
                 list.appendChild(schoolSection);
             }

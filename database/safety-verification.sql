@@ -352,7 +352,7 @@ WITH checks AS (
             FROM pg_policies
             WHERE schemaname = 'storage'
               AND tablename = 'objects'
-              AND policyname = 'students can upload listing images'
+              AND policyname = 'sellers can upload listing images'
               AND cmd = 'INSERT'
               AND 'authenticated' = ANY(roles)
         )
@@ -365,6 +365,22 @@ WITH checks AS (
               AND permissive = 'RESTRICTIVE'
               AND cmd = 'INSERT'
               AND with_check ILIKE '%can_upload_product_media%'
+        )
+    UNION ALL
+    SELECT
+        'obsolete student-only listing policies are removed',
+        NOT EXISTS (
+            SELECT 1
+            FROM pg_policies
+            WHERE policyname IN (
+                'students can manage their own listings',
+                'students can manage their listing images',
+                'students can upload listing images',
+                'students can update listing images',
+                'students can delete listing images',
+                'students can upload listing videos',
+                'students can delete listing videos'
+            )
         )
     UNION ALL
     SELECT
@@ -704,13 +720,12 @@ WITH checks AS (
         'marketplace media settings are protected and complete',
         to_regclass('public.marketplace_settings') IS NOT NULL
         AND (
-            SELECT count(*) = 4
+            SELECT count(*) = 3
             FROM information_schema.columns
             WHERE table_schema = 'public'
               AND table_name = 'marketplace_settings'
               AND column_name IN (
                   'product_image_limit',
-                  'student_listing_media_limit',
                   'product_image_max_bytes',
                   'product_video_max_bytes'
               )

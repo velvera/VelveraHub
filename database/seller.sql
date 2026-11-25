@@ -54,8 +54,7 @@ begin
             account_type,
             role,
             business_name,
-            business_state,
-            business_institution
+            business_state
         )
         values (
             new.id,
@@ -65,8 +64,7 @@ begin
             requested_role,
             requested_role,
             nullif(new.raw_user_meta_data ->> 'businessName', ''),
-            nullif(new.raw_user_meta_data ->> 'businessState', ''),
-            nullif(new.raw_user_meta_data ->> 'businessInstitution', '')
+            nullif(new.raw_user_meta_data ->> 'businessState', '')
         );
     else
         update public.profiles as profile
@@ -89,10 +87,6 @@ begin
                business_state = coalesce(
                    profile.business_state,
                    nullif(new.raw_user_meta_data ->> 'businessState', '')
-               ),
-               business_institution = coalesce(
-                   profile.business_institution,
-                   nullif(new.raw_user_meta_data ->> 'businessInstitution', '')
                ),
                first_name = coalesce(
                     profile.first_name,

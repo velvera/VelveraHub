@@ -47,7 +47,7 @@ assert.doesNotMatch(
     'listing creation must not depend on bucket enumeration',
 );
 assert.match(studentListing, /upsert:\s*false/, 'media uploads must not require overwrite permissions');
-assert.match(studentListing, /student-listing-media-upload/, 'storage upload failures must be diagnosed at the upload boundary');
+assert.match(studentListing, /listing-media-upload/, 'storage upload failures must be diagnosed at the upload boundary');
 assert.match(observability, /error\?\.details/, 'safe diagnostics must retain server-provided error details');
 assert.match(observability, /error\?\.hint/, 'safe diagnostics must retain server-provided error hints');
 assert.match(observability, /httpStatus/, 'safe diagnostics must retain the HTTP status separately');
@@ -86,10 +86,10 @@ assert.match(quotaTriggerFunction[0], /VALUES \(v_product_id, 1\)\s+ON CONFLICT 
 assert.match(mediaQuotaConflictFix, /DECLARE\s+v_product_id UUID/i);
 assert.match(mediaQuotaConflictFix, /VALUES \(v_product_id, 1\)\s+ON CONFLICT \(product_id\)/i);
 assert.match(studentListing, /get_marketplace_media_limits/);
-assert.match(rls, /CREATE POLICY "students can upload listing images"/);
+assert.match(rls, /CREATE POLICY "sellers can upload listing images"/);
 assert.match(rls, /CREATE POLICY "restrict product media uploads"/);
 assert.match(rls, /public\.can_upload_product_media\(bucket_id, name\)/);
-assert.match(rls, /CREATE POLICY "students can manage their listing images"/);
+assert.match(rls, /CREATE POLICY "sellers can manage their listing images"/);
 
 const vmContext = {
     window: { location: { origin: 'https://example.test', pathname: '/veeve/sell.html' } },

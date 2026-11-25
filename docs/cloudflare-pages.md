@@ -154,9 +154,9 @@ these screens in production.
 The base RLS migration:
 
 - limits public product and image metadata reads to active listings;
-- limits product and relational image CRUD to the authenticated shop owner;
+- limits product and relational image CRUD to the authenticated listing owner;
 - creates or updates the public `product-images` bucket and the public
-  `product-videos` bucket for independent campus listings;
+  `product-videos` bucket for all marketplace listings;
 - avoids broad `SELECT` policies on `storage.objects`, so public object URLs
   continue to work without allowing clients to list bucket contents;
 - at the base migration stage, accepts only WebP images up to 5 MiB and
@@ -165,10 +165,10 @@ The base RLS migration:
   by the media-size trigger;
 - requires a product UUID folder and a generated UUIDv4 filename with the
   matching media extension;
-- enforces the campus limit of six images and videos combined with an atomic
-  per-listing counter and private Storage-object ledger, so parallel direct
-  Storage uploads cannot reserve the same remaining slot;
-- keeps shop uploads image-only and uses the configured shop image limit.
+- enforces one admin-configured photo-and-video limit for every listing with an
+  atomic per-listing counter and private Storage-object ledger, so parallel
+  direct Storage uploads cannot reserve the same remaining slot;
+- applies the same media rules to shop and seller-owned listings.
 
 The product row must exist before its images are uploaded. This allows the
 Storage insert policy to verify the product UUID and its owning shop.
@@ -193,8 +193,8 @@ FROM pg_policies
 WHERE schemaname = 'storage'
   AND tablename = 'objects'
   AND policyname IN (
-      'students can upload listing images',
-      'students can upload listing videos',
+      'sellers can upload listing images',
+      'owners can upload product videos',
       'restrict product media uploads'
   );
 
@@ -211,7 +211,7 @@ SELECT policyname, permissive, cmd, roles, with_check
 FROM pg_policies
 WHERE schemaname = 'public'
   AND tablename = 'product_images'
-  AND policyname = 'students can manage their listing images';
+  AND policyname = 'sellers can manage their listing images';
 
 SELECT tgname
 FROM pg_trigger
@@ -227,7 +227,7 @@ then each be capped at `41943040` bytes; images are restricted to `image/webp`
 and videos to MP4, WebM, and QuickTime. The database media-size trigger enforces
 the current admin-selected limits below these fixed Storage ceilings. A
 documented plan maximum is not proof of the target project's current setting.
-Student upload policies should be
+Seller upload policies should be
 `PERMISSIVE` `INSERT` policies for `authenticated`; the upload validator should
 be `RESTRICTIVE` for `INSERT`. The query for broad public read policies should
 return no rows. If either is present, apply
@@ -238,11 +238,11 @@ Removing the broad `SELECT` policies blocks `storage.objects` listing; it does
 not disable public downloads through known public URLs. The application uses
 upload, public URL, and delete operations for these buckets, not bucket listing.
 
-Use the authenticated admin workspace to temporarily change the per-listing
-counts and photo/video limits within the supported ranges. Confirm both upload
-forms show the new count and direct Storage requests above a selected size are
-rejected. Restore the defaults after the test: 10 shop photos per product, 10
-media files per independent listing, and 40 MiB per product photo or video.
+Use the authenticated admin workspace to temporarily change the shared
+per-listing media count and photo/video limits within the supported ranges.
+Confirm all listing forms show the new count and direct Storage requests above
+a selected size are rejected. Restore the defaults after the test: 10 photos
+or videos per listing and 40 MiB per file.
 Original photos may be up to 40 MiB before compression.
 
 Then, using an authenticated staging seller and a disposable listing they own,
