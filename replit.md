@@ -98,7 +98,22 @@ VelveraHub is a world-class multi-vendor e-commerce platform designed to compete
 
 ## Replit Development
 
-The Replit workflow is **Start application** and runs `node server.js` on port 5000 for local preview only.
+The Replit workflow is **Start application** and runs `npm start` (`node server.js`)
+on `0.0.0.0:5000` for local preview only. Use Replit's Run button to start it;
+there is no frontend build step. Dependencies are installed from `package.json`.
+The existing `SESSION_SECRET` supplies the server's JWT signing secret.
+
+The browser connects directly to the configured **test** Supabase project.
+Do not create a replacement database or apply migrations just to start the
+preview. The optional Express database-backed API requires an explicitly
+configured `DATABASE_URL`; without it, the health and static routes work but
+database-backed API features are not configured. A successful `/healthz`
+response confirms the server is running, not database readiness.
+
+Useful checks:
+- `npm run smoke` checks local storefront, regional, seller, shop, admin, and health routes.
+- `SMOKE_REQUIRE_SUPABASE=1 npm run smoke` additionally checks that public Supabase configuration is present (not live connectivity).
+
 The browser uses `assets/js/services/publicSupabaseConfig.js` for the shared
 public Supabase URL and anon key. Never expose `service_role`, `JWT_SECRET`,
 `SESSION_SECRET`, `DATABASE_URL`, or any other server credential to the client.
