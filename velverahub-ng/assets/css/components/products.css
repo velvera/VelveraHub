@@ -224,16 +224,6 @@
     color: var(--primary);
 }
 
-.seller-type {
-    color: #6d28d9;
-    font-size: 0.65rem;
-    font-weight: 700;
-}
-
-.product-shop.student-seller .shop-avatar {
-    border: 2px solid #ede9fe;
-}
-
 .badge-campus {
     color: #5b21b6;
     background: #ede9fe;

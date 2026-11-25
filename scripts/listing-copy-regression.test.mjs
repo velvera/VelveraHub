@@ -20,10 +20,12 @@ for (const root of storefrontRoots) {
     }
 
     const product = read(`${root}veeve/product.html`);
+    const css = read(`${root}veeve/pages.css`);
     const gallery = product.match(/<section class="product-gallery"[\s\S]*?<\/section>/)?.[0];
     const actions = product.match(/<div class="product-action-row">([\s\S]*?)<\/div>/)?.[1];
     assert.ok(gallery, `${root || 'root'} product page must have a media gallery`);
     assert.match(gallery, /<button class="product-share-button"[^>]*aria-label="Share product link"[^>]*><i[^>]*><\/i><\/button>/);
+    assert.match(css, /\.product-share-button\s*\{[\s\S]*?position:\s*absolute;[\s\S]*?top:\s*\.75rem;[\s\S]*?right:\s*\.75rem;/);
     assert.ok(actions, `${root || 'root'} product page must have purchase actions`);
     assert.match(actions, /id="addToCart"/);
     assert.match(actions, /class="btn btn-secondary product-save-button"[^>]*aria-label="Save product"[^>]*><i[^>]*><\/i><\/button>/);
@@ -43,6 +45,13 @@ for (const root of roots) {
     ]) {
         const source = read(`${root}${file}`);
         assert.doesNotMatch(source, /listing_type|student_item|student_ad|Student seller|businessInstitution/);
+    }
+    for (const file of [
+        'assets/css/components/products.css',
+        'assets/css/components/campus-marketplace.css',
+    ]) {
+        const source = read(`${root}${file}`);
+        assert.doesNotMatch(source, /\.seller-type|\.product-shop\.student-seller/, `${root || 'root'} ${file} removes seller-type styling`);
     }
 }
 
@@ -69,9 +78,14 @@ for (const root of ['admin-workspace/', 'velverahub-admin/']) {
 
 for (const root of storefrontRoots) {
     const css = read(`${root}veeve/pages.css`);
-    assert.match(css, /\.related-products-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(auto-fill,\s*minmax\(min\(100%,\s*220px\),\s*1fr\)\)/);
+    const product = read(`${root}veeve/product.html`);
+    assert.match(css, /\.related-products-section\s*\{[\s\S]*?width:\s*100%;[\s\S]*?min-width:\s*0;/);
+    assert.match(css, /\.related-products-grid\s*\{[\s\S]*?width:\s*100%;[\s\S]*?min-width:\s*0;[\s\S]*?grid-template-columns:\s*repeat\(auto-fit,\s*minmax\(min\(100%,\s*16rem\),\s*1fr\)\)/);
     assert.match(css, /\.related-products-grid \.product-card\s*\{[\s\S]*?width:\s*100%;[\s\S]*?min-width:\s*0;/);
+    assert.match(css, /@media \(max-width:\s*480px\)[\s\S]*?\.related-products-grid\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+    assert.match(product, /href="pages\.css\?v=20261125-1"/);
 }
 
+assert.match(read('server.js'), /const LOCAL_ASSET_VERSION = '20261125-1'/);
 assert.match(read('docs/listing-copy-audit.md'), /Root[\s\S]*Nigeria[\s\S]*UK[\s\S]*Shop owner[\s\S]*Admin/);
 console.log('PASS general listing copy, optional institution context, icon-only product actions, and shared media controls');

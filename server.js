@@ -47,7 +47,7 @@ const SUPABASE_ANON_KEY = cleanRuntimeValue(
     process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY
 );
 
-const LOCAL_ASSET_VERSION = '20260925-1';
+const LOCAL_ASSET_VERSION = '20261125-1';
 
 function bustLocalAssetCache(html) {
     return html.replace(

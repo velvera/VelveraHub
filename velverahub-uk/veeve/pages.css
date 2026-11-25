@@ -1722,6 +1722,8 @@
 }
 
 .related-products-section {
+    width: 100%;
+    min-width: 0;
     margin-top: 2rem;
 }
 
@@ -1745,12 +1747,15 @@
 
 .related-products-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
     align-items: stretch;
     gap: 1rem;
 }
 
 .related-products-grid .product-card {
+    box-sizing: border-box;
     width: 100%;
     min-width: 0;
     max-width: 100%;
@@ -1969,7 +1974,8 @@
     }
 
     .related-products-grid {
-        grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+        /* A single full-width card avoids the cramped sliver seen on phones. */
+        grid-template-columns: minmax(0, 1fr);
         gap: .6rem;
     }
 }
