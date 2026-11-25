@@ -20,6 +20,8 @@
     let marketplaceMediaLimitsPromise = null;
     let mediaProgressRows = [];
     let activeMediaUploadTasks = [];
+    let selectedListingFiles = [];
+    let mediaSubmissionState = null;
 
     async function loadMarketplaceMediaLimits(supabase) {
         if (!supabase) throw new Error('Marketplace upload settings are unavailable.');
@@ -93,32 +95,92 @@
 
         const list = document.createElement('ul');
         list.className = 'campus-media-upload-list';
-        for (const file of files) {
+        files.forEach((file, index) => {
             const row = document.createElement('li');
+            row.className = 'campus-media-upload-row';
+            const details = document.createElement('div');
+            details.className = 'campus-media-upload-details';
             const name = document.createElement('span');
+            name.className = 'campus-media-upload-name';
             name.textContent = file.name || 'Selected file';
             const progress = document.createElement('progress');
             progress.max = 100;
             progress.value = 0;
             progress.setAttribute('aria-label', `Upload progress for ${file.name || 'selected file'}`);
             const state = document.createElement('span');
-            state.textContent = 'Ready to upload';
-            row.append(name, progress, state);
+            state.className = 'campus-media-upload-state';
+            state.setAttribute('aria-live', 'polite');
+            const removeButton = document.createElement('button');
+            removeButton.type = 'button';
+            removeButton.className = 'campus-media-remove';
+            removeButton.setAttribute('aria-label', `Remove ${file.name || 'selected file'}`);
+            removeButton.title = `Remove ${file.name || 'selected file'}`;
+            const removeIcon = document.createElement('i');
+            removeIcon.className = 'fas fa-xmark';
+            removeIcon.setAttribute('aria-hidden', 'true');
+            removeButton.appendChild(removeIcon);
+            removeButton.addEventListener('click', () => removeSelectedMedia(index));
+            details.append(name, progress, state);
+            row.append(details, removeButton);
             list.appendChild(row);
-            mediaProgressRows.push({ progress, state });
+            mediaProgressRows.push({
+                file,
+                element: row,
+                progress,
+                state,
+                removeButton,
+                task: null,
+                uploadedMedia: null
+            });
+        });
+        preview.appendChild(list);
+        preview.hidden = false;
+    }
+
+    function syncSelectedFilesToInput(files) {
+        try {
+            const transfer = new DataTransfer();
+            files.forEach((file) => transfer.items.add(file));
+            imageInput.files = transfer.files;
+        } catch (_) {
+            // Keep the in-memory selection authoritative on browsers that do
+            // not allow assigning a FileList back to the input.
+            imageInput.value = '';
+        }
+    }
+
+    function removeSelectedMedia(index) {
+        const row = mediaProgressRows[index];
+        if (!row || (mediaSubmissionState && !mediaSubmissionState.allowRemoval)) return;
+
+        selectedListingFiles = selectedListingFiles.filter((file) => file !== row.file);
+        syncSelectedFilesToInput(selectedListingFiles);
+
+        if (!mediaSubmissionState) {
+            renderMediaProgress(selectedListingFiles);
+            return;
         }
 
-        const cancel = document.createElement('button');
-        cancel.type = 'button';
-        cancel.className = 'btn btn-secondary';
-        cancel.textContent = 'Cancel uploads';
-        cancel.hidden = true;
-        cancel.addEventListener('click', () => {
-            activeMediaUploadTasks.forEach((task) => task.cancel());
-            setStatus('Cancelling uploads…', 'warning');
+        const submission = mediaSubmissionState;
+        submission.removedIndices.add(index);
+        row.task?.cancel();
+        row.removeButton.disabled = true;
+        row.element.remove();
+
+        const uploaded = submission.uploadedByIndex.get(index);
+        if (!uploaded) return;
+        submission.uploadedByIndex.delete(index);
+        const cleanupPromise = removeUploadedMedia(submission.supabase, [uploaded]).then((cleanup) => {
+            if (cleanup.failed) {
+                submission.uploadedMedia.push(uploaded);
+                submission.removalError = new Error('A cancelled upload could not be removed from storage.');
+                return;
+            }
+            const uploadedIndex = submission.uploadedMedia.indexOf(uploaded);
+            if (uploadedIndex !== -1) submission.uploadedMedia.splice(uploadedIndex, 1);
+            row.uploadedMedia = null;
         });
-        preview.append(list, cancel);
-        preview.hidden = false;
+        submission.pendingRemovals.push(cleanupPromise);
     }
 
     function updateMediaProgress(index, percent, message) {
@@ -126,11 +188,6 @@
         if (!row) return;
         row.progress.value = Math.max(0, Math.min(100, Number(percent) || 0));
         row.state.textContent = message || `${Math.round(row.progress.value)}%`;
-    }
-
-    function setMediaUploadActive(active) {
-        const cancel = preview.querySelector('button');
-        if (cancel) cancel.hidden = !active;
     }
 
     function populateSchools(state) {
@@ -423,6 +480,7 @@
         });
         imageInput.addEventListener('change', async () => {
             const files = Array.from(imageInput.files || []);
+            selectedListingFiles = files;
             if (!files.length) {
                 renderMediaProgress([]);
                 setStatus('');
@@ -431,15 +489,12 @@
             setStatus('Checking current upload limits…');
             try {
                 const limits = await loadMarketplaceMediaLimits(window.SupabaseClient?.get());
-                const mediaHelp = $('listingMediaLimitHelp');
-                if (mediaHelp) {
-                    mediaHelp.textContent = `Current limit: ${limits.product_image_limit} photos and videos per listing; compressed photos up to ${Math.floor(limits.product_image_max_bytes / 1048576)} MiB; videos up to ${Math.floor(limits.product_video_max_bytes / 1048576)} MiB. Original photos may be up to 40 MiB.`;
-                }
                 const validationError = mediaSelectionError(files, limits);
                 if (validationError) {
                     preview.hidden = true;
                     preview.replaceChildren();
                     mediaProgressRows = [];
+                    selectedListingFiles = [];
                     setStatus(validationError, 'error');
                     imageInput.value = '';
                     return;
@@ -448,6 +503,7 @@
                 preview.hidden = true;
                 preview.replaceChildren();
                 mediaProgressRows = [];
+                selectedListingFiles = [];
                 setStatus(window.AsyncFeedback?.errorMessage(
                     error,
                     'Marketplace upload settings could not be loaded. Refresh and try again.',
@@ -474,14 +530,26 @@
 
             const submit = $('publishListingBtn');
             submit.disabled = true;
+            imageInput.disabled = true;
             submit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Publishing…';
+            const submissionFiles = [...selectedListingFiles];
             let productId = null;
+            let listingPublished = false;
             let failureStage = 'listing details';
             let failureMediaType = '';
             let failureMediaCount = 0;
             let cancelledUploadCleanupFailed = false;
             const uploadedMedia = [];
             activeMediaUploadTasks = [];
+            mediaSubmissionState = {
+                allowRemoval: true,
+                removedIndices: new Set(),
+                uploadedByIndex: new Map(),
+                pendingRemovals: [],
+                removalError: null,
+                uploadedMedia,
+                supabase
+            };
             try {
                 if (window.PhoneVerification && !await window.PhoneVerification.requireVerifiedPhone()) {
                     throw new Error('Verify your Nigerian phone number before publishing this listing.');
@@ -493,19 +561,25 @@
                 const price = Number(data.get('price'));
                 const stock = Number(data.get('stock'));
                 if (!Number.isFinite(price) || price < 0 || !Number.isInteger(stock) || stock < 1) throw new Error('Enter a valid price and available quantity.');
-                const selectedFiles = Array.from(imageInput.files || []);
+                const selectedFiles = submissionFiles.filter((_, index) => !mediaSubmissionState.removedIndices.has(index));
                 failureMediaCount = selectedFiles.length;
                 const selectionError = mediaSelectionError(selectedFiles, mediaLimits);
                 if (selectionError) throw new Error(selectionError);
                 const preparedMedia = [];
                 failureStage = 'media preparation';
-                for (const file of selectedFiles) {
+                for (let index = 0; index < submissionFiles.length; index += 1) {
+                    if (mediaSubmissionState.removedIndices.has(index)) continue;
+                    const file = submissionFiles[index];
                     if (IMAGE_TYPES.has(file.type)) {
                         failureMediaType = 'image';
-                        preparedMedia.push({ blob: await compressImage(file, mediaLimits), mediaType: 'image' });
+                        const blob = await compressImage(file, mediaLimits);
+                        if (mediaSubmissionState.removedIndices.has(index)) continue;
+                        preparedMedia.push({ index, blob, mediaType: 'image' });
                     } else {
                         failureMediaType = 'video';
-                        preparedMedia.push({ blob: readVideo(file, mediaLimits), mediaType: 'video' });
+                        const blob = readVideo(file, mediaLimits);
+                        if (mediaSubmissionState.removedIndices.has(index)) continue;
+                        preparedMedia.push({ index, blob, mediaType: 'video' });
                     }
                 }
                 failureMediaType = [...new Set(preparedMedia.map((item) => item.mediaType))].join(',') || failureMediaType;
@@ -544,9 +618,9 @@
                 if (inserted.error) throw inserted.error;
                 productId = inserted.data.id;
                 failureStage = 'media upload';
-                setMediaUploadActive(true);
-                for (let index = 0; index < preparedMedia.length; index += 1) {
-                    const item = preparedMedia[index];
+                for (const preparedItem of preparedMedia) {
+                    const { index, ...item } = preparedItem;
+                    if (mediaSubmissionState.removedIndices.has(index)) continue;
                     failureMediaType = item.mediaType;
                     updateMediaProgress(index, 0, 'Starting upload');
                     const task = uploadMedia(
@@ -574,14 +648,35 @@
                         }
                     );
                     activeMediaUploadTasks.push(task);
+                    if (mediaProgressRows[index]) mediaProgressRows[index].task = task;
                     try {
-                        uploadedMedia.push(await task.promise);
+                        const uploaded = await task.promise;
+                        if (mediaSubmissionState.removedIndices.has(index)) {
+                            const cleanup = await removeUploadedMedia(supabase, [uploaded]);
+                            if (cleanup.failed) {
+                                uploadedMedia.push(uploaded);
+                                mediaSubmissionState.removalError = new Error('A cancelled upload could not be removed from storage.');
+                            }
+                            continue;
+                        }
+                        uploadedMedia.push(uploaded);
+                        mediaSubmissionState.uploadedByIndex.set(index, uploaded);
+                        if (mediaProgressRows[index]) mediaProgressRows[index].uploadedMedia = uploaded;
                         updateMediaProgress(index, 100, 'Uploaded');
+                    } catch (error) {
+                        if (mediaSubmissionState.removedIndices.has(index) && error?.name === 'AbortError') {
+                            continue;
+                        }
+                        throw error;
                     } finally {
+                        if (mediaProgressRows[index]) mediaProgressRows[index].task = null;
                         activeMediaUploadTasks = activeMediaUploadTasks.filter((activeTask) => activeTask !== task);
                     }
                 }
-                setMediaUploadActive(false);
+                mediaSubmissionState.allowRemoval = false;
+                mediaProgressRows.forEach((row) => { row.removeButton.disabled = true; });
+                await Promise.all(mediaSubmissionState.pendingRemovals);
+                if (mediaSubmissionState.removalError) throw mediaSubmissionState.removalError;
                 if (uploadedMedia.length) {
                     failureStage = 'media metadata';
                     failureMediaType = [...new Set(uploadedMedia.map((item) => item.mediaType))].join(',') || failureMediaType;
@@ -627,6 +722,8 @@
                         window.location.assign('/pages/seller.html?view=notifications');
                     }, 1400);
                 }
+                listingPublished = true;
+                selectedListingFiles = [];
                 form.reset();
                 preview.hidden = true;
                 preview.replaceChildren();
@@ -687,7 +784,11 @@
             } finally {
                 activeMediaUploadTasks.forEach((task) => task.cancel());
                 activeMediaUploadTasks = [];
-                setMediaUploadActive(false);
+                mediaSubmissionState = null;
+                imageInput.disabled = false;
+                if (!listingPublished && selectedListingFiles.length) {
+                    renderMediaProgress(selectedListingFiles);
+                }
                 submit.disabled = false;
                 submit.innerHTML = '<i class="fas fa-paper-plane"></i> Publish listing';
             }

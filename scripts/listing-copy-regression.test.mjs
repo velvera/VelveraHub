@@ -46,6 +46,14 @@ for (const root of roots) {
         const source = read(`${root}${file}`);
         assert.doesNotMatch(source, /listing_type|student_item|student_ad|Student seller|businessInstitution/);
     }
+    const listingScript = read(`${root}assets/js/pages/student-listing.js`);
+    const marketplaceCss = read(`${root}assets/css/components/campus-marketplace.css`);
+    assert.doesNotMatch(listingScript, /Ready to upload|Cancel uploads|Current limit:|listingMediaLimitHelp/);
+    assert.match(listingScript, /removeButton\.className = 'campus-media-remove'/);
+    assert.match(listingScript, /removeButton\.addEventListener\('click', \(\) => removeSelectedMedia\(index\)\)/);
+    assert.match(listingScript, /submission\.removedIndices\.add\(index\)/);
+    assert.match(listingScript, /row\.task\?\.cancel\(\)/);
+    assert.match(marketplaceCss, /\.campus-media-remove\s*\{[\s\S]*?color:\s*#b42318;/);
     for (const file of [
         'assets/css/components/products.css',
         'assets/css/components/campus-marketplace.css',
@@ -58,6 +66,9 @@ for (const root of roots) {
 for (const root of storefrontRoots) {
     const sell = read(`${root}veeve/sell.html`);
     const sellerWorkspace = read(`${root}veeve/seller.html`);
+    assert.match(sell, /<label for="listingImages">Photos and videos<\/label>/);
+    assert.match(sell, /Never share passwords or payment details in a listing\./);
+    assert.doesNotMatch(sell, /count set by administrator|Current limit:|compressed photos up to|Original photos may be up to|Your seller name and avatar come from your account/);
     for (const [source, label] of [[sell, 'sell form'], [sellerWorkspace, 'seller workspace']]) {
         assert.match(
             source,

@@ -261,29 +261,85 @@
 }
 
 .campus-image-preview {
-    display: flex;
-    align-items: center;
-    gap: .65rem;
-    min-height: 3.4rem;
+    display: block;
     margin-top: .5rem;
     padding: .5rem;
     border-radius: .65rem;
     background: #f8fafc;
 }
 
-.campus-image-preview img {
-    width: 3rem;
-    height: 3rem;
-    border-radius: .45rem;
-    object-fit: cover;
+.campus-media-upload-list {
+    display: grid;
+    gap: .35rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
 }
 
-.campus-image-preview span {
+.campus-media-upload-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 2.25rem;
+    align-items: center;
+    gap: .5rem;
+    min-width: 0;
+    padding: .3rem;
+    border-radius: .5rem;
+}
+
+.campus-media-upload-details {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(4rem, 8rem);
+    align-items: center;
+    gap: .2rem .55rem;
+    min-width: 0;
+}
+
+.campus-media-upload-name,
+.campus-media-upload-state {
     overflow: hidden;
     color: var(--campus-muted);
     font-size: .75rem;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.campus-media-upload-details progress {
+    width: 100%;
+    height: .45rem;
+    accent-color: #6d28d9;
+}
+
+.campus-media-upload-state {
+    grid-column: 1 / -1;
+    min-height: 1em;
+}
+
+.campus-media-remove {
+    display: grid;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    place-items: center;
+    border: 1px solid transparent;
+    border-radius: 50%;
+    background: transparent;
+    color: #b42318;
+    cursor: pointer;
+    font-size: .95rem;
+}
+
+.campus-media-remove:hover {
+    background: #fee4e2;
+}
+
+.campus-media-remove:focus-visible {
+    outline: 2px solid #b42318;
+    outline-offset: 2px;
+}
+
+.campus-media-remove:disabled {
+    cursor: not-allowed;
+    opacity: .45;
 }
 
 .badge-campus {

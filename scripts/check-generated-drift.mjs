@@ -33,8 +33,45 @@ const sharedFiles = [
     'assets/js/state/store.js'
 ];
 
+const sellerPhoneVerificationGuard = [
+    '        if (supabaseContext && window.PhoneVerification && !await window.PhoneVerification.requireVerifiedPhone()) {',
+    "            showToast('Verify your Nigerian phone number before publishing a listing.', 'warning');",
+    '            return;',
+    '        }',
+    ''
+].join('\n');
+const listingPhoneVerificationGuard = [
+    '                if (window.PhoneVerification && !await window.PhoneVerification.requireVerifiedPhone()) {',
+    "                    throw new Error('Verify your Nigerian phone number before publishing this listing.');",
+    '                }',
+    ''
+].join('\n');
+
+// The admin and shop shells do not load the public seller/listing pages. Their
+// shared-file copies intentionally omit these route-specific publishing gates.
+// Keep the exception exact so other drift in those files still fails the check.
+const intentionalSharedCopyOmissions = new Map([
+    ['velverahub-admin/assets/js/pages/seller-dashboard.js', sellerPhoneVerificationGuard],
+    ['velverahub-shop/assets/js/pages/seller-dashboard.js', sellerPhoneVerificationGuard],
+    ['velverahub-admin/assets/js/pages/student-listing.js', listingPhoneVerificationGuard],
+    ['velverahub-shop/assets/js/pages/student-listing.js', listingPhoneVerificationGuard]
+]);
+
 function digest(file) {
     return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+}
+
+function sharedCopyMatches(appRoot, relative, sourcePath, copyPath) {
+    const source = fs.readFileSync(sourcePath, 'utf8');
+    const copy = fs.readFileSync(copyPath, 'utf8');
+    const omission = intentionalSharedCopyOmissions.get(`${appRoot}/${relative}`);
+    if (!omission) return source === copy;
+    if (!source.includes(omission)) {
+        console.error(`DRIFT documented app-specific omission no longer matches ${appRoot}/${relative}`);
+        failures++;
+        return true;
+    }
+    return source.replace(omission, '') === copy;
 }
 
 for (const publicRoot of ['velverahub-ng', 'velverahub-uk']) {
@@ -129,7 +166,7 @@ for (const generatedRoot of generatedRoots) {
             failures++;
             continue;
         }
-        if (digest(source) !== digest(copy)) {
+        if (!sharedCopyMatches(generatedRoot, relative, source, copy)) {
             console.error(`DRIFT ${generatedRoot}/${relative} differs from the shared source`);
             failures++;
         }
@@ -264,7 +301,7 @@ for (const relative of shopSharedFiles) {
     if (!fs.existsSync(copy)) {
         console.error(`DRIFT velverahub-shop/${relative} is missing`);
         failures++;
-    } else if (digest(source) !== digest(copy)) {
+    } else if (!sharedCopyMatches('velverahub-shop', relative, source, copy)) {
         console.error(`DRIFT velverahub-shop/${relative} differs from the shared source`);
         failures++;
     }

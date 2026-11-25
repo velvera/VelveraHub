@@ -95,7 +95,7 @@
             try {
                 const copied = await copyText(url);
                 announce(
-                    copied ? 'Product link copied to clipboard.' : 'Could not copy the link. Select and copy the address from your browser.'
+                    copied ? 'Product link copied to clipboard.' : 'Could not copy the link. Select and copy the address from your browser.',
                 );
             } catch (_) {
                 announce('Could not share this product. Please copy the address from your browser.');
