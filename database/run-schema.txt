@@ -33,6 +33,7 @@ code or run schema changes from a storefront.
 19. database/phone-verification.sql — optional phone verification, private OTP challenge state, seller publishing and public-media policies, and admin-controlled activation; starts disabled and requires the Supabase Edge Function setup in docs/phone-verification.md.
 20. database/physical-store-logistics.sql — separate physical shop locations, private provider identity verification, service areas, delivery requests, rider engagements, complaint queues, admin settings, and location/provider RPCs. Requires migrations 1–19.
 21. database/location-logistics-workflows.sql — buyer matching and order delivery, time-limited provider availability, buyer and seller tracking, provider status updates, next-day service coverage, and separate temporary/permanent workforce engagements. Requires migration 20.
+22. database/location-logistics-market-readiness.sql — disables untouched seeded delivery markets until an administrator configures and enables them; preserves settings saved by an admin. Requires migrations 20–21.
 
 Before applying step 15 to any Supabase project, verify the project's actual
 plan and global Storage file-size limit in the dashboard. Both must support at
@@ -53,7 +54,9 @@ destinations and provider service areas. Provider identity files stay in a
 private bucket; all browser access to logistics records is through
 authenticated, role-checked RPCs. Delivery fees are stored in the request's
 local NGN or GBP currency while order totals remain in the existing USD base
-units. Apply both migrations before enabling the logistics pages.
+units. Apply migrations 20–22 before enabling the logistics pages.
+The market-readiness migration keeps provider matching disabled by default until
+an administrator explicitly configures rates and enables each market.
 
 ### Conditional legacy and repair scripts
 

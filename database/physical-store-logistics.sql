@@ -136,14 +136,14 @@ CREATE TABLE IF NOT EXISTS public.delivery_platform_settings (
         CHECK (platform_commission_percent BETWEEN 0 AND 30),
     fixed_delivery_fee NUMERIC(12,2) NOT NULL DEFAULT 0
         CHECK (fixed_delivery_fee BETWEEN 0 AND 1000000),
-    is_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    is_enabled BOOLEAN NOT NULL DEFAULT FALSE,
     updated_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     CHECK ((country_code = 'NG' AND currency_code = 'NGN') OR
            (country_code = 'GB' AND currency_code = 'GBP'))
 );
-INSERT INTO public.delivery_platform_settings(country_code, currency_code, currency_per_usd)
-VALUES ('NG', 'NGN', 900), ('GB', 'GBP', 0.79)
+INSERT INTO public.delivery_platform_settings(country_code, currency_code, currency_per_usd, is_enabled)
+VALUES ('NG', 'NGN', 900, FALSE), ('GB', 'GBP', 0.79, FALSE)
 ON CONFLICT (country_code) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS public.delivery_requests (

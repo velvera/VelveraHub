@@ -123,6 +123,8 @@ Run these files in order in the Supabase SQL editor:
 21. `database/location-logistics-workflows.sql` — live buyer matching,
     provider availability, order delivery status tracking, buyer/seller
     tracking, and temporary/permanent rider hiring.
+22. `database/location-logistics-market-readiness.sql` — keeps new delivery
+     markets disabled until an administrator configures and enables them.
 
 For an existing database that reports PostgreSQL error `42702` while removing
 or cleaning up failed listing media uploads, apply
@@ -147,10 +149,11 @@ delivery coverage, or timing; sellers and buyers must confirm those separately.
 The physical-store and location-logistics migrations add a separate reviewed
 shop-visit address, exact approved public map locations, private provider
 verification documents, service-area matching, buyer-selected delivery
-providers, and distinct rider work engagements. Apply migrations 20 and 21
-after migration 19. The migrations do not change existing pickup or seller
+providers, and distinct rider work engagements. Apply migrations 20–22 after
+migration 19. The migrations do not change existing pickup or seller
 delivery-address fields. Provider matching remains disabled per market until
-an administrator enables it and providers are approved and currently available.
+an administrator configures and enables rates and providers are approved and
+currently available.
 
 The manual-payment migration adds regional VelveraHub receiving destinations,
 KYC-gated seller payment preferences, order instruction snapshots, and

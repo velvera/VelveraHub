@@ -7,6 +7,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 const physical = read('database/physical-store-logistics.sql');
 const workflows = read('database/location-logistics-workflows.sql');
+const marketReadiness = read('database/location-logistics-market-readiness.sql');
 const service = read('assets/js/services/logistics.js');
 const providerPage = read('assets/js/pages/logistics.js');
 const checkoutPage = read('assets/js/pages/checkout-logistics.js');
@@ -43,6 +44,9 @@ includes(physical, "VALUES (\n    'delivery-provider-verification-private',\n   
 includes(physical, 'shop_owner_save_physical_location', 'Shop location writes need an owner-checked RPC.');
 includes(physical, "location.review_status = 'approved'", 'Public shop locations must be approval-gated.');
 includes(physical, 'admin_review_delivery_provider', 'Provider approval must remain an admin-only RPC.');
+includes(physical, 'is_enabled BOOLEAN NOT NULL DEFAULT FALSE', 'New delivery markets must remain disabled until admin setup.');
+includes(marketReadiness, 'WHERE updated_by IS NULL', 'The market-readiness migration must preserve admin-configured settings.');
+includes(marketReadiness, 'SET is_enabled = FALSE', 'Untouched default markets must be disabled before rollout.');
 includes(physical, "'next_day'", 'Provider service areas must accept next-day deliveries.');
 includes(workflows, 'delivery_provider_service_areas_service_types_check', 'Existing service-area constraints must be updated for next-day.');
 
