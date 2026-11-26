@@ -185,8 +185,10 @@ function addBusinessDays(start, days, region = 'ng') {
     return date;
 }
 
-function calculatePromise({ location, processingDays = 1, courierDays = 3, cutoffHour = 14, reliability = 86 } = {}) {
-    const region = NIGERIAN_STATES.includes(location) ? 'ng' : 'uk';
+function calculatePromise({ location, region: requestedRegion, processingDays = 1, courierDays = 3, cutoffHour = 14, reliability = 86 } = {}) {
+    const region = ['ng', 'uk'].includes(String(requestedRegion || '').toLowerCase())
+        ? String(requestedRegion).toLowerCase()
+        : NIGERIAN_STATES.includes(location) ? 'ng' : 'uk';
     const now = new Date();
     const cutoffPassed = now.getHours() >= Number(cutoffHour || 14);
     const handling = Math.max(1, Number(processingDays) || 1) + (cutoffPassed ? 1 : 0);
@@ -2231,18 +2233,27 @@ app.post('/api/orders', async (req, res) => {
 // endpoint is intentionally additive so existing product-card rendering
 // continues to work when a deployment has not yet run the new migration.
 app.get('/api/delivery/promise', async (req, res) => {
-    const { productId, location } = req.query;
-    if (!productId) return res.status(400).json({ error: 'productId is required' });
+    const productId = String(req.query.productId || '').trim();
+    const location = String(req.query.location || '').trim().slice(0, 100);
+    const requestedRegion = String(req.query.region || '').toLowerCase();
+    const region = ['ng', 'uk'].includes(requestedRegion)
+        ? requestedRegion
+        : NIGERIAN_STATES.includes(location) ? 'ng' : 'uk';
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(productId)) {
+        return res.status(400).json({ error: 'A valid productId is required' });
+    }
     try {
         const result = await pool.query(`
             SELECT p.processing_days, s.courier_sla_days, s.delivery_cutoff_hour,
                    s.delivery_reliability, p.inventory_verified
             FROM products p LEFT JOIN shops s ON s.id = p.shop_id
-            WHERE p.id = $1 LIMIT 1
+            WHERE p.id = $1 AND p.status = 'active' LIMIT 1
         `, [productId]);
-        const row = result.rows[0] || {};
+        const row = result.rows[0];
+        if (!row) return res.status(404).json({ error: 'Delivery timing is unavailable for this item' });
         res.json({
             promise: calculatePromise({
+                region,
                 location,
                 processingDays: row.processing_days || 1,
                 courierDays: row.courier_sla_days || 3,
@@ -2253,7 +2264,7 @@ app.get('/api/delivery/promise', async (req, res) => {
         });
     } catch (error) {
         if (!isMissingSchemaError(error)) console.warn('Delivery promise lookup failed:', error.message);
-        res.json({ promise: calculatePromise({ location }), inventoryVerified: false });
+        res.status(503).json({ error: 'Live delivery timing is temporarily unavailable' });
     }
 });
 

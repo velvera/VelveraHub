@@ -30,6 +30,77 @@
         }
     }
 
+    function marketCurrency(region = window.RegionService?.region) {
+        return String(region || '').toLowerCase() === 'uk' ? 'GBP' : 'NGN';
+    }
+
+    async function getDeliveryPromise(productId, location, region) {
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(productId || ''))) {
+            throw new Error('A valid item is required to estimate delivery timing.');
+        }
+        const market = String(region || '').toLowerCase();
+        if (!['ng', 'uk'].includes(market)) throw new Error('Delivery timing is unavailable for this market.');
+
+        const params = new URLSearchParams({
+            productId: String(productId),
+            location: String(location || ''),
+            region: market
+        });
+        const controller = new AbortController();
+        const timeout = window.setTimeout(() => controller.abort(), 8000);
+        try {
+            const apiFetch = window.VelveraAPI?.fetch || fetch;
+            const response = await apiFetch(`/api/delivery/promise?${params}`, {
+                signal: controller.signal,
+                timeoutMs: 9000
+            });
+            if (!response.ok) throw new Error(`Delivery timing is unavailable (${response.status}).`);
+            const data = await response.json();
+            const earliest = new Date(data?.promise?.earliest);
+            const latest = new Date(data?.promise?.latest);
+            if (!Number.isFinite(earliest.getTime()) || !Number.isFinite(latest.getTime()) || earliest > latest) {
+                throw new Error('The delivery estimate could not be validated.');
+            }
+            return { earliest, latest };
+        } finally {
+            window.clearTimeout(timeout);
+        }
+    }
+
+    function formatDeliveryWindow(promises, region = window.RegionService?.region) {
+        if (!Array.isArray(promises) || !promises.length) throw new Error('Delivery timing is unavailable.');
+        const earliest = Math.max(...promises.map((item) => new Date(item.earliest).getTime()));
+        const latest = Math.max(...promises.map((item) => new Date(item.latest).getTime()));
+        if (!Number.isFinite(earliest) || !Number.isFinite(latest) || earliest > latest) {
+            throw new Error('The delivery estimate could not be validated.');
+        }
+        const locale = String(region || '').toLowerCase() === 'uk' ? 'en-GB' : 'en-NG';
+        const formatter = new Intl.DateTimeFormat(locale, {
+            day: 'numeric',
+            month: 'short',
+            timeZone: 'UTC'
+        });
+        return `${formatter.format(earliest)}–${formatter.format(latest)}`;
+    }
+
+    function normalizeProviderQuote(provider, region = window.RegionService?.region) {
+        const providerId = String(provider?.provider_id || '');
+        const serviceAreaId = String(provider?.service_area_id || '');
+        const fee = Number(provider?.total_fee_amount);
+        const etaMin = Number(provider?.eta_min_minutes);
+        const etaMax = Number(provider?.eta_max_minutes);
+        const currency = String(provider?.currency_code || '');
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(providerId)
+            || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(serviceAreaId)
+            || !Number.isFinite(fee) || fee < 0 || fee > 1000000
+            || currency !== marketCurrency(region)
+            || !Number.isInteger(etaMin) || etaMin < 1
+            || !Number.isInteger(etaMax) || etaMax < etaMin || etaMax > 10080) {
+            return null;
+        }
+        return { providerId, serviceAreaId, fee, currency, etaMin, etaMax };
+    }
+
     async function geocodeAddress(query, countryCode) {
         const text = String(query || '').trim().slice(0, 180);
         if (text.length < 5 || !['NG', 'GB'].includes(countryCode)) {
@@ -162,6 +233,10 @@
         marketCountry,
         escapeHtml,
         formatFee,
+        marketCurrency,
+        getDeliveryPromise,
+        formatDeliveryWindow,
+        normalizeProviderQuote,
         geocodeAddress,
         createMap,
         rpc

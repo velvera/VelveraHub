@@ -159,6 +159,63 @@ async function testCheckout(browser) {
     assert.equal(checkoutUi.actionBottomGap, 0);
     assert.ok(checkoutUi.buttonHeight >= 48);
     assert.equal(checkoutUi.documentWidth, 390);
+    await successPage.waitForFunction(() =>
+        /Estimated arrival|Delivery date not available/.test(document.getElementById('checkoutDeliveryPromise')?.textContent || '')
+    );
+    const deliveryMessage = await successPage.locator('#checkoutDeliveryPromise').innerText();
+    if (/Delivery date not available/i.test(deliveryMessage)) {
+        assert.match(deliveryMessage, /seller-arranged delivery/i, 'missing live delivery data must leave seller-arranged checkout available');
+    }
+    const initialShipping = await successPage.evaluate(() => ({
+        label: document.getElementById('checkoutShippingLabel')?.textContent || '',
+        fee: document.getElementById('checkoutShippingValue')?.textContent || '',
+        note: document.getElementById('checkoutShippingNote')?.textContent || '',
+        total: document.getElementById('checkoutTotalValue')?.textContent || ''
+    }));
+    assert.match(initialShipping.label, /estimate/i);
+    assert.ok(initialShipping.fee, 'checkout shows a shipping fee before order placement');
+    assert.match(initialShipping.note, /seller-arranged delivery/i);
+    assert.match(initialShipping.total, /[0-9]/);
+
+    await successPage.evaluate(() => {
+        window.CheckoutLogistics = {
+            hasSelection: () => false,
+            getSelectedProvider: () => ({
+                fee: 1800,
+                currency: 'NGN',
+                etaMin: 45,
+                etaMax: 90
+            })
+        };
+        document.dispatchEvent(new CustomEvent('checkout:delivery-selection-change'));
+    });
+    const providerEstimate = await successPage.evaluate(() => ({
+        label: document.getElementById('checkoutShippingLabel')?.textContent || '',
+        fee: document.getElementById('checkoutShippingValue')?.textContent || '',
+        note: document.getElementById('checkoutShippingNote')?.textContent || '',
+        total: document.getElementById('checkoutTotalValue')?.textContent || '',
+        promise: document.getElementById('checkoutDeliveryPromise')?.textContent || ''
+    }));
+    assert.match(providerEstimate.label, /provider.*estimate/i);
+    assert.match(providerEstimate.fee, /1,800/);
+    assert.match(providerEstimate.note, /rechecked/i);
+    assert.notEqual(providerEstimate.total, initialShipping.total, 'the total updates to include the selected provider estimate');
+    assert.match(providerEstimate.promise, /45–90 minutes/);
+
+    await successPage.evaluate(() => {
+        window.CheckoutLogistics = {
+            hasSelection: () => false,
+            getSelectedProvider: () => ({ fee: -1, currency: 'NGN', etaMin: 45, etaMax: 90 })
+        };
+        document.dispatchEvent(new CustomEvent('checkout:delivery-selection-change'));
+    });
+    const rejectedEstimate = await successPage.evaluate(() => ({
+        label: document.getElementById('checkoutShippingLabel')?.textContent || '',
+        total: document.getElementById('checkoutTotalValue')?.textContent || ''
+    }));
+    assert.match(rejectedEstimate.label, /standard shipping.*estimate/i);
+    assert.equal(rejectedEstimate.total, initialShipping.total, 'invalid provider fees do not alter the order total');
+    console.log('PASS checkout labels delivery estimates and only totals valid selected-provider fees');
     for (const [selector, value] of [
         ['#email', 'buyer@example.test'],
         ['#firstName', 'Test'],

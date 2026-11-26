@@ -6,6 +6,10 @@
     const byId = (id) => document.getElementById(id);
     const service = () => window.LogisticsService;
 
+    function notifySelectionChange() {
+        document.dispatchEvent(new CustomEvent('checkout:delivery-selection-change'));
+    }
+
     function setStatus(message, error = false) {
         const node = byId('deliveryProviderStatus');
         if (!node) return;
@@ -27,6 +31,7 @@
         destination = null;
         host.replaceChildren();
         if (byId('deliveryProviderQuote')) byId('deliveryProviderQuote').textContent = '';
+        notifySelectionChange();
         if (!shopId) {
             setStatus('Provider selection is available for orders from one shop. This cart contains multiple shops or an item without a shop assignment.');
             return;
@@ -59,20 +64,22 @@
                 p_limit: 30
             });
             if (revision !== searchRevision) return;
-            const providers = Array.isArray(results) ? results : [];
+            const providers = (Array.isArray(results) ? results : [])
+                .map((provider) => ({ provider, quote: service().normalizeProviderQuote(provider) }))
+                .filter((match) => match.quote);
             if (!providers.length) {
-                host.innerHTML = '<p>No approved provider is currently available for both this shop and your delivery address. You can continue and arrange delivery with the seller.</p>';
-                setStatus('No live provider match. No rider was selected.');
+                host.innerHTML = '<p>No currently available provider with a valid fee and delivery window was found for both locations. You can continue and arrange delivery with the seller.</p>';
+                setStatus('No valid live provider match. No rider was selected.');
                 return;
             }
-            host.innerHTML = providers.map((provider) => `
+            host.innerHTML = providers.map(({ provider, quote }) => `
                 <article class="logistics-result">
                     <header><strong>${service().escapeHtml(provider.display_name)}</strong><span class="logistics-badge">${provider.provider_type === 'independent_rider' ? 'Independent rider' : 'Logistics company'}</span></header>
                     <p>${service().escapeHtml(provider.vehicle_type)} · ${service().escapeHtml(provider.service_city)}, ${service().escapeHtml(provider.service_region)}</p>
-                    <p>${service().escapeHtml(provider.distance_km)} km · ${service().formatFee(provider.total_fee_amount, provider.currency_code)} total · ${service().escapeHtml(provider.eta_min_minutes)}–${service().escapeHtml(provider.eta_max_minutes)} minutes</p>
+                    <p>${service().escapeHtml(provider.distance_km)} km · ${service().formatFee(quote.fee, quote.currency)} estimated · ${quote.etaMin}–${quote.etaMax} minutes</p>
                     <p class="logistics-help">${service().escapeHtml(provider.description || 'Verified delivery provider.')}</p>
                     ${signedIn
-                        ? `<button class="logistics-button logistics-button--secondary" type="button" data-select-provider="${service().escapeHtml(provider.provider_id)}" data-service-area="${service().escapeHtml(provider.service_area_id)}" data-fee="${service().escapeHtml(provider.total_fee_amount)}" data-currency="${service().escapeHtml(provider.currency_code)}" data-eta-min="${service().escapeHtml(provider.eta_min_minutes)}" data-eta-max="${service().escapeHtml(provider.eta_max_minutes)}">Choose this provider</button>`
+                        ? `<button class="logistics-button logistics-button--secondary" type="button" data-select-provider="${service().escapeHtml(quote.providerId)}" data-service-area="${service().escapeHtml(quote.serviceAreaId)}" data-fee="${quote.fee}" data-currency="${quote.currency}" data-eta-min="${quote.etaMin}" data-eta-max="${quote.etaMax}" data-provider-name="${service().escapeHtml(provider.display_name)}">Choose this provider</button>`
                         : '<p class="logistics-help">Sign in to request this provider. Guests can continue with seller-arranged delivery.</p>'}
                 </article>`).join('');
             setStatus(`Address found: ${found.displayName}. Provider availability is checked again when the order is created.`);
@@ -90,15 +97,24 @@
     function chooseProvider(event) {
         const button = event.target.closest('[data-select-provider]');
         if (!button) return;
+        const quote = service().normalizeProviderQuote({
+            provider_id: button.dataset.selectProvider,
+            service_area_id: button.dataset.serviceArea,
+            total_fee_amount: button.dataset.fee,
+            currency_code: button.dataset.currency,
+            eta_min_minutes: button.dataset.etaMin,
+            eta_max_minutes: button.dataset.etaMax
+        });
+        if (!quote || !destination) {
+            setStatus('This provider estimate is no longer valid. Search again before selecting a provider.', true);
+            return;
+        }
         const providerCard = button.closest('.logistics-result');
         selectedProvider = {
-            providerId: button.dataset.selectProvider,
-            serviceAreaId: button.dataset.serviceArea,
+            ...quote,
+            providerName: button.dataset.providerName || 'Selected provider',
+            shopId: cartShopId(),
             destination,
-            fee: Number(button.dataset.fee),
-            currency: button.dataset.currency,
-            etaMin: Number(button.dataset.etaMin),
-            etaMax: Number(button.dataset.etaMax)
         };
         byId('deliveryProviderMatches').querySelectorAll('[data-select-provider]').forEach((item) => {
             item.classList.toggle('logistics-button--secondary', item !== button);
@@ -106,8 +122,9 @@
         });
         providerCard?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         byId('deliveryProviderQuote').textContent =
-            `Selected delivery quote: ${service().formatFee(selectedProvider.fee, selectedProvider.currency)} · ${selectedProvider.etaMin}–${selectedProvider.etaMax} minutes. It replaces the estimated shipping amount if the provider confirms the request.`;
-        setStatus('Provider selected. Availability, coverage, and price are checked again when the order is created.');
+            `Selected provider estimate: ${service().formatFee(selectedProvider.fee, selectedProvider.currency)} · ${selectedProvider.etaMin}–${selectedProvider.etaMax} minutes. Price and availability are rechecked when you place the order.`;
+        notifySelectionChange();
+        setStatus('Provider estimate selected. The fee and availability are checked again when the request is submitted.');
     }
 
     async function requestProvider(orderId) {
@@ -129,6 +146,7 @@
         destination = null;
         byId('deliveryProviderMatches')?.replaceChildren();
         if (byId('deliveryProviderQuote')) byId('deliveryProviderQuote').textContent = '';
+        notifySelectionChange();
         setStatus('Address changed. Search again to check current provider coverage.');
     }
 
@@ -143,16 +161,21 @@
         byId('findDeliveryProviders').addEventListener('click', loadMatches);
         byId('deliveryProviderMatches').addEventListener('click', chooseProvider);
         byId('deliveryServiceType').addEventListener('change', invalidateMatches);
-        ['address', 'address2', 'city', 'state', 'zip', 'country'].forEach((id) =>
-            byId(id)?.addEventListener('input', invalidateMatches)
-        );
+        ['address', 'address2', 'city', 'zip'].forEach((id) => byId(id)?.addEventListener('input', invalidateMatches));
+        ['state', 'country'].forEach((id) => {
+            byId(id)?.addEventListener('input', invalidateMatches);
+            byId(id)?.addEventListener('change', invalidateMatches);
+        });
         window.CheckoutLogistics = Object.freeze({
             requestProvider,
-            hasSelection: () => Boolean(selectedProvider)
+            hasSelection: () => Boolean(selectedProvider && selectedProvider.shopId === cartShopId()),
+            getSelectedProvider: () => selectedProvider && selectedProvider.shopId === cartShopId()
+                ? { ...selectedProvider }
+                : null
         });
         byId('deliveryProviderMatches').innerHTML = '<p>Enter your delivery address, then search to compare verified providers that are available now.</p>';
         setStatus(signedIn
-            ? 'Provider selection is optional. The selected delivery fee replaces the current estimated shipping amount on your pending order.'
+            ? 'Provider selection is optional. Selected fees are estimates and are checked again when your order is placed.'
             : 'Sign in to request a provider. Guest checkout and seller-arranged delivery still work as before.');
     }
 

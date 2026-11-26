@@ -632,26 +632,27 @@
 
                 <div class="delivery-promise checkout-delivery-promise" id="checkoutDeliveryPromise">
                     <i class="fas fa-truck-fast"></i>
-                    <span><strong>Calculating your delivery promise…</strong><small>We use your location, seller handling time, and courier SLA.</small></span>
+                    <span><strong>Checking delivery estimate…</strong><small>Delivery timing and shipping fees are estimates until confirmed.</small></span>
                 </div>
                 
                 <div class="summary-row">
                     <span>Subtotal</span>
-                    <span>$0.00</span>
+                    <span id="checkoutSubtotalValue">$0.00</span>
                 </div>
                 <div class="summary-row">
-                    <span>Shipping</span>
-                    <span>$0.00</span>
+                    <span id="checkoutShippingLabel">Standard shipping · estimate</span>
+                    <span id="checkoutShippingValue">$0.00</span>
                 </div>
+                <small class="checkout-summary-note" id="checkoutShippingNote">Seller-arranged delivery remains available.</small>
                 <div class="summary-row">
                     <span>Tax</span>
-                    <span>$0.00</span>
+                    <span id="checkoutTaxValue">$0.00</span>
                 </div>
                 <div class="checkout-action" role="group" aria-label="Order total and place order">
                     <p class="checkout-status" id="checkoutStatus" role="status" aria-live="polite"></p>
                     <div class="summary-row total" aria-label="Order total" aria-live="polite">
-                        <span>Total</span>
-                        <span>$0.00</span>
+                        <span>Estimated total</span>
+                        <span id="checkoutTotalValue">$0.00</span>
                     </div>
                     <button class="place-order-btn" id="placeOrderBtn" type="button" aria-busy="false">
                         <i class="fas fa-lock" aria-hidden="true"></i>
@@ -692,10 +693,23 @@
             opacity: .48;
             filter: grayscale(.7);
         }
+        .checkout-page .checkout-summary-note {
+            display: block;
+            margin: -.2rem 0 .65rem;
+            color: var(--gray-600, #4b5563);
+            font-size: .72rem;
+            line-height: 1.4;
+            text-align: left;
+        }
+        .checkout-page .checkout-delivery-promise {
+            text-align: left;
+        }
     </style>
     <script>
         let checkoutUpdatesAccepted = false;
         let checkoutIdempotencyKey = null;
+        let checkoutDeliveryPromiseRevision = 0;
+        let checkoutDeliveryPromiseState = null;
 
         function createCheckoutIdempotencyKey() {
             if (window.crypto?.randomUUID) return window.crypto.randomUUID();
@@ -740,6 +754,11 @@
             if (window.supabaseConfigReady) await window.supabaseConfigReady;
             initCheckoutRegion();
             loadCartItems();
+            ['state', 'country'].forEach((id) => {
+                document.getElementById(id)?.addEventListener('change', () => {
+                    loadCheckoutPromise(CartService.getCart());
+                });
+            });
             await applySellerPaymentPolicy(JSON.parse(localStorage.getItem('velverahub_cart') || '[]'));
             initPaymentMethods();
             initPlaceOrder();
@@ -839,8 +858,65 @@
         async function loadCheckoutPromise(cart) {
             const target = document.getElementById('checkoutDeliveryPromise');
             if (!target || !cart.length) return;
-            target.innerHTML = '<i class="fas fa-truck-fast"></i><span><strong>Delivery timing confirmed after order review</strong><small>The seller will confirm the delivery date for your address.</small></span>';
+            const revision = ++checkoutDeliveryPromiseRevision;
+            checkoutDeliveryPromiseState = null;
+            target.innerHTML = '<i class="fas fa-truck-fast" aria-hidden="true"></i><span><strong>Checking delivery estimate…</strong><small>Delivery timing and shipping fees are estimates until confirmed.</small></span>';
+            try {
+                const region = window.RegionService?.region === 'uk' ? 'uk' : 'ng';
+                const location = document.getElementById('state')?.value || window.RegionService?.location || '';
+                const rawProductIds = cart.map((item) => String((item.product || item).id || ''));
+                const productIds = [...new Set(rawProductIds)];
+                if (!productIds.length || rawProductIds.some((productId) =>
+                    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(productId)
+                )) {
+                    throw new Error('A live delivery estimate is unavailable for every item.');
+                }
+                const promises = await Promise.all(productIds.map((productId) =>
+                    window.LogisticsService.getDeliveryPromise(productId, location, region)
+                ));
+                if (revision !== checkoutDeliveryPromiseRevision) return;
+                checkoutDeliveryPromiseState = window.LogisticsService.formatDeliveryWindow(promises, region);
+            } catch (_) {
+                if (revision !== checkoutDeliveryPromiseRevision) return;
+                checkoutDeliveryPromiseState = null;
+            }
+            renderCheckoutDeliveryPromise();
         }
+
+        function getCheckoutProviderSelection() {
+            const selection = window.CheckoutLogistics?.getSelectedProvider?.();
+            const region = window.RegionService;
+            const fee = Number(selection?.fee);
+            const etaMin = Number(selection?.etaMin);
+            const etaMax = Number(selection?.etaMax);
+            if (!selection || !region || selection.currency !== region.currency?.code
+                || !Number.isFinite(fee) || fee < 0
+                || !Number.isInteger(etaMin) || etaMin < 1
+                || !Number.isInteger(etaMax) || etaMax < etaMin) {
+                return null;
+            }
+            return { ...selection, fee, etaMin, etaMax };
+        }
+
+        function renderCheckoutDeliveryPromise() {
+            const target = document.getElementById('checkoutDeliveryPromise');
+            if (!target) return;
+            const provider = getCheckoutProviderSelection();
+            if (provider) {
+                target.innerHTML = `<i class="fas fa-truck-fast" aria-hidden="true"></i><span><strong>Provider estimate · ${provider.etaMin}–${provider.etaMax} minutes</strong><small>Timing and fee are rechecked when requested; delivery is not confirmed until the provider accepts.</small></span>`;
+                return;
+            }
+            if (checkoutDeliveryPromiseState) {
+                target.innerHTML = `<i class="fas fa-truck-fast" aria-hidden="true"></i><span><strong>Estimated arrival · ${checkoutDeliveryPromiseState}</strong><small>Based on seller handling time and courier timing. The seller confirms the delivery date.</small></span>`;
+                return;
+            }
+            target.innerHTML = '<i class="fas fa-truck-fast" aria-hidden="true"></i><span><strong>Delivery date not available yet</strong><small>The seller will confirm timing. You can still place the order with seller-arranged delivery.</small></span>';
+        }
+
+        document.addEventListener('checkout:delivery-selection-change', () => {
+            updateTotals(CartService.getCart());
+            renderCheckoutDeliveryPromise();
+        });
         
         function updateTotals(cart, fmt) {
             const region = window.RegionService;
@@ -854,16 +930,35 @@
             const conv = region ? region.conversionFactor : 1;
             const threshold = region ? region.freeShippingThreshold : 50;
             const isFreeShipping = subtotalUSD * conv >= threshold;
-            const shippingUSD = isFreeShipping ? 0 : (region && region.region === 'ng' ? 0.56 : 3.99);
+            const provider = getCheckoutProviderSelection();
+            const providerShippingUSD = provider ? provider.fee / conv : null;
+            const standardShippingUSD = isFreeShipping ? 0 : (region && region.region === 'ng' ? 0.56 : 3.99);
+            const shippingUSD = providerShippingUSD ?? standardShippingUSD;
             const taxUSD = subtotalUSD * 0.075;
             const totalUSD = subtotalUSD + shippingUSD + taxUSD;
             
-            const rows = document.querySelectorAll('.summary-row');
-            if (rows[0]) rows[0].querySelector('span:last-child').textContent = fmt(subtotalUSD);
-            if (rows[1]) rows[1].querySelector('span:last-child').textContent = isFreeShipping ? 'Free' : fmt(shippingUSD);
-            if (rows[2]) rows[2].querySelector('span:last-child').textContent = fmt(taxUSD);
-            const totalRow = document.querySelector('.summary-row.total');
-            if (totalRow) totalRow.querySelector('span:last-child').textContent = fmt(totalUSD);
+            const subtotalValue = document.getElementById('checkoutSubtotalValue');
+            const shippingLabel = document.getElementById('checkoutShippingLabel');
+            const shippingValue = document.getElementById('checkoutShippingValue');
+            const shippingNote = document.getElementById('checkoutShippingNote');
+            const taxValue = document.getElementById('checkoutTaxValue');
+            const totalValue = document.getElementById('checkoutTotalValue');
+            if (subtotalValue) subtotalValue.textContent = fmt(subtotalUSD);
+            if (shippingLabel) shippingLabel.textContent = provider ? 'Provider delivery · estimate' : 'Standard shipping · estimate';
+            if (shippingValue) {
+                shippingValue.textContent = provider
+                    ? window.LogisticsService.formatFee(provider.fee, provider.currency)
+                    : isFreeShipping ? 'Free' : fmt(standardShippingUSD);
+            }
+            if (shippingNote) {
+                shippingNote.textContent = provider
+                    ? 'Fee and availability are rechecked when the provider request is submitted.'
+                    : isFreeShipping
+                        ? 'Free standard shipping for this order. Seller-arranged delivery remains available.'
+                        : 'Marketplace shipping estimate. Seller-arranged delivery remains available.';
+            }
+            if (taxValue) taxValue.textContent = fmt(taxUSD);
+            if (totalValue) totalValue.textContent = fmt(totalUSD);
             const orderAmount = document.getElementById('placeOrderAmount');
             if (orderAmount) orderAmount.textContent = fmt(totalUSD);
         }
