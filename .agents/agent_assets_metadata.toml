@@ -1,0 +1,16 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "dDVVa-Yp2tGwTLN-x2wsB"
+uri = "file://docs/velverahub-nigerian-mobile-app-build-prompt.md"
+type = "text"
+title = "VelveraHub Nigeria mobile app build prompt"
+description = "Implementation prompt for a Nigeria-only Android and iOS app grounded in the existing VelveraHub platform."
+logical_id = "0d743323-4956-45ee-a97b-858cf6155dde"
+content_hash = "sha256:263f95a11d215b7777a0ec11abac38eb1f843dcc04026502fa9063cad1ce959a"
+size = 15050
+mtime_ms = 1795713029328
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:103dfd49-078a-4561-a1e7-9b08a36d2bbe/0d743323-4956-45ee-a97b-858cf6155dde/5afad4aa-c19d-4516-a9ae-85fd0ea33ed9"
+storage_version_token = "1795713055434493"
+content_type = "text/markdown"
