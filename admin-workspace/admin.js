@@ -17,6 +17,7 @@
         phoneVerificationSettings: null,
         pendingManualPayments: [],
         manualPaymentsLoading: false,
+        deliverySettings: [],
         activeView: 'verification'
     };
 

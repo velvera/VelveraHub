@@ -65,6 +65,7 @@
                 <button class="admin-tab" id="paymentSettingsTab" type="button" aria-pressed="false" aria-controls="paymentSettingsPanel" data-admin-view="paymentSettings">Payment settings</button>
                 <button class="admin-tab" id="mediaSettingsTab" type="button" aria-pressed="false" aria-controls="mediaSettingsPanel" data-admin-view="mediaSettings">Media limits</button>
                 <button class="admin-tab" id="phoneVerificationSettingsTab" type="button" aria-pressed="false" aria-controls="phoneVerificationSettingsPanel" data-admin-view="phoneVerificationSettings">Phone verification</button>
+                <button class="admin-tab" id="logisticsTab" type="button" aria-pressed="false" aria-controls="logisticsPanel" data-admin-view="logistics">Store locations &amp; delivery</button>
             </div>
 
             <p class="admin-global-message" id="adminGlobalMessage" role="status" aria-live="polite" hidden></p>
@@ -251,6 +252,49 @@
                     <p class="admin-global-message" id="phoneVerificationSettingsMessage" role="status" aria-live="polite" hidden></p>
                     <button class="admin-primary-button" id="savePhoneVerificationSettings" type="submit">Save phone verification setting</button>
                 </form>
+            </section>
+            <section id="logisticsPanel" aria-labelledby="logisticsTab" hidden>
+                <div class="deletion-review-note">
+                    <strong>Physical store discovery, delivery, and rider hiring are separate workflows.</strong>
+                    <span>Location coordinates and provider documents remain private until approved. Provider delivery availability expires automatically; rider work interest is a separate choice.</span>
+                </div>
+                <section class="queue-toolbar" aria-label="Physical location review controls">
+                    <div><label for="physicalLocationStatusFilter">Shop locations</label><select id="physicalLocationStatusFilter"><option value="pending">Awaiting review</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="all">All</option></select></div>
+                    <p id="physicalLocationSummary" aria-live="polite">Loading shop locations…</p>
+                </section>
+                <div class="verification-list" id="physicalLocationQueue" aria-live="polite"></div>
+
+                <section class="queue-toolbar" aria-label="Delivery provider review controls">
+                    <div><label for="deliveryProviderStatusFilter">Delivery providers</label><select id="deliveryProviderStatusFilter"><option value="pending">Awaiting review</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="suspended">Suspended</option><option value="all">All</option></select></div>
+                    <p id="deliveryProviderSummary" aria-live="polite">Loading providers…</p>
+                </section>
+                <div class="verification-list" id="deliveryProviderQueue" aria-live="polite"></div>
+
+                <section class="queue-toolbar" aria-label="Provider complaint review controls">
+                    <div><label for="deliveryReportStatusFilter">Provider reports</label><select id="deliveryReportStatusFilter"><option value="open">Open reports</option><option value="reviewing">In review</option><option value="resolved">Resolved</option><option value="dismissed">Dismissed</option><option value="all">All</option></select></div>
+                    <p id="deliveryReportSummary" aria-live="polite">Loading reports…</p>
+                </section>
+                <div class="verification-list" id="deliveryReportQueue" aria-live="polite"></div>
+
+                <section class="marketplace-payment-form" aria-labelledby="deliverySettingsTitle">
+                    <div class="marketplace-payment-form-heading">
+                        <h2 id="deliverySettingsTitle">Delivery platform settings</h2>
+                        <p>These values are used for new delivery quotes. Confirm rates and commissions for each market before enabling provider requests.</p>
+                    </div>
+                    <form id="deliveryPlatformSettingsForm">
+                        <div class="marketplace-payment-field"><label for="deliverySettingsCountry">Market</label><select id="deliverySettingsCountry"><option value="NG">Nigeria (NGN)</option><option value="GB">United Kingdom (GBP)</option></select></div>
+                        <div class="marketplace-payment-fields">
+                            <div class="marketplace-payment-field"><label for="deliveryExchangeRate">Local currency per USD</label><input id="deliveryExchangeRate" type="number" min="0.0001" step="0.0001" required></div>
+                            <div class="marketplace-payment-field"><label for="deliveryCommission">Platform commission (%)</label><input id="deliveryCommission" type="number" min="0" max="30" step="0.01" required></div>
+                            <div class="marketplace-payment-field"><label for="deliveryFixedFee">Fixed delivery fee</label><input id="deliveryFixedFee" type="number" min="0" max="1000000" step="0.01" required></div>
+                        </div>
+                        <label class="marketplace-payment-enabled"><input id="deliveryMarketEnabled" type="checkbox"><span>Enable new provider matching and requests in this market</span></label>
+                        <p class="admin-global-message" id="deliverySettingsMessage" role="status" aria-live="polite" hidden></p>
+                        <button class="admin-primary-button" type="submit">Save delivery settings</button>
+                    </form>
+                </section>
+                <section class="queue-toolbar"><div><strong>Recent delivery activity</strong><p id="deliveryActivitySummary" aria-live="polite">Loading activity…</p></div></section>
+                <div class="verification-list" id="deliveryActivityList" aria-live="polite"></div>
             </section>
         </section>
     </main>

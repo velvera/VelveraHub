@@ -44,6 +44,15 @@
         .manual-payment-free-text {
             white-space: pre-wrap;
         }
+        .delivery-request-notice {
+            margin: 1rem auto;
+            padding: .85rem 1rem;
+            border: 1px solid #f2ca7c;
+            border-radius: .75rem;
+            background: #fff9eb;
+            color: #684a12;
+            text-align: left;
+        }
     </style>
 </head>
 <body>
@@ -61,6 +70,7 @@
             <h1 id="successTitle">You’re all set</h1>
             <p id="successMessage">Your action was completed successfully.</p>
             <p id="successDetail" class="success-detail" hidden></p>
+            <p id="deliveryRequestNotice" class="delivery-request-notice" hidden></p>
             <section class="manual-payment-instructions" id="manualPaymentInstructions" aria-live="polite" hidden>
                 <h2>Payment instructions</h2>
                 <p id="manualPaymentStatus"></p>
@@ -117,6 +127,11 @@
             document.title = `${selected.title} - VelveraHub`;
             document.getElementById('successTitle').textContent = selected.title;
             document.getElementById('successMessage').textContent = selected.message;
+            if (type === 'order' && params.get('delivery') === 'not-requested') {
+                const notice = document.getElementById('deliveryRequestNotice');
+                notice.textContent = 'Your order was created, but the selected provider could not be assigned. No provider delivery is confirmed. Contact the seller to arrange delivery.';
+                notice.hidden = false;
+            }
             const detail = document.getElementById('successDetail');
             if (order && /^[A-Za-z0-9_-]{1,80}$/.test(order)) {
                 detail.textContent = `Order reference: ${order}`;

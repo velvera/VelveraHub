@@ -579,6 +579,21 @@
                             </select>
                         </div>
                     </div>
+                    <section class="logistics-card" aria-labelledby="deliveryProviderHeading" id="deliveryProviderPicker">
+                        <h2 id="deliveryProviderHeading"><i class="fas fa-truck-fast"></i> Choose a delivery provider</h2>
+                        <p class="payment-disclaimer">This is an optional, separate delivery request. Only currently available, approved providers covering both the shop and your destination are shown. For multi-shop carts, arrange delivery with each seller.</p>
+                        <div class="logistics-search">
+                            <select id="deliveryServiceType" aria-label="Delivery service type">
+                                <option value="standard">Standard delivery</option>
+                                <option value="same_day">Same-day delivery</option>
+                                <option value="express">Express delivery</option>
+                                <option value="scheduled">Scheduled delivery</option>
+                            </select>
+                            <button class="logistics-button logistics-button--secondary" id="findDeliveryProviders" type="button">Find available providers</button>
+                        </div>
+                        <div class="logistics-results" id="deliveryProviderMatches" aria-live="polite"></div>
+                        <p class="logistics-status" id="deliveryProviderStatus" role="status" aria-live="polite"></p>
+                    </section>
                 </div>
                 
                 <div class="form-section">
@@ -659,7 +674,10 @@
     <script src="../assets/js/services/observability.js"></script>
     <script src="../assets/js/services/cart.js"></script>
     <script src="../assets/js/components/async-feedback.js"></script>
+    <script src="../assets/js/services/logistics.js"></script>
+    <script src="../assets/js/pages/checkout-logistics.js"></script>
     <link href="../assets/css/components/smart-features.css" rel="stylesheet">
+    <link href="../assets/css/components/logistics.css" rel="stylesheet">
     <style>
         .payment-disclaimer {
             margin: 1rem 0 0;
@@ -1043,6 +1061,21 @@
                         throw new Error('Order confirmation was incomplete. Please retry.');
                     }
 
+                    let deliveryRequestUnavailable = false;
+                    if (window.CheckoutLogistics?.hasSelection()) {
+                        if (!/^[0-9a-f-]{36}$/i.test(String(orderId || ''))) {
+                            deliveryRequestUnavailable = true;
+                        } else {
+                            try {
+                                await window.CheckoutLogistics.requestProvider(orderId);
+                            } catch (deliveryError) {
+                                deliveryRequestUnavailable = true;
+                                AsyncFeedback.log('checkout-provider-request', AsyncFeedback.createRequestId('delivery-request'), deliveryError, {
+                                    order_id: orderId
+                                });
+                            }
+                        }
+                    }
                     localStorage.removeItem('velverahub_cart');
                     sessionStorage.removeItem('velverahub_checkout_idempotency');
                     checkoutIdempotencyKey = null;
@@ -1050,6 +1083,7 @@
                     window.Observability?.completeCheckout();
                     const successParams = new URLSearchParams({ type: 'order' });
                     if (orderReference) successParams.set('order', orderReference);
+                    if (deliveryRequestUnavailable) successParams.set('delivery', 'not-requested');
                     if (orderInput.p_payment_method === 'bank_transfer') {
                         successParams.set('payment', 'manual');
                         if (/^[0-9a-f-]{36}$/i.test(String(orderId || ''))) {

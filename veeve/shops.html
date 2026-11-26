@@ -6,16 +6,32 @@
     <meta name="description" content="Browse active VelveraHub shops and their current listings.">
     <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link href="../assets/css/base.css" rel="stylesheet"><link href="../assets/css/components/navbar.css" rel="stylesheet"><link href="../assets/css/components/custom-select.css" rel="stylesheet"><link href="../assets/css/components/smart-features.css" rel="stylesheet"><link href="../assets/css/components/landing-pages.css" rel="stylesheet">
+    <link href="../assets/css/base.css" rel="stylesheet"><link href="../assets/css/components/navbar.css" rel="stylesheet"><link href="../assets/css/components/custom-select.css" rel="stylesheet"><link href="../assets/css/components/smart-features.css" rel="stylesheet"><link href="../assets/css/components/landing-pages.css" rel="stylesheet"><link href="../assets/css/components/logistics.css" rel="stylesheet">
 <link href="../assets/css/components/footer.css" rel="stylesheet">
     <link rel="icon" href="../img/favicon.ico">
 </head>
 <body>
     <nav class="navbar"><div class="nav-container"><div class="nav-left"><a href="/" class="logo"><span class="logo-icon"><img src="../logo.png" alt="VelveraHub"></span><span class="logo-text">Velvera<span class="accent">Hub</span></span></a></div><div class="nav-center"><div class="search-container"><select class="category-select" id="searchCategory"><option value="all">All Categories</option><option value="electronics">Electronics</option><option value="fashion">Fashion</option><option value="home">Home &amp; Garden</option><option value="sports">Sports</option><option value="beauty">Beauty</option><option value="toys">Toys &amp; Games</option></select><input class="search-input" id="searchInput" placeholder="Search for products..."><button class="search-btn" id="searchBtn" aria-label="Search"><i class="fas fa-search"></i></button></div></div><div class="nav-right"><div class="nav-icons"><a class="nav-icon-item" href="/"><i class="fas fa-home"></i><span class="icon-label">Home</span></a><a class="nav-icon-item" href="/pages/products.html"><i class="fas fa-th-large"></i><span class="icon-label">Browse</span></a><a class="nav-icon-item" href="/pages/account.html"><i class="fas fa-user"></i><span class="icon-label">Account</span></a><a class="nav-icon-item" href="/pages/cart.html"><i class="fas fa-shopping-cart"></i><span class="icon-label">Cart</span></a></div></div></div></nav>
-<main class="landing-main"><div class="section-container"><header class="landing-hero"><span class="landing-eyebrow"><i class="fas fa-store"></i> Shop directory</span><h1>Active Shops</h1><p>Browse shops that are currently listed on VelveraHub. Review each listing and confirm delivery and payment details before ordering.</p></header><section class="shops-directory-grid" id="shopsDirectory" aria-live="polite"><div class="shops-directory-status"><i class="fas fa-spinner fa-spin"></i> Loading shops...</div></section></div></main>
+<main class="landing-main"><div class="section-container"><header class="landing-hero"><span class="landing-eyebrow"><i class="fas fa-store"></i> Shop directory</span><h1>Active Shops</h1><p>Browse active shops or discover approved physical store locations nearby. Only verified shop addresses appear on the map.</p><a href="/pages/logistics.html">Deliveries and rider work</a></header>
+    <section class="logistics-page logistics-card logistics-card--wide" aria-labelledby="physicalShopDiscoveryTitle">
+        <h2 id="physicalShopDiscoveryTitle">Find a shop to visit</h2>
+        <p>Search a shop or place, or choose to share your location to see approved stores within 25 km.</p>
+        <form class="logistics-search" id="shopDiscoveryForm">
+            <input id="shopDiscoveryQuery" maxlength="120" placeholder="Shop name, city, or area" aria-label="Search shops and locations">
+            <button class="logistics-button" type="submit">Search stores</button>
+            <button class="logistics-button logistics-button--secondary" id="shopDiscoveryNearMe" type="button">Use my location</button>
+        </form>
+        <div class="logistics-map logistics-map--large" id="shopDiscoveryMap" aria-label="Map of approved physical store locations"></div>
+        <p class="logistics-map-attribution">Map data © OpenStreetMap contributors.</p>
+        <p class="logistics-status" id="shopDiscoveryStatus" role="status" aria-live="polite"></p>
+        <div class="logistics-results" id="shopDiscoveryResults" aria-live="polite"></div>
+    </section>
+    <section aria-labelledby="activeShopDirectoryTitle"><h2 id="activeShopDirectoryTitle">Browse active shops</h2><div class="shops-directory-grid" id="shopsDirectory" aria-live="polite"><div class="shops-directory-status"><i class="fas fa-spinner fa-spin"></i> Loading shops...</div></div></section>
+</div></main>
     <nav class="mobile-bottom-nav"><div class="bottom-nav-items"><a class="bottom-nav-item" href="/"><i class="fas fa-home"></i><span>Home</span></a><a class="bottom-nav-item active" href="/pages/shops.html"><i class="fas fa-store"></i><span>Shops</span></a><button class="bottom-nav-item" id="bottomCartBtn"><i class="fas fa-shopping-cart"></i><span>Cart</span></button><button class="bottom-nav-item" id="bottomAccountBtn"><i class="fas fa-user"></i><span>Account</span></button></div></nav>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../assets/js/services/region.js"></script><script src="../assets/js/config.js"></script><script src="../assets/js/services/publicSupabaseConfig.js"></script><script src="../assets/js/services/observability.js"></script><script src="../assets/js/services/supabaseClient.js"></script><script src="../assets/js/components/async-feedback.js"></script><script src="../assets/js/components/site-navigation.js"></script><script src="../assets/js/components/custom-select.js"></script><script src="../assets/js/components/smart-features.js"></script><script src="../assets/js/components/mobile-nav.js"></script>
+    <script src="../assets/js/services/logistics.js"></script><script src="../assets/js/pages/shop-discovery.js"></script>
     <script>
         (() => {
             const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
