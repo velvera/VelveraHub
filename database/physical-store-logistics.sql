@@ -108,8 +108,8 @@ CREATE TABLE IF NOT EXISTS public.delivery_provider_service_areas (
         CHECK (coverage_radius_km BETWEEN 1 AND 200),
     service_types TEXT[] NOT NULL DEFAULT ARRAY['standard']::TEXT[]
         CHECK (
-            cardinality(service_types) BETWEEN 1 AND 4
-            AND service_types <@ ARRAY['standard', 'same_day', 'express', 'scheduled']::TEXT[]
+            cardinality(service_types) BETWEEN 1 AND 5
+            AND service_types <@ ARRAY['standard', 'same_day', 'next_day', 'express', 'scheduled']::TEXT[]
         ),
     base_fee NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (base_fee BETWEEN 0 AND 10000000),
     per_km_fee NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (per_km_fee BETWEEN 0 AND 1000000),
@@ -1026,8 +1026,8 @@ BEGIN
        OR p_latitude IS NULL OR p_latitude NOT BETWEEN -90 AND 90
        OR p_longitude IS NULL OR p_longitude NOT BETWEEN -180 AND 180
        OR p_coverage_radius_km IS NULL OR p_coverage_radius_km NOT BETWEEN 1 AND 200
-       OR coalesce(cardinality(p_service_types), 0) NOT BETWEEN 1 AND 4
-       OR p_service_types <@ ARRAY['standard', 'same_day', 'express', 'scheduled']::TEXT[] IS NOT TRUE
+       OR coalesce(cardinality(p_service_types), 0) NOT BETWEEN 1 AND 5
+       OR p_service_types <@ ARRAY['standard', 'same_day', 'next_day', 'express', 'scheduled']::TEXT[] IS NOT TRUE
        OR p_base_fee IS NULL OR p_base_fee NOT BETWEEN 0 AND 10000000
        OR p_per_km_fee IS NULL OR p_per_km_fee NOT BETWEEN 0 AND 1000000
        OR p_eta_min_minutes IS NULL OR p_eta_min_minutes NOT BETWEEN 5 AND 10080
@@ -1187,7 +1187,7 @@ BEGIN
     IF p_latitude IS NULL OR p_latitude NOT BETWEEN -90 AND 90
        OR p_longitude IS NULL OR p_longitude NOT BETWEEN -180 AND 180
        OR p_country_code NOT IN ('NG', 'GB')
-       OR p_service_type NOT IN ('standard', 'same_day', 'express', 'scheduled') THEN
+       OR p_service_type NOT IN ('standard', 'same_day', 'next_day', 'express', 'scheduled') THEN
         RETURN NULL;
     END IF;
     SELECT jsonb_build_object(
@@ -1265,7 +1265,7 @@ BEGIN
     IF p_latitude IS NULL OR p_latitude NOT BETWEEN -90 AND 90
        OR p_longitude IS NULL OR p_longitude NOT BETWEEN -180 AND 180
        OR p_country_code NOT IN ('NG', 'GB')
-       OR p_service_type NOT IN ('standard', 'same_day', 'express', 'scheduled') THEN
+       OR p_service_type NOT IN ('standard', 'same_day', 'next_day', 'express', 'scheduled') THEN
         RAISE EXCEPTION 'Enter a valid delivery location' USING ERRCODE = '22023';
     END IF;
     SELECT coalesce(jsonb_agg(result.quote ORDER BY
@@ -1746,54 +1746,5 @@ END;
 $$;
 REVOKE ALL ON FUNCTION public.admin_list_delivery_activity(INTEGER) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_list_delivery_activity(INTEGER) TO authenticated;
-
-CREATE OR REPLACE FUNCTION public.admin_save_delivery_settings(
-    p_country_code TEXT,
-    p_currency_per_usd NUMERIC,
-    p_commission_percent NUMERIC,
-    p_fixed_delivery_fee NUMERIC,
-    p_is_enabled BOOLEAN
-)
-RETURNS VOID
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, pg_temp
-AS $$
-DECLARE
-    v_currency TEXT;
-BEGIN
-    IF public.current_profile_role() IS DISTINCT FROM 'admin' THEN
-        RAISE EXCEPTION 'Access denied' USING ERRCODE = '42501';
-    END IF;
-    IF p_country_code NOT IN ('NG', 'GB')
-       OR p_currency_per_usd IS NULL OR p_currency_per_usd NOT BETWEEN 0.0001 AND 100000000
-       OR p_commission_percent IS NULL OR p_commission_percent NOT BETWEEN 0 AND 30
-       OR p_fixed_delivery_fee IS NULL OR p_fixed_delivery_fee NOT BETWEEN 0 AND 1000000 THEN
-        RAISE EXCEPTION 'Delivery settings are outside the permitted range' USING ERRCODE = '22023';
-    END IF;
-    v_currency := CASE WHEN p_country_code = 'NG' THEN 'NGN' ELSE 'GBP' END;
-    INSERT INTO public.delivery_platform_settings(
-        country_code, currency_code, currency_per_usd, platform_commission_percent,
-        fixed_delivery_fee, is_enabled, updated_by, updated_at
-    )
-    VALUES (
-        p_country_code, v_currency, p_currency_per_usd, p_commission_percent,
-        p_fixed_delivery_fee, coalesce(p_is_enabled, FALSE),
-        public.current_profile_id(), now()
-    )
-    ON CONFLICT (country_code) DO UPDATE SET
-        currency_code = EXCLUDED.currency_code,
-        currency_per_usd = EXCLUDED.currency_per_usd,
-        platform_commission_percent = EXCLUDED.platform_commission_percent,
-        fixed_delivery_fee = EXCLUDED.fixed_delivery_fee,
-        is_enabled = EXCLUDED.is_enabled,
-        updated_by = EXCLUDED.updated_by,
-        updated_at = now();
-END;
-$$;
-REVOKE ALL ON FUNCTION public.admin_save_delivery_settings(TEXT, NUMERIC, NUMERIC, NUMERIC, BOOLEAN)
-    FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.admin_save_delivery_settings(TEXT, NUMERIC, NUMERIC, NUMERIC, BOOLEAN)
-    TO authenticated;
 
 

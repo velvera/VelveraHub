@@ -23,6 +23,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         window.VelveraHubDomains?.publicUrl && document.querySelectorAll('a[href="/"]').forEach((link) => {
             link.href = window.VelveraHubDomains.publicUrl('/');
         });
+        document.querySelectorAll('[data-marketplace-link]').forEach((link) => {
+            const path = link.dataset.marketplaceLink;
+            link.href = window.VelveraHubDomains?.publicUrl?.(path) || path;
+        });
         initSidebar();
         initModals();
         if (window.supabaseConfigReady) await withSellerBootTimeout(window.supabaseConfigReady, 'catalogue configuration');

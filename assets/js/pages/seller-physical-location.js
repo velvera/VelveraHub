@@ -79,8 +79,7 @@
                 setStatus(error.message, true);
             }
         });
-        byId('physicalStoreForm')?.addEventListener('submit', (event) => event.preventDefault());
-        byId('physicalStoreLocationForm').addEventListener('submit', async (event) => {
+        byId('shopPhysicalLocationForm').addEventListener('submit', async (event) => {
             event.preventDefault();
             const button = event.currentTarget.querySelector('button[type="submit"]');
             if (!selectedPoint) {

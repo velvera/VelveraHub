@@ -112,7 +112,7 @@
                     <div class="logistics-field"><label for="areaPerKmFee">Fee per km</label><input id="areaPerKmFee" type="number" min="0" step="0.01" required></div>
                     <div class="logistics-field"><label for="areaEtaMin">Fastest estimate (minutes)</label><input id="areaEtaMin" type="number" min="5" max="10080" value="60" required></div>
                     <div class="logistics-field"><label for="areaEtaMax">Longest estimate (minutes)</label><input id="areaEtaMax" type="number" min="5" max="10080" value="180" required></div>
-                    <div class="logistics-field logistics-field--wide"><label>Service types</label><div>${[['standard','Standard'],['same_day','Same day'],['express','Express'],['scheduled','Scheduled']].map(([value,label]) => `<label class="logistics-checkline"><input type="checkbox" name="areaServiceType" value="${value}" ${value === 'standard' ? 'checked' : ''}><span>${label}</span></label>`).join('')}</div></div>
+                    <div class="logistics-field logistics-field--wide"><label>Service types</label><div>${[['standard','Standard'],['same_day','Same day'],['next_day','Next day'],['express','Express'],['scheduled','Scheduled']].map(([value,label]) => `<label class="logistics-checkline"><input type="checkbox" name="areaServiceType" value="${value}" ${value === 'standard' ? 'checked' : ''}><span>${label}</span></label>`).join('')}</div></div>
                 </div>
                 <div class="logistics-search">
                     <input id="areaAddress" maxlength="180" placeholder="Search a real city or operating address" aria-label="Service area address">

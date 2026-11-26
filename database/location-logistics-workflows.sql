@@ -4,6 +4,17 @@
 
 BEGIN;
 
+-- Migration 20 accepted four service types. Add next-day as a distinct
+-- regional option without loosening the existing provider service constraints.
+ALTER TABLE public.delivery_provider_service_areas
+    DROP CONSTRAINT IF EXISTS delivery_provider_service_areas_service_types_check;
+ALTER TABLE public.delivery_provider_service_areas
+    ADD CONSTRAINT delivery_provider_service_areas_service_types_check
+    CHECK (
+        cardinality(service_types) BETWEEN 1 AND 5
+        AND service_types <@ ARRAY['standard', 'same_day', 'next_day', 'express', 'scheduled']::TEXT[]
+    );
+
 ALTER TABLE public.delivery_providers
     ADD COLUMN IF NOT EXISTS accepts_workforce_engagements BOOLEAN NOT NULL DEFAULT FALSE;
 
@@ -96,7 +107,7 @@ BEGIN
     IF p_destination_latitude IS NULL OR p_destination_latitude NOT BETWEEN -90 AND 90
        OR p_destination_longitude IS NULL OR p_destination_longitude NOT BETWEEN -180 AND 180
        OR p_country_code NOT IN ('NG', 'GB')
-       OR p_service_type NOT IN ('standard', 'same_day', 'express', 'scheduled') THEN
+       OR p_service_type NOT IN ('standard', 'same_day', 'next_day', 'express', 'scheduled') THEN
         RAISE EXCEPTION 'Enter a valid delivery destination' USING ERRCODE = '22023';
     END IF;
 
@@ -192,6 +203,109 @@ REVOKE ALL ON FUNCTION public.get_available_delivery_providers_for_shop(
 GRANT EXECUTE ON FUNCTION public.get_available_delivery_providers_for_shop(
     UUID, DOUBLE PRECISION, DOUBLE PRECISION, TEXT, TEXT, INTEGER
 ) TO anon, authenticated;
+
+-- Let shop owners discover current delivery coverage around their own
+-- verified store without conflating that search with a buyer's destination
+-- quote or a rider workforce engagement.
+CREATE OR REPLACE FUNCTION public.shop_owner_find_available_delivery_providers(
+    p_shop_id UUID,
+    p_limit INTEGER DEFAULT 20
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+    v_location RECORD;
+    v_result JSONB;
+BEGIN
+    IF auth.uid() IS NULL OR NOT public.shop_portal_owns_shop(p_shop_id) THEN
+        RAISE EXCEPTION 'You do not own this shop' USING ERRCODE = '42501';
+    END IF;
+
+    SELECT location.latitude, location.longitude, location.country_code
+      INTO v_location
+      FROM public.shop_physical_locations AS location
+      JOIN public.shops AS shop ON shop.id = location.shop_id
+     WHERE location.shop_id = p_shop_id
+       AND location.review_status = 'approved'
+       AND shop.status = 'active'
+       AND shop.verified IS TRUE;
+    IF NOT FOUND THEN
+        RETURN '[]'::JSONB;
+    END IF;
+
+    SELECT coalesce(jsonb_agg(to_jsonb(match_row) ORDER BY
+        match_row.total_fee_amount, match_row.distance_to_shop_km, match_row.provider_id), '[]'::JSONB)
+      INTO v_result
+      FROM (
+          SELECT DISTINCT ON (provider.id)
+                 provider.id AS provider_id,
+                 provider.provider_type,
+                 provider.display_name,
+                 provider.description,
+                 provider.vehicle_type,
+                 provider.available_until,
+                 area.country_code,
+                 area.city AS service_city,
+                 area.state_or_region AS service_region,
+                 area.service_types,
+                 area.coverage_radius_km,
+                 round(route.distance_km::NUMERIC, 2) AS distance_to_shop_km,
+                 round(area.base_fee + area.per_km_fee * route.distance_km, 2) AS provider_fee_amount,
+                 round(
+                     (area.base_fee + area.per_km_fee * route.distance_km)
+                         * settings.platform_commission_percent / 100
+                     + settings.fixed_delivery_fee,
+                     2
+                 ) AS platform_fee_amount,
+                 round(
+                     (area.base_fee + area.per_km_fee * route.distance_km)
+                         * (1 + settings.platform_commission_percent / 100)
+                     + settings.fixed_delivery_fee,
+                     2
+                 ) AS total_fee_amount,
+                 settings.currency_code,
+                 area.eta_min_minutes,
+                 area.eta_max_minutes
+            FROM public.delivery_providers AS provider
+            JOIN public.delivery_provider_service_areas AS area
+              ON area.provider_id = provider.id
+            JOIN public.delivery_platform_settings AS settings
+              ON settings.country_code = area.country_code
+             AND settings.is_enabled IS TRUE
+            CROSS JOIN LATERAL (
+                SELECT public.delivery_distance_km(
+                    area.latitude, area.longitude,
+                    v_location.latitude, v_location.longitude
+                ) AS distance_km
+            ) AS route
+           WHERE provider.country_code = v_location.country_code
+             AND provider.status = 'approved'
+             AND provider.is_verified IS TRUE
+             AND provider.is_available IS TRUE
+             AND provider.available_until > now()
+             AND area.country_code = v_location.country_code
+             AND area.is_active IS TRUE
+             AND public.delivery_distance_km(
+                    area.latitude, area.longitude,
+                    v_location.latitude, v_location.longitude
+                 ) <= area.coverage_radius_km
+           ORDER BY provider.id,
+                    area.base_fee + area.per_km_fee * route.distance_km,
+                    route.distance_km
+           LIMIT greatest(1, least(coalesce(p_limit, 20), 50))
+      ) AS match_row;
+
+    RETURN v_result;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.shop_owner_find_available_delivery_providers(UUID, INTEGER)
+    FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.shop_owner_find_available_delivery_providers(UUID, INTEGER)
+    TO authenticated;
 
 -- Store employment interest separately from short-lived order-delivery
 -- availability. Permanent hiring must not be hidden because a rider toggled
@@ -581,7 +695,7 @@ BEGIN
     -- Apply the selected fee only while the existing offline order is unpaid.
     UPDATE public.orders
        SET shipping_cost = v_total_fee_usd,
-           total = round(subtotal + tax + v_total_fee_usd, 2),
+           total = round(subtotal + tax + v_total_fee_usd - coalesce(discount, 0), 2),
            updated_at = now()
      WHERE id = p_order_id
        AND customer_id = v_profile_id

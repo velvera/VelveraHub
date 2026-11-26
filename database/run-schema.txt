@@ -32,7 +32,7 @@ code or run schema changes from a storefront.
 18. database/fix-product-media-upload-quota-conflict.sql — removes the PL/pgSQL variable/column name collision that causes product image uploads to return HTTP 500; requires migration 4.
 19. database/phone-verification.sql — optional phone verification, private OTP challenge state, seller publishing and public-media policies, and admin-controlled activation; starts disabled and requires the Supabase Edge Function setup in docs/phone-verification.md.
 20. database/physical-store-logistics.sql — separate physical shop locations, private provider identity verification, service areas, delivery requests, rider engagements, complaint queues, admin settings, and location/provider RPCs. Requires migrations 1–19.
-21. database/location-logistics-workflows.sql — buyer matching and order delivery, time-limited provider availability, buyer and seller tracking, provider status updates, and separate temporary/permanent workforce engagements. Requires migration 20.
+21. database/location-logistics-workflows.sql — buyer matching and order delivery, time-limited provider availability, buyer and seller tracking, provider status updates, next-day service coverage, and separate temporary/permanent workforce engagements. Requires migration 20.
 
 Before applying step 15 to any Supabase project, verify the project's actual
 plan and global Storage file-size limit in the dashboard. Both must support at

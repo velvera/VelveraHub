@@ -13,6 +13,7 @@
     <link rel="icon" href="../img/favicon.ico" type="image/x-icon">
     <link href="../assets/css/base.css" rel="stylesheet">
     <link href="../assets/css/seller-dashboard.css" rel="stylesheet">
+    <link href="../assets/css/components/logistics.css" rel="stylesheet">
     <link href="../assets/css/components/navbar.css" rel="stylesheet">
     <link href="../assets/css/components/seller-updates.css" rel="stylesheet">
     <link href="../assets/css/components/footer.css" rel="stylesheet">
@@ -75,6 +76,10 @@
                     <a href="#" class="nav-item" data-page="shop-settings">
                         <i class="fas fa-store"></i>
                         <span>Shop Settings <small class="owner-only-label">owner</small></span>
+                    </a>
+                    <a href="/veeve/logistics.html" class="nav-item">
+                        <i class="fas fa-truck-fast"></i>
+                        <span>Delivery &amp; Rider Work</span>
                     </a>
                     <a href="#" class="nav-item" data-page="reviews">
                         <i class="fas fa-star"></i>
@@ -345,6 +350,32 @@
                                 <button type="submit" class="btn btn-primary">
                                     <i class="fas fa-save"></i> Save Changes
                                 </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-card settings-card logistics-card" id="shopPhysicalLocationCard">
+                        <div class="card-header">
+                            <h2><i class="fas fa-map-location-dot"></i> Physical store location</h2>
+                        </div>
+                        <div class="card-body">
+                            <p class="form-help">This is the customer-facing location for visiting your shop. It is separate from your seller pickup and delivery addresses. The map marker stays private until an administrator approves the address and pin.</p>
+                            <form id="shopPhysicalLocationForm">
+                                <div class="logistics-form-grid">
+                                    <div class="logistics-field logistics-field--wide"><label for="physicalStoreAddress">Street address</label><input id="physicalStoreAddress" maxlength="240" required></div>
+                                    <div class="logistics-field"><label for="physicalStoreCity">City</label><input id="physicalStoreCity" maxlength="120" required></div>
+                                    <div class="logistics-field"><label for="physicalStoreRegion">State or region</label><input id="physicalStoreRegion" maxlength="120" required></div>
+                                    <div class="logistics-field"><label for="physicalStorePostcode">Postcode (optional)</label><input id="physicalStorePostcode" maxlength="24"></div>
+                                    <div class="logistics-field"><label for="physicalStoreCountry">Market</label><select id="physicalStoreCountry" required><option value="NG">Nigeria</option><option value="GB">United Kingdom</option></select></div>
+                                </div>
+                                <div class="logistics-search">
+                                    <input id="physicalStoreSearch" maxlength="180" placeholder="Search this exact address or a nearby landmark" aria-label="Search physical store address">
+                                    <button class="logistics-button logistics-button--secondary" id="physicalStoreFindAddress" type="button">Find address</button>
+                                </div>
+                                <div class="logistics-map" id="physicalStoreMap" aria-label="Physical shop location map; click to place the exact pin"></div>
+                                <p class="logistics-help" id="physicalStoreCoordinates">Place the pin at your shop entrance. Click or drag the marker to adjust.</p>
+                                <p class="logistics-status" id="physicalStoreStatus" role="status" aria-live="polite"></p>
+                                <div class="logistics-actions"><button class="logistics-button" type="submit">Submit physical location for review</button></div>
                             </form>
                         </div>
                     </div>
@@ -745,6 +776,8 @@
     <script src="../assets/js/components/password-visibility.js"></script>
     <script src="../assets/js/components/interaction-feedback.js"></script>
     <script src="../assets/js/services/storage-uploads.js"></script>
+    <script src="../assets/js/services/logistics.js"></script>
+    <script src="../assets/js/pages/seller-physical-location.js"></script>
     <script src="../assets/js/pages/seller-dashboard.js"></script>
     <script src="../assets/js/components/custom-select.js"></script>
     <script src="../assets/js/components/smart-features.js"></script>

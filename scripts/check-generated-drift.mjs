@@ -32,6 +32,15 @@ const sharedFiles = [
     'assets/css/components/seller-updates.css',
     'assets/js/state/store.js'
 ];
+const regionalLogisticsAssets = [
+    'assets/css/components/logistics.css',
+    'assets/js/pages/checkout-logistics.js',
+    'assets/js/pages/logistics.js',
+    'assets/js/pages/shop-discovery.js',
+    'assets/js/pages/shop-physical-location.js',
+    'assets/js/pages/seller-physical-location.js',
+    'assets/js/services/logistics.js'
+];
 
 const sellerPhoneVerificationGuard = [
     '        if (supabaseContext && window.PhoneVerification && !await window.PhoneVerification.requireVerifiedPhone()) {',
@@ -77,6 +86,10 @@ function sharedCopyMatches(appRoot, relative, sourcePath, copyPath) {
 for (const publicRoot of ['velverahub-ng', 'velverahub-uk']) {
     for (const relative of [
         'veeve/product.html',
+        'veeve/logistics.html',
+        'veeve/shops.html',
+        'veeve/shop.html',
+        'veeve/checkout.html',
         'veeve/pages.css',
         'img/logo.png',
         'img/product-placeholder.svg',
@@ -86,6 +99,17 @@ for (const publicRoot of ['velverahub-ng', 'velverahub-uk']) {
     ]) {
         if (!fs.existsSync(path.join(root, publicRoot, relative))) {
             console.error(`DRIFT ${publicRoot}/${relative} is missing`);
+            failures++;
+        }
+    }
+    for (const relative of regionalLogisticsAssets) {
+        const source = path.join(root, relative);
+        const copy = path.join(root, publicRoot, relative);
+        if (!fs.existsSync(copy)) {
+            console.error(`DRIFT ${publicRoot}/${relative} is missing`);
+            failures++;
+        } else if (digest(source) !== digest(copy)) {
+            console.error(`DRIFT ${publicRoot}/${relative} differs from the shared source`);
             failures++;
         }
     }
@@ -108,7 +132,10 @@ for (const publicRoot of ['velverahub-ng', 'velverahub-uk']) {
             'id="dashboardContent"',
             '../assets/css/seller-dashboard.css',
             '../assets/css/components/seller-updates.css',
+            '../assets/css/components/logistics.css',
             '../assets/js/pages/seller-dashboard.js',
+            '../assets/js/pages/seller-physical-location.js',
+            'id="shopPhysicalLocationForm"',
             `https://${expectedDomain}/veeve/seller.html`,
         ]) {
             if (!html.includes(required)) {
@@ -117,6 +144,34 @@ for (const publicRoot of ['velverahub-ng', 'velverahub-uk']) {
             }
         }
     }
+}
+
+for (const [portalRoot, pagePath, scriptPath] of [
+    ['shop-owner', 'shop-owner/index.html', 'shop-owner/dashboard.js'],
+    ['velverahub-shop', 'velverahub-shop/index.html', 'velverahub-shop/shop.js']
+]) {
+    const html = fs.readFileSync(path.join(root, pagePath), 'utf8');
+    const script = fs.readFileSync(path.join(root, scriptPath), 'utf8');
+    for (const expected of [
+        'data-marketplace-link="/veeve/seller.html"',
+        'data-marketplace-link="/veeve/logistics.html"'
+    ]) {
+        if (!html.includes(expected)) {
+            console.error(`DRIFT ${portalRoot} is missing ${expected}`);
+            failures++;
+        }
+    }
+    if (!script.includes('data-marketplace-link')) {
+        console.error(`DRIFT ${portalRoot} does not route marketplace links`);
+        failures++;
+    }
+}
+
+const adminSource = path.join(root, 'admin-workspace/admin.js');
+const adminCopy = path.join(root, 'velverahub-admin/admin.js');
+if (fs.existsSync(adminCopy) && digest(adminSource) !== digest(adminCopy)) {
+    console.error('DRIFT velverahub-admin/admin.js differs from the admin workspace source');
+    failures++;
 }
 
 for (const publicRoot of ['.', 'velverahub-ng', 'velverahub-uk']) {
