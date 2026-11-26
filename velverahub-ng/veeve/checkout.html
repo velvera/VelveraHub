@@ -480,8 +480,9 @@
 <link href="../assets/css/components/footer.css" rel="stylesheet">
     <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
     <link rel="manifest" href="../manifest.webmanifest">
+    <link href="../assets/css/components/checkout-responsive.css" rel="stylesheet">
 </head>
-<body data-header-search="false">
+<body class="checkout-page" data-header-search="false">
     <nav class="navbar" id="navbar">
         <div class="nav-container">
             <div class="nav-left">
@@ -622,7 +623,6 @@
                 
                 <div class="summary-items" id="summaryItems"></div>
                  <div class="checkout-corrections" id="checkoutCorrections" hidden></div>
-                 <p class="checkout-status" id="checkoutStatus" role="status" aria-live="polite"></p>
                 
                 <div class="promo-code">
                     <input type="text" placeholder="Promo code">
@@ -646,19 +646,20 @@
                     <span>Tax</span>
                     <span>$0.00</span>
                 </div>
-                <div class="summary-row total">
-                    <span>Total</span>
-                    <span>$0.00</span>
-                </div>
-                
-                <button class="place-order-btn" id="placeOrderBtn">
-                    <i class="fas fa-lock"></i>
-                    Place Order
-                </button>
-                
-                <div class="secure-badge">
-                    <i class="fas fa-shield-alt"></i>
-                    <span>Review order and payment details before placing</span>
+                <div class="checkout-action" role="group" aria-label="Order total and place order">
+                    <p class="checkout-status" id="checkoutStatus" role="status" aria-live="polite"></p>
+                    <div class="summary-row total" aria-label="Order total" aria-live="polite">
+                        <span>Total</span>
+                        <span>$0.00</span>
+                    </div>
+                    <button class="place-order-btn" id="placeOrderBtn" type="button">
+                        <i class="fas fa-lock" aria-hidden="true"></i>
+                        Place order
+                    </button>
+                    <div class="secure-badge">
+                        <i class="fas fa-shield-alt" aria-hidden="true"></i>
+                        <span>Review order and payment details before placing</span>
+                    </div>
                 </div>
             </div>
         </div>
