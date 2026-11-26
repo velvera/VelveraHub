@@ -5,3 +5,4 @@
 - [Seller-friendly upload limits](seller-friendly-upload-limits.md) — keep media caps reasonable and make upload thresholds admin-controllable.
 - [Institution-based marketplace positioning](student-segment-positioning.md) — institutions are optional location context, never a student-only listing or seller signal.
 - [Test Supabase project](test-supabase-project.md) — the currently configured Supabase project is for testing; create a separate project before production.
+- [Live checkout inventory verification](live-checkout-inventory.md) — cached listings are for display only; checkout must confirm current active stock from Supabase.

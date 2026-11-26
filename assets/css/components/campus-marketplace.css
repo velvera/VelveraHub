@@ -320,16 +320,18 @@
     height: 2.25rem;
     padding: 0;
     place-items: center;
-    border: 1px solid transparent;
+    border: 1px solid #fecaca;
     border-radius: 50%;
-    background: transparent;
+    background: #fff5f5;
     color: #b42318;
     cursor: pointer;
     font-size: .95rem;
 }
 
 .campus-media-remove:hover {
-    background: #fee4e2;
+    border-color: #b42318;
+    background: #b42318;
+    color: #fff;
 }
 
 .campus-media-remove:focus-visible {

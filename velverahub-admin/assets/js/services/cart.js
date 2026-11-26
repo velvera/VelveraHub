@@ -112,7 +112,7 @@ const CartService = {
             const requestedQuantity = Math.max(1, Number(item.quantity) || 1);
             let result;
             try {
-                result = await window.ProductsService?.getProduct(cachedProduct.id);
+                result = await window.ProductsService?.getProduct(cachedProduct.id, { requireLive: true });
             } catch (error) {
                 window.AsyncFeedback?.log('cart-revalidate', requestId, error, { product_id: cachedProduct.id });
                 result = { data: null, error };

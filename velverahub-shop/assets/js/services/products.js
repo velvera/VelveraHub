@@ -377,12 +377,14 @@ const ProductsService = {
         }
     },
 
-    async getProduct(id) {
+    async getProduct(id, { requireLive = false } = {}) {
         if (window.supabaseConfigReady) await window.supabaseConfigReady;
 
         const productId = decodeURIComponent(String(id || '')).trim();
         if (!productId) return { data: null, error: new Error('Product id is required') };
 
+        let liveLookupCompleted = false;
+        let liveLookupError = null;
         if (window.SupabaseClient && window.SupabaseClient.isConfigured()) {
             const supabase = window.SupabaseClient.get();
             try {
@@ -418,6 +420,8 @@ const ProductsService = {
                         data.product_images = images.data || [];
                     }
                 }
+                if (!error) liveLookupCompleted = true;
+                else liveLookupError = error;
                 if (!error && data) {
                     const formatted = this.formatSupabaseProduct(data);
                     await this.resolvePrivateProductMedia([formatted]);
@@ -444,6 +448,7 @@ const ProductsService = {
                     });
                 }
             } catch (error) {
+                liveLookupError = error;
                 const requestId = window.AsyncFeedback?.createRequestId('product-detail') || `product-detail-${Date.now()}`;
                 window.AsyncFeedback?.log('product-detail', requestId, error, {
                     product_id: productId,
@@ -453,6 +458,14 @@ const ProductsService = {
         }
 
         if (window.VELVERAHUB_CONFIG?.STATIC_ONLY) {
+            if (requireLive) {
+                return liveLookupCompleted
+                    ? { data: null, error: null }
+                    : {
+                        data: null,
+                        error: liveLookupError || new Error('The live listing could not be verified.')
+                    };
+            }
             const cached = this.recalledProduct(productId);
             return cached
                 ? { data: cached, error: null }

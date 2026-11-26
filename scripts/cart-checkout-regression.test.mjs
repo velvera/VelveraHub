@@ -40,6 +40,62 @@ function testCartPreservesItemsWhenAvailabilityCannotBeVerified() {
     });
 }
 
+async function testCartDoesNotTrustCachedAvailability() {
+    const product = {
+        id: 'stale-product-id',
+        title: 'Cached listing',
+        price: 20,
+        stock: 3
+    };
+    const createStorage = (initial = {}) => {
+        const values = new Map(Object.entries(initial));
+        return {
+            getItem: (key) => values.get(key) ?? null,
+            setItem: (key, value) => values.set(key, String(value)),
+            removeItem: (key) => values.delete(key)
+        };
+    };
+    const localStorage = createStorage({
+        velverahub_cart: JSON.stringify([{ product, quantity: 1, currency: 'NGN' }])
+    });
+    const sessionStorage = createStorage();
+    const query = {
+        select() { return this; },
+        eq() { return this; },
+        async maybeSingle() { return { data: null, error: null }; }
+    };
+    const window = {
+        VELVERAHUB_CONFIG: { STATIC_ONLY: true },
+        SupabaseClient: { isConfigured: () => true, get: () => ({ from: () => query }) },
+        RegionService: { region: 'ng', currency: { code: 'NGN' } },
+        dispatchEvent: () => {}
+    };
+    const context = vm.createContext({
+        window,
+        document: { getElementById: () => null },
+        localStorage,
+        sessionStorage,
+        CustomEvent: class CustomEvent { constructor(type, init) { this.type = type; this.detail = init?.detail; } },
+        decodeURIComponent,
+        Date,
+        JSON,
+        Number,
+        Math,
+        String,
+        Promise
+    });
+    vm.runInContext(read('assets/js/services/products.js'), context);
+    vm.runInContext(read('assets/js/services/cart.js'), context);
+    window.ProductsService.rememberProducts([product]);
+    window.CartService.init();
+
+    const result = await window.CartService.revalidate();
+    assert.equal(result.cart.length, 0, 'a cached listing absent from the live catalogue must not pass checkout revalidation');
+    assert.equal(result.corrections[0]?.type, 'unavailable');
+    assert.equal((await window.ProductsService.getProduct(product.id)).data?.id, product.id, 'cached product details can still render outside checkout');
+    console.log('PASS checkout revalidation rejects cached listings absent from live inventory');
+}
+
 async function openCheckout(browser, { rpcResult, failOrder = false }) {
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
     const product = {
@@ -159,6 +215,7 @@ async function testResponsiveAndGeneratedCopies() {
 }
 
 await testCartPreservesItemsWhenAvailabilityCannotBeVerified();
+await testCartDoesNotTrustCachedAvailability();
 await testResponsiveAndGeneratedCopies();
 const browser = await chromium.launch({
     headless: true,

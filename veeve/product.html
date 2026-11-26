@@ -214,7 +214,6 @@
             const stockLabel = Number(product.stock) > 0 ? `${product.stock} available` : 'Contact seller for availability';
             const specs = [
                 ['Condition', product.condition || 'Not specified'],
-                ['Category', product.category || 'General'],
                 ['Location', [product.location, product.school_name, product.campus_area].filter(Boolean).join(' · ') || 'Seller location provided at checkout'],
             ];
             const renderDeliveryOptions = (value) => {
@@ -240,7 +239,7 @@
                 return '<p><strong>VelveraHub manual payment</strong> is selected by this verified shop. Message the seller to agree on delivery and confirm payment details before paying. Transfer instructions are shown after checkout when the admin account is configured for this market.</p>';
             };
             target.innerHTML = `
-                <nav class="product-breadcrumbs" aria-label="Breadcrumb"><a href="/pages/products.html">Catalogue</a><span>/</span><span>${esc(product.category || 'Product')}</span><span>/</span><strong>${esc(product.title)}</strong></nav>
+                <nav class="product-breadcrumbs" aria-label="Breadcrumb"><a href="/pages/products.html">Catalogue</a><span>/</span><strong>${esc(product.title)}</strong></nav>
                 <article class="product-detail-card">
                     <section class="product-gallery" aria-label="Product media">
                         <div class="product-detail-image" id="productMediaStage"></div>
