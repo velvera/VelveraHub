@@ -427,7 +427,10 @@
         const select = byId('hiringShopSelect');
         select.innerHTML = state.shops.map((shop) => `<option value="${escapeHtml(shop.id)}">${escapeHtml(shop.name)}</option>`).join('');
         byId('sellerHiringCard').hidden = state.shops.length === 0;
-        if (state.shops.length) await loadRiderMatches();
+        if (state.shops.length) {
+            await loadRiderMatches();
+            await loadSellerDeliveryProviderMatches();
+        }
     }
 
     async function loadBuyerDeliveryRequests() {
@@ -480,6 +483,37 @@
         } catch (error) {
             window.AsyncFeedback?.log('seller-delivery-tracking', window.AsyncFeedback?.createRequestId('seller-delivery-tracking'), error);
             host.innerHTML = '<p>Order-delivery tracking is temporarily unavailable. Confirm the location and logistics migrations are installed.</p>';
+        }
+    }
+
+    async function loadSellerDeliveryProviderMatches() {
+        const shopId = byId('hiringShopSelect').value;
+        const host = byId('sellerDeliveryProviderMatches');
+        if (!shopId || !host) return;
+        host.innerHTML = '<p>Checking provider approval, current availability, and coverage for your shop…</p>';
+        try {
+            const providers = await service().rpc('shop_owner_find_available_delivery_providers', {
+                p_shop_id: shopId,
+                p_limit: 30
+            });
+            host.innerHTML = providers.length ? providers.map((provider) => {
+                const availableUntil = new Date(provider.available_until);
+                const availabilityText = Number.isNaN(availableUntil.getTime())
+                    ? 'Available now'
+                    : `Available until ${availableUntil.toLocaleString()}`;
+                const sampleFee = service().formatFee(provider.total_fee_amount, provider.currency_code);
+                const serviceTypes = Array.isArray(provider.service_types) ? provider.service_types.join(', ') : 'Standard';
+                return `<article class="logistics-result">
+                    <header><strong>${escapeHtml(provider.display_name)}</strong><span class="logistics-badge">${provider.provider_type === 'independent_rider' ? 'Independent rider' : 'Logistics company'}</span></header>
+                    <p>${escapeHtml(provider.vehicle_type)} · ${escapeHtml(provider.service_city)}, ${escapeHtml(provider.service_region)} · ${escapeHtml(provider.distance_to_shop_km)} km from your shop</p>
+                    <p>${escapeHtml(serviceTypes)} · ${escapeHtml(provider.coverage_radius_km)} km service radius · ${escapeHtml(provider.eta_min_minutes)}–${escapeHtml(provider.eta_max_minutes)} minutes</p>
+                    <p><strong>Sample fee to shop area: ${escapeHtml(sampleFee)}</strong> · ${escapeHtml(availabilityText)}</p>
+                    <p class="logistics-help">${escapeHtml(provider.description || 'Verified delivery provider.')}</p>
+                </article>`;
+            }).join('') : '<p>No approved provider is currently available for your approved shop location. You can still arrange delivery with customers through your existing workflow.</p>';
+        } catch (error) {
+            reportError('sellerHiringStatus', error, 'Delivery providers could not be matched to this shop. Confirm its physical location has been approved.');
+            host.replaceChildren();
         }
     }
 
@@ -597,7 +631,11 @@
             reportError('providerRegistrationStatus', error, 'Provider profile could not be loaded.')
         ));
         byId('refreshRiderMatches').addEventListener('click', loadRiderMatches);
-        byId('hiringShopSelect').addEventListener('change', loadRiderMatches);
+        byId('refreshSellerDeliveryProviders').addEventListener('click', loadSellerDeliveryProviderMatches);
+        byId('hiringShopSelect').addEventListener('change', () => {
+            loadRiderMatches();
+            loadSellerDeliveryProviderMatches();
+        });
         byId('sellerHiringCard').addEventListener('submit', handleSellerHiring);
         byId('sellerHiringCard').addEventListener('click', handleSellerHiring);
         byId('buyerDeliveryRequests').addEventListener('submit', handleBuyerReport);
