@@ -679,6 +679,20 @@
         let checkoutUpdatesAccepted = false;
         let checkoutIdempotencyKey = null;
 
+        function createCheckoutIdempotencyKey() {
+            if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+            if (window.crypto?.getRandomValues) {
+                const bytes = new Uint8Array(16);
+                window.crypto.getRandomValues(bytes);
+                bytes[6] = (bytes[6] & 0x0f) | 0x40;
+                bytes[8] = (bytes[8] & 0x3f) | 0x80;
+                return [...bytes].map((byte, index) =>
+                    `${index === 4 || index === 6 || index === 8 || index === 10 ? '-' : ''}${byte.toString(16).padStart(2, '0')}`
+                ).join('');
+            }
+            throw new Error('Secure browser randomness is required to place an order.');
+        }
+
         function getCheckoutIdempotencyKey(cart, context = '') {
             const fingerprint = cart.map((item) => {
                 const product = item.product || item;
@@ -690,11 +704,11 @@
                 if (saved?.fingerprint === fingerprint && /^[A-Za-z0-9._:-]{16,128}$/.test(saved.key || '')) {
                     return saved.key;
                 }
-                const key = crypto.randomUUID();
+                const key = createCheckoutIdempotencyKey();
                 sessionStorage.setItem(storageKey, JSON.stringify({ fingerprint, key }));
                 return key;
             } catch (_) {
-                return checkoutIdempotencyKey || crypto.randomUUID();
+                return checkoutIdempotencyKey || createCheckoutIdempotencyKey();
             }
         }
 
@@ -891,24 +905,36 @@
         
         function initPlaceOrder() {
             document.getElementById('placeOrderBtn')?.addEventListener('click', async () => {
-                const email = document.getElementById('email').value.trim();
+                const emailField = document.getElementById('email');
+                const email = emailField.value.trim();
                 const firstName = document.getElementById('firstName').value.trim();
                 const lastName = document.getElementById('lastName').value.trim();
                 const address = document.getElementById('address').value.trim();
                 const city = document.getElementById('city').value.trim();
                 
-                if (!email || !firstName || !lastName || !address || !city) {
-                    alert('Please fill in all required fields.');
+                if (!email || !emailField.checkValidity() || !firstName || !lastName || !address || !city) {
+                    const status = document.getElementById('checkoutStatus');
+                    const invalidEmail = !email || !emailField.checkValidity();
+                    if (status) status.textContent = invalidEmail
+                        ? 'Enter a valid email address before placing your order.'
+                        : 'Complete your name, delivery address, and city before placing your order.';
+                    (invalidEmail ? emailField : [
+                        document.getElementById('firstName'),
+                        document.getElementById('lastName'),
+                        document.getElementById('address'),
+                        document.getElementById('city')
+                    ].find((field) => !field.value.trim()))?.focus();
                     return;
                 }
                 const policyConsent = document.getElementById('checkoutPolicyConsent');
                 if (!policyConsent?.checked) {
-                    alert('Please accept the Terms of Service and Refunds and Returns Policy before placing your order.');
+                    const status = document.getElementById('checkoutStatus');
+                    if (status) status.textContent = 'Accept the Terms of Service and Refunds and Returns Policy before placing your order.';
                     policyConsent?.focus();
                     return;
                 }
                 
-                const cart = JSON.parse(localStorage.getItem('velverahub_cart') || '[]');
+                let cart = CartService.getCart();
                 if (cart.length === 0) {
                     alert('Your cart is empty.');
                     return;
@@ -919,6 +945,7 @@
                 const btn = document.getElementById('placeOrderBtn');
                 btn.disabled = true;
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking latest order details...';
+                document.getElementById('checkoutStatus').textContent = 'Checking current prices, stock, and delivery availability…';
 
                 try {
                     /*
@@ -932,6 +959,7 @@
                         area: document.getElementById('city').value.trim(),
                         currency: window.RegionService?.currency?.code
                     });
+                    cart = preflight.cart;
                     loadCartItems();
                     if (!preflight.cart.length) {
                         renderCheckoutCorrections(preflight.corrections);
@@ -947,6 +975,7 @@
                         return;
                     }
                     clearCheckoutCorrections();
+                    document.getElementById('checkoutStatus').textContent = 'Creating your order…';
 
                     const orderInput = {
                         p_customer: {
@@ -1006,16 +1035,24 @@
                         order = errorData;
                     }
 
+                    if (Array.isArray(order)) order = order[0];
+                    if (typeof order === 'string') {
+                        try { order = JSON.parse(order); } catch (_) {}
+                    }
+                    const orderReference = order?.order_number || order?.orderNumber;
+                    const orderId = order?.orderId || order?.order_id || order?.id;
+                    if (!order || order.success === false || (!orderReference && !orderId)) {
+                        throw new Error('Order confirmation was incomplete. Please retry.');
+                    }
+
                     localStorage.removeItem('velverahub_cart');
                     sessionStorage.removeItem('velverahub_checkout_idempotency');
                     checkoutIdempotencyKey = null;
                     checkoutUpdatesAccepted = false;
                     window.Observability?.completeCheckout();
-                    const orderReference = order.order_number || order.orderNumber || '';
                     const successParams = new URLSearchParams({ type: 'order' });
                     if (orderReference) successParams.set('order', orderReference);
                     if (orderInput.p_payment_method === 'bank_transfer') {
-                        const orderId = order.orderId || order.order_id || order.id;
                         successParams.set('payment', 'manual');
                         if (/^[0-9a-f-]{36}$/i.test(String(orderId || ''))) {
                             successParams.set('order_id', orderId);
@@ -1030,15 +1067,30 @@
                         area: document.getElementById('city').value.trim(),
                         currency: window.RegionService?.currency?.code
                     }).catch(() => ({ corrections: [] }));
+                    let correctionsShown = false;
                     if (latest.corrections?.length) {
                         loadCartItems();
                         renderCheckoutCorrections(latest.corrections);
+                        correctionsShown = true;
                     } else {
                         const status = document.getElementById('checkoutStatus');
-                        if (status) status.textContent = 'We could not place the order. Please try again. Your cart was not lost.';
+                        const message = String(e?.message || '');
+                        if (status) {
+                            if (/place_order_secure|PGRST202|function .*not found|schema cache/i.test(message)) {
+                                status.textContent = 'Secure order processing is not available right now. Your cart is unchanged; please contact support.';
+                            } else if (/not enough stock|no longer available|out of stock/i.test(message)) {
+                                status.textContent = 'An item changed while you were checking out. Review your cart and try again.';
+                            } else if (/valid customer email|email is required/i.test(message)) {
+                                status.textContent = 'Check your email address and try placing the order again.';
+                            } else {
+                                status.textContent = 'We could not place the order. Your cart is unchanged; please try again.';
+                            }
+                        }
                     }
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-lock"></i> Place Order';
+                    if (!correctionsShown) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fas fa-lock"></i> Place Order';
+                    }
                 }
             });
         }

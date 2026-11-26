@@ -109,6 +109,7 @@ const CartService = {
 
         for (const item of this.cart) {
             const cachedProduct = item.product || item;
+            const requestedQuantity = Math.max(1, Number(item.quantity) || 1);
             let result;
             try {
                 result = await window.ProductsService?.getProduct(cachedProduct.id);
@@ -118,15 +119,28 @@ const CartService = {
             }
             const product = result?.data;
             if (!product) {
-                corrections.push({
-                    type: 'unavailable',
-                    title: cachedProduct.title || 'Item',
-                    message: 'This item is no longer available and was removed from your cart.'
-                });
+                if (result?.error || !result) {
+                    corrections.push({
+                        type: 'verification',
+                        title: cachedProduct.title || 'Item',
+                        message: 'We could not verify this listing right now. Your item remains in the cart; try again before placing the order.'
+                    });
+                    nextCart.push({
+                        ...item,
+                        product: cachedProduct,
+                        quantity: requestedQuantity,
+                        currency: item.currency || currency || null
+                    });
+                } else {
+                    corrections.push({
+                        type: 'unavailable',
+                        title: cachedProduct.title || 'Item',
+                        message: 'This item is no longer available and was removed from your cart.'
+                    });
+                }
                 continue;
             }
 
-            const requestedQuantity = Math.max(1, Number(item.quantity) || 1);
             const stock = Math.max(0, Number(product.stock) || 0);
             if (stock < 1) {
                 corrections.push({

@@ -1407,6 +1407,15 @@
     margin-bottom: 1.2rem;
 }
 
+.product-action-row .product-save-button {
+    display: inline-grid;
+    width: 2.75rem;
+    min-width: 2.75rem;
+    height: 2.75rem;
+    padding: 0;
+    place-items: center;
+}
+
 .product-detail-title-row {
     display: flex;
     align-items: flex-start;
@@ -1749,7 +1758,7 @@
     display: grid;
     width: 100%;
     min-width: 0;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     align-items: stretch;
     gap: 1rem;
 }
@@ -1788,6 +1797,10 @@
     .catalogue-main #productsGrid {
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
+
+    .related-products-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
 }
 
 @media (max-width: 768px) {
@@ -1820,6 +1833,11 @@
     }
 
     .catalogue-main #productsGrid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: .65rem;
+    }
+
+    .related-products-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: .65rem;
     }
@@ -1870,7 +1888,7 @@
 
     .product-action-row {
         display: grid;
-        grid-template-columns: 4.35rem minmax(0, 1fr) 4rem;
+        grid-template-columns: 4.1rem 3rem minmax(0, 1fr);
         align-items: stretch;
         gap: .4rem;
         width: 100%;
@@ -1897,6 +1915,12 @@
         width: 2rem;
         min-width: 0;
         padding: 0;
+    }
+
+    .product-action-row .product-save-button {
+        width: 100%;
+        min-width: 0;
+        min-height: 2.75rem;
     }
 
     .product-action-row .btn i {
@@ -1955,7 +1979,7 @@
     }
 
     .product-action-row {
-        grid-template-columns: 4.1rem minmax(0, 1fr) 3.75rem;
+        grid-template-columns: 4rem 2.85rem minmax(0, 1fr);
         gap: .3rem;
     }
 
@@ -1974,8 +1998,7 @@
     }
 
     .related-products-grid {
-        /* A single full-width card avoids the cramped sliver seen on phones. */
-        grid-template-columns: minmax(0, 1fr);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: .6rem;
     }
 }

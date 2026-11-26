@@ -37,13 +37,14 @@
         .cart-page-item h3 { font-size:1rem; color:var(--gray-900); margin-bottom:.25rem; }
         .cart-page-item-shop { color:var(--gray-500); font-size:.8rem; }
         .cart-page-item-price { color:var(--primary); font-weight:700; margin-top:.45rem; }
-        .cart-page-item-actions { display:flex; align-items:center; gap:.65rem; }
+        .cart-page-item-actions { display:flex; align-items:center; justify-content:flex-end; gap:.5rem; }
         .cart-page-qty { display:flex; align-items:center; border:1px solid var(--gray-200); border-radius:var(--radius-full); overflow:hidden; }
         .cart-page-qty button { width:30px; height:30px; color:var(--gray-600); }
         .cart-page-qty button:hover { background:var(--primary-50); color:var(--primary); }
         .cart-page-qty span { min-width:28px; text-align:center; font-weight:600; }
-        .cart-page-remove { color:var(--gray-400); padding:.4rem; }
-        .cart-page-remove:hover { color:var(--error); }
+        .cart-page-remove { display:grid; place-items:center; width:36px; height:36px; padding:0; border:1px solid #fecaca; border-radius:var(--radius-md); background:#fff5f5; color:#b42318; transition:background .18s ease, border-color .18s ease, color .18s ease; }
+        .cart-page-remove:hover { color:#fff; border-color:#b42318; background:#b42318; }
+        .cart-page-remove:focus-visible { outline:3px solid rgba(180,35,24,.25); outline-offset:2px; }
         .cart-page-empty { text-align:center; padding:4rem 1.5rem; color:var(--gray-500); }
         .cart-page-empty p { margin:0 0 .8rem; }
         .cart-page .btn:disabled { opacity:.5; cursor:not-allowed; box-shadow:none; }
@@ -57,7 +58,7 @@
             .cart-page-header { align-items:flex-start; flex-direction:column; }
             .cart-page-item { grid-template-columns:64px minmax(0,1fr); gap:.75rem; }
             .cart-page-item-image { width:64px; height:64px; }
-            .cart-page-item-actions { grid-column:2; justify-content:space-between; }
+            .cart-page-item-actions { grid-column:1 / -1; justify-content:flex-end; }
         }
     </style>
 <link href="../assets/css/components/footer.css" rel="stylesheet">
@@ -145,7 +146,7 @@
                     return `<article class="cart-page-item">
                         <div class="cart-page-item-image"><img src="${image}" alt="${product.title || 'Product'}" loading="lazy" decoding="async"></div>
                         <div><h3>${product.title || 'Product'}</h3><p class="cart-page-item-shop">${product.shops?.name || 'VelveraHub Store'}</p><p class="cart-page-item-price">${fmt(Number(product.price || 0) * item.quantity)}</p></div>
-                        <div class="cart-page-item-actions"><div class="cart-page-qty"><button data-cart-action="decrease" data-product-id="${product.id}" aria-label="Decrease quantity"><i class="fas fa-minus"></i></button><span>${item.quantity}</span><button data-cart-action="increase" data-product-id="${product.id}" aria-label="Increase quantity"><i class="fas fa-plus"></i></button></div><button class="cart-page-remove" data-cart-action="remove" data-product-id="${product.id}" aria-label="Remove item"><i class="fas fa-trash"></i></button></div>
+                        <div class="cart-page-item-actions"><div class="cart-page-qty"><button type="button" data-cart-action="decrease" data-product-id="${product.id}" aria-label="Decrease quantity"><i class="fas fa-minus"></i></button><span>${item.quantity}</span><button type="button" data-cart-action="increase" data-product-id="${product.id}" aria-label="Increase quantity"><i class="fas fa-plus"></i></button></div><button class="cart-page-remove" type="button" data-cart-action="remove" data-product-id="${product.id}" aria-label="Remove item"><i class="fas fa-trash"></i></button></div>
                     </article>`;
                 }).join('');
             }
