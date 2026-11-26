@@ -1423,7 +1423,7 @@ async function assertShopOwnerCategories(page, width) {
         window.__VelveraSellerMobileTest.setProducts([
             { id: 'cat-a', title: 'Desktop computer', category: 'electronics::computer-hardware', price: 1, stock: 1, status: 'active' },
             { id: 'cat-b', title: 'Other electronics', category: secondElectronicsChild, price: 1, stock: 1, status: 'active' },
-            { id: 'cat-c', title: 'Dress', category: 'fashion::womens-clothing', price: 1, stock: 1, status: 'active' }
+            { id: 'cat-c', title: 'Dress', category: 'fashion::womens-clothing', price: 1, stock: 0, status: 'draft' }
         ]);
     });
     await page.locator('#productCategoryFilter').evaluate((select) => {
@@ -1440,6 +1440,23 @@ async function assertShopOwnerCategories(page, width) {
     const childRows = await page.locator('#productsTableBody tr').allTextContents();
     if (childRows.length !== 1 || !childRows[0].includes('Desktop computer')) {
         throw new Error(`shop-owner ${width}px subcategory did not filter to its matching product`);
+    }
+    await page.locator('#productCategoryFilter').selectOption('');
+    await page.locator('#productSearchInput').fill('computer');
+    if (await page.locator('#productsTableBody tr').count() !== 1 ||
+        !(await page.locator('#productsTableBody').innerText()).includes('Desktop computer')) {
+        throw new Error(`shop-owner ${width}px product search did not filter the live table`);
+    }
+    await page.locator('#productSearchInput').fill('');
+    await page.locator('#productStatusFilter').selectOption('draft');
+    if (await page.locator('#productsTableBody tr').count() !== 1 ||
+        !(await page.locator('#productsTableBody').innerText()).includes('Dress')) {
+        throw new Error(`shop-owner ${width}px status filter did not return draft products`);
+    }
+    await page.locator('#productStatusFilter').selectOption('out-of-stock');
+    if (await page.locator('#productsTableBody tr').count() !== 1 ||
+        !(await page.locator('#productsTableBody').innerText()).includes('Dress')) {
+        throw new Error(`shop-owner ${width}px out-of-stock filter did not return depleted products`);
     }
     pass(`shop-owner ${width}px searchable category selector and parent/child product filters`);
 }

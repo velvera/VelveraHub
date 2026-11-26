@@ -141,21 +141,22 @@
                     <h1 class="page-title">Dashboard</h1>
                 </div>
                 <div class="header-right">
-                    <div class="header-search">
-                        <i class="fas fa-search"></i>
-                        <input type="text" placeholder="Search...">
-                    </div>
-                    <button class="header-icon-btn" id="notificationsBtn">
-                        <i class="fas fa-bell"></i>
-                        <span class="notification-dot"></span>
+                    <form class="header-search" id="sellerGlobalSearch" role="search">
+                        <input id="sellerGlobalSearchInput" name="q" type="search" placeholder="Search products" aria-label="Search products" autocomplete="off">
+                        <button class="header-search-submit" type="submit" aria-label="Search products">
+                            <i class="fas fa-search" aria-hidden="true"></i>
+                        </button>
+                    </form>
+                    <button class="header-icon-btn" id="notificationsBtn" type="button" data-page-link="notifications" data-no-processing aria-label="Open listing updates">
+                        <i class="fas fa-bell" aria-hidden="true"></i>
                     </button>
                     <button class="header-icon-btn" id="messagesBtn" data-page-link="messages" data-no-processing type="button" aria-label="Open messages">
                         <i class="fas fa-envelope"></i>
                     </button>
-                    <div class="user-dropdown" id="userDropdown">
-                        <img src="../img/seller/seller.jpg" alt="Shop owner store image">
-                        <i class="fas fa-chevron-down"></i>
-                    </div>
+                    <button class="user-dropdown" id="userDropdown" type="button" data-page-link="settings" data-no-processing aria-label="Open account settings">
+                        <img src="../img/seller/seller.jpg" alt="">
+                        <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                    </button>
                 </div>
             </header>
             
@@ -228,21 +229,21 @@
                             <h2>Quick Actions</h2>
                         </div>
                         <div class="quick-actions">
-                            <button class="quick-action-btn" id="addProductBtn">
-                                <i class="fas fa-plus"></i>
+                            <button class="quick-action-btn" id="addProductBtn" type="button">
+                                <i class="fas fa-plus" aria-hidden="true"></i>
                                 <span>Add Product</span>
                             </button>
-                            <button class="quick-action-btn">
-                                <i class="fas fa-tag"></i>
-                                <span>Create Discount</span>
+                            <button class="quick-action-btn" type="button" data-page-link="products">
+                                <i class="fas fa-tag" aria-hidden="true"></i>
+                                <span>Manage discounts</span>
                             </button>
-                            <button class="quick-action-btn">
-                                <i class="fas fa-bullhorn"></i>
-                                <span>Run Promotion</span>
+                            <button class="quick-action-btn" type="button" data-page-link="advertisements">
+                                <i class="fas fa-bullhorn" aria-hidden="true"></i>
+                                <span>Request promotion</span>
                             </button>
-                            <button class="quick-action-btn">
-                                <i class="fas fa-file-export"></i>
-                                <span>Export Report</span>
+                            <button class="quick-action-btn" type="button" data-seller-export>
+                                <i class="fas fa-file-export" aria-hidden="true"></i>
+                                <span>Export report</span>
                             </button>
                         </div>
                         
@@ -528,15 +529,15 @@
                     <div class="filters-bar">
                         <div class="search-box">
                             <i class="fas fa-search"></i>
-                            <input type="text" placeholder="Search products...">
+                            <input id="productSearchInput" type="search" placeholder="Search products..." aria-label="Search products" autocomplete="off">
                         </div>
-                        <select class="filter-select">
+                        <select class="filter-select" id="productCategoryFilter" data-category-filter aria-label="Filter products by category">
                             <option value="">All Categories</option>
                             <option value="electronics">Electronics</option>
                             <option value="fashion">Fashion</option>
                             <option value="home">Home</option>
                         </select>
-                        <select class="filter-select">
+                        <select class="filter-select" id="productStatusFilter" aria-label="Filter products by status">
                             <option value="">All Status</option>
                             <option value="active">Active</option>
                             <option value="draft">Draft</option>

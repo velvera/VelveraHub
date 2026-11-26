@@ -967,8 +967,8 @@ function updateProductsDisplay(products) {
                 <span class="product-sold">${product.sales_count || 0} sold</span>
             </div>
             <div class="product-actions">
-                <button class="icon-btn" onclick="editProduct('${product.id}')"><i class="fas fa-edit"></i></button>
-                <button class="icon-btn" onclick="deleteProduct('${product.id}')"><i class="fas fa-trash"></i></button>
+                <button class="icon-btn" type="button" onclick="editProduct('${product.id}')" aria-label="Edit ${escapeHtml(product.title)}" title="Edit product"><i class="fas fa-edit" aria-hidden="true"></i></button>
+                <button class="icon-btn" type="button" onclick="deleteProduct('${product.id}')" aria-label="Delete ${escapeHtml(product.title)}" title="Delete product"><i class="fas fa-trash" aria-hidden="true"></i></button>
             </div>
         </div>
     `).join('');
@@ -1083,10 +1083,29 @@ function initNavigation() {
     });
 
     document.addEventListener('click', (event) => {
+        const exportButton = event.target.closest('[data-seller-export]');
+        if (exportButton) {
+            event.preventDefault();
+            exportSellerReport();
+            return;
+        }
         const link = event.target.closest('[data-page-link]');
         if (!link) return;
         event.preventDefault();
         document.querySelector(`.nav-item[data-page="${link.dataset.pageLink}"]`)?.click();
+    });
+
+    document.getElementById('sellerGlobalSearch')?.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const query = document.getElementById('sellerGlobalSearchInput')?.value.trim() || '';
+        if (!query) return;
+        const productSearch = document.getElementById('productSearchInput');
+        if (productSearch) productSearch.value = query;
+        document.querySelector('.nav-item[data-page="products"]')?.click();
+        if (productSearch) {
+            renderProductsTable(currentProducts, true);
+            productSearch.focus({ preventScroll: true });
+        }
     });
 }
 
@@ -2363,9 +2382,21 @@ function renderSellerTableFeedback(tbody, state, options = {}) {
 
 function initProductTableFilters() {
     const categoryFilter = document.getElementById('productCategoryFilter');
-    if (!categoryFilter || categoryFilter.dataset.categoryFilterReady === 'true') return;
-    categoryFilter.dataset.categoryFilterReady = 'true';
-    categoryFilter.addEventListener('change', () => renderProductsTable(currentProducts, true));
+    const statusFilter = document.getElementById('productStatusFilter');
+    const searchInput = document.getElementById('productSearchInput');
+    const filterProducts = () => renderProductsTable(currentProducts, true);
+    if (categoryFilter && categoryFilter.dataset.categoryFilterReady !== 'true') {
+        categoryFilter.dataset.categoryFilterReady = 'true';
+        categoryFilter.addEventListener('change', filterProducts);
+    }
+    if (statusFilter && statusFilter.dataset.statusFilterReady !== 'true') {
+        statusFilter.dataset.statusFilterReady = 'true';
+        statusFilter.addEventListener('change', filterProducts);
+    }
+    if (searchInput && searchInput.dataset.searchReady !== 'true') {
+        searchInput.dataset.searchReady = 'true';
+        searchInput.addEventListener('input', filterProducts);
+    }
 }
 
 function renderProductsTable(products, isReal) {
@@ -2376,13 +2407,32 @@ function renderProductsTable(products, isReal) {
     const matchingCategoryValues = categoryFilter && categoryFilter !== 'all'
         ? (window.VelveraCategories?.getValues(categoryFilter) || [categoryFilter])
         : null;
-    const visibleProducts = matchingCategoryValues
-        ? products.filter((product) => matchingCategoryValues.includes(String(product.category || '')))
-        : products;
+    const statusFilter = document.getElementById('productStatusFilter')?.value || '';
+    const searchTerm = (document.getElementById('productSearchInput')?.value || '').trim().toLocaleLowerCase();
+    const visibleProducts = products.filter((product) => {
+        const categoryMatches = !matchingCategoryValues ||
+            matchingCategoryValues.includes(String(product.category || ''));
+        const productStatus = String(product.status || 'active').toLowerCase();
+        const statusMatches = !statusFilter ||
+            (statusFilter === 'out-of-stock'
+                ? Number(product.stock || 0) <= 0
+                : productStatus === statusFilter);
+        const searchableText = [
+            product.title,
+            product.category,
+            window.VelveraCategories?.labelFor?.(product.category),
+            product.location,
+            product.status,
+            product.price,
+            product.stock
+        ].filter(Boolean).join(' ').toLocaleLowerCase();
+        return categoryMatches && statusMatches && (!searchTerm || searchableText.includes(searchTerm));
+    });
 
     if (!visibleProducts.length) {
-        const emptyMessage = products.length && matchingCategoryValues
-            ? 'No products match this category.'
+        const hasFilters = Boolean(matchingCategoryValues || statusFilter || searchTerm);
+        const emptyMessage = products.length && hasFilters
+            ? 'No products match your search and filters.'
             : 'No products yet. Click "Add Product" to create your first listing.';
         tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--gray-500);">${emptyMessage}</td></tr>`;
         const summary = document.getElementById('productsTableSummary');
@@ -2405,8 +2455,8 @@ function renderProductsTable(products, isReal) {
             <td><span class="status-badge ${escapeHtml(product.status || 'active')}">${escapeHtml((product.status || 'active').replace('-', ' '))}</span></td>
             <td>
                 <div class="product-actions">
-                    <button class="icon-btn" onclick="editProduct('${product.id}')"><i class="fas fa-edit"></i></button>
-                    <button class="icon-btn" onclick="deleteProduct('${product.id}')"><i class="fas fa-trash"></i></button>
+                    <button class="icon-btn" type="button" onclick="editProduct('${product.id}')" aria-label="Edit ${escapeHtml(product.title)}" title="Edit product"><i class="fas fa-edit" aria-hidden="true"></i></button>
+                    <button class="icon-btn" type="button" onclick="deleteProduct('${product.id}')" aria-label="Delete ${escapeHtml(product.title)}" title="Delete product"><i class="fas fa-trash" aria-hidden="true"></i></button>
                 </div>
             </td>
         </tr>
