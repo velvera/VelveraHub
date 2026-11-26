@@ -674,6 +674,9 @@
                 mediaProgressRows.forEach((row) => { row.removeButton.disabled = true; });
                 await Promise.all(mediaSubmissionState.pendingRemovals);
                 if (mediaSubmissionState.removalError) throw mediaSubmissionState.removalError;
+                if (cancelledUploadCleanupFailed) {
+                    throw new Error('A cancelled media upload could not be cleaned up.');
+                }
                 if (uploadedMedia.length) {
                     failureStage = 'media metadata';
                     failureMediaType = [...new Set(uploadedMedia.map((item) => item.mediaType))].join(',') || failureMediaType;

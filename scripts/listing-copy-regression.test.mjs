@@ -53,6 +53,7 @@ for (const root of roots) {
     assert.match(listingScript, /removeButton\.addEventListener\('click', \(\) => removeSelectedMedia\(index\)\)/);
     assert.match(listingScript, /submission\.removedIndices\.add\(index\)/);
     assert.match(listingScript, /row\.task\?\.cancel\(\)/);
+    assert.match(listingScript, /if \(cancelledUploadCleanupFailed\)/);
     assert.match(marketplaceCss, /\.campus-media-remove\s*\{[\s\S]*?color:\s*#b42318;/);
     for (const file of [
         'assets/css/components/products.css',
