@@ -10,6 +10,33 @@ ALTER TABLE public.delivery_providers
 CREATE INDEX IF NOT EXISTS delivery_provider_workforce_match_idx
     ON public.delivery_providers(country_code, provider_type, status, accepts_workforce_engagements);
 
+-- A provider may define coverage before verification. Make those saved
+-- user-entered areas matchable when an administrator first approves them.
+CREATE OR REPLACE FUNCTION public.activate_delivery_areas_after_provider_approval()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+    IF NEW.status = 'approved'
+       AND NEW.is_verified IS TRUE
+       AND (OLD.status IS DISTINCT FROM 'approved' OR OLD.is_verified IS DISTINCT FROM TRUE) THEN
+        UPDATE public.delivery_provider_service_areas
+           SET is_active = TRUE
+         WHERE provider_id = NEW.id
+           AND is_active IS FALSE;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.activate_delivery_areas_after_provider_approval() FROM PUBLIC, anon, authenticated;
+DROP TRIGGER IF EXISTS activate_delivery_areas_after_provider_approval
+    ON public.delivery_providers;
+CREATE TRIGGER activate_delivery_areas_after_provider_approval
+AFTER UPDATE OF status, is_verified ON public.delivery_providers
+FOR EACH ROW EXECUTE FUNCTION public.activate_delivery_areas_after_provider_approval();
+
 CREATE OR REPLACE FUNCTION public.delivery_provider_list_my_profiles()
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -455,6 +482,8 @@ DECLARE
     v_fee NUMERIC(12,2);
     v_platform_fee NUMERIC(12,2);
     v_total_fee NUMERIC(12,2);
+    v_currency_per_usd NUMERIC(12,4);
+    v_total_fee_usd NUMERIC(12,2);
 BEGIN
     IF auth.uid() IS NULL THEN
         RAISE EXCEPTION 'Sign in to request a verified delivery provider' USING ERRCODE = '42501';
@@ -519,6 +548,17 @@ BEGIN
     v_fee := (v_match->>'provider_fee_amount')::NUMERIC;
     v_platform_fee := (v_match->>'platform_fee_amount')::NUMERIC;
     v_total_fee := (v_match->>'total_fee_amount')::NUMERIC;
+    SELECT settings.currency_per_usd
+      INTO v_currency_per_usd
+      FROM public.delivery_platform_settings AS settings
+     WHERE settings.country_code = v_country_code
+       AND settings.is_enabled IS TRUE;
+    IF v_currency_per_usd IS NULL OR v_currency_per_usd <= 0 THEN
+        RAISE EXCEPTION 'Delivery pricing is not available for this market' USING ERRCODE = '23514';
+    END IF;
+    -- Order totals are stored in the platform's USD base units; the delivery
+    -- request snapshot retains the buyer-facing NGN or GBP amounts.
+    v_total_fee_usd := round(v_total_fee / v_currency_per_usd, 2);
     INSERT INTO public.delivery_requests(
         order_id, provider_id, service_area_id, buyer_user_id,
         destination_latitude, destination_longitude, distance_km,
@@ -531,7 +571,7 @@ BEGIN
         p_destination_latitude, p_destination_longitude,
         (v_match->>'distance_km')::NUMERIC, v_fee, v_platform_fee, v_total_fee,
         v_match->>'currency_code',
-        (SELECT currency_per_usd FROM public.delivery_platform_settings WHERE country_code = v_country_code),
+        v_currency_per_usd,
         (SELECT platform_commission_percent FROM public.delivery_platform_settings WHERE country_code = v_country_code),
         (v_match->>'eta_min_minutes')::INTEGER, (v_match->>'eta_max_minutes')::INTEGER,
         'requested'
@@ -540,8 +580,8 @@ BEGIN
 
     -- Apply the selected fee only while the existing offline order is unpaid.
     UPDATE public.orders
-       SET shipping_cost = v_total_fee,
-           total = round(subtotal + tax + v_total_fee, 2),
+       SET shipping_cost = v_total_fee_usd,
+           total = round(subtotal + tax + v_total_fee_usd, 2),
            updated_at = now()
      WHERE id = p_order_id
        AND customer_id = v_profile_id
@@ -665,5 +705,119 @@ END;
 $$;
 REVOKE ALL ON FUNCTION public.delivery_provider_update_request(UUID, UUID, TEXT, TEXT) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.delivery_provider_update_request(UUID, UUID, TEXT, TEXT) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.buyer_list_my_delivery_requests(p_limit INTEGER DEFAULT 50)
+RETURNS JSONB
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+    v_profile_id UUID;
+BEGIN
+    IF auth.uid() IS NULL THEN
+        RAISE EXCEPTION 'Authentication required' USING ERRCODE = '42501';
+    END IF;
+    SELECT profile.id INTO v_profile_id
+      FROM public.profiles AS profile
+     WHERE profile.user_id = auth.uid() OR profile.id = auth.uid()
+     ORDER BY (profile.user_id = auth.uid()) DESC
+     LIMIT 1;
+    IF v_profile_id IS NULL THEN
+        RAISE EXCEPTION 'A linked marketplace profile is required' USING ERRCODE = '42501';
+    END IF;
+    RETURN (
+        SELECT coalesce(jsonb_agg(to_jsonb(delivery_row) ORDER BY delivery_row.created_at DESC), '[]'::JSONB)
+        FROM (
+            SELECT request.id AS request_id,
+                   request.order_id,
+                   order_row.order_number,
+                   request.provider_id,
+                   provider.display_name AS provider_name,
+                   provider.provider_type,
+                   request.status,
+                   request.total_fee_amount,
+                   request.currency_code,
+                   request.eta_min_minutes,
+                   request.eta_max_minutes,
+                   request.response_note,
+                   order_row.shipping_address->>'city' AS destination_city,
+                   order_row.shipping_address->>'state' AS destination_region,
+                   request.created_at,
+                   request.updated_at,
+                   coalesce((
+                       SELECT jsonb_agg(jsonb_build_object(
+                           'status', event.status,
+                           'note', event.note,
+                           'created_at', event.created_at
+                       ) ORDER BY event.created_at)
+                       FROM public.delivery_request_events AS event
+                       WHERE event.request_id = request.id
+                   ), '[]'::JSONB) AS events
+              FROM public.delivery_requests AS request
+              JOIN public.orders AS order_row ON order_row.id = request.order_id
+              JOIN public.delivery_providers AS provider ON provider.id = request.provider_id
+             WHERE order_row.customer_id = v_profile_id
+             ORDER BY request.created_at DESC
+             LIMIT greatest(1, least(coalesce(p_limit, 50), 100))
+        ) AS delivery_row
+    );
+END;
+$$;
+REVOKE ALL ON FUNCTION public.buyer_list_my_delivery_requests(INTEGER) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.buyer_list_my_delivery_requests(INTEGER) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.shop_owner_list_delivery_requests(p_shop_id UUID, p_limit INTEGER DEFAULT 50)
+RETURNS JSONB
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+    IF auth.uid() IS NULL OR NOT public.shop_portal_owns_shop(p_shop_id) THEN
+        RAISE EXCEPTION 'You do not own this shop' USING ERRCODE = '42501';
+    END IF;
+    RETURN (
+        SELECT coalesce(jsonb_agg(to_jsonb(delivery_row) ORDER BY delivery_row.created_at DESC), '[]'::JSONB)
+        FROM (
+            SELECT request.id AS request_id,
+                   request.order_id,
+                   order_row.order_number,
+                   provider.display_name AS provider_name,
+                   provider.provider_type,
+                   request.status,
+                   request.total_fee_amount,
+                   request.currency_code,
+                   request.distance_km,
+                   request.eta_min_minutes,
+                   request.eta_max_minutes,
+                   request.response_note,
+                   order_row.shipping_address->>'city' AS destination_city,
+                   order_row.shipping_address->>'state' AS destination_region,
+                   request.created_at,
+                   request.updated_at,
+                   coalesce((
+                       SELECT jsonb_agg(jsonb_build_object(
+                           'status', event.status,
+                           'note', event.note,
+                           'created_at', event.created_at
+                       ) ORDER BY event.created_at)
+                       FROM public.delivery_request_events AS event
+                       WHERE event.request_id = request.id
+                   ), '[]'::JSONB) AS events
+              FROM public.delivery_requests AS request
+              JOIN public.orders AS order_row ON order_row.id = request.order_id
+              JOIN public.delivery_providers AS provider ON provider.id = request.provider_id
+             WHERE order_row.shop_id = p_shop_id
+             ORDER BY request.created_at DESC
+             LIMIT greatest(1, least(coalesce(p_limit, 50), 100))
+        ) AS delivery_row
+    );
+END;
+$$;
+REVOKE ALL ON FUNCTION public.shop_owner_list_delivery_requests(UUID, INTEGER) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.shop_owner_list_delivery_requests(UUID, INTEGER) TO authenticated;
 
 COMMIT;

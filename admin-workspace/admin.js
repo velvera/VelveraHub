@@ -18,6 +18,10 @@
         pendingManualPayments: [],
         manualPaymentsLoading: false,
         deliverySettings: [],
+        shopLocationReviews: [],
+        deliveryProviders: [],
+        deliveryReports: [],
+        deliveryActivity: null,
         activeView: 'verification'
     };
 
@@ -317,7 +321,7 @@
         window.__VelveraAdminMobileTest = { renderApplication };
     }
 
-    async function openPrivateDocument(path) {
+    async function openPrivateDocument(path, bucket = 'shop-verification-private') {
         const popup = window.open('about:blank', '_blank');
         if (!popup) {
             setGlobalMessage('Allow pop-ups for this site to open a verification document.', true);
@@ -326,7 +330,7 @@
         popup.opener = null;
         setGlobalMessage('Preparing a private document link…');
         const { data, error } = await state.supabase
-            .storage.from('shop-verification-private')
+            .storage.from(bucket)
             .createSignedUrl(path, 120);
         if (error || !data?.signedUrl) {
             popup.close();
@@ -336,6 +340,333 @@
         }
         popup.location.replace(data.signedUrl);
         setGlobalMessage('The private document link expires after two minutes.');
+    }
+
+    function logisticsQueueError(summaryId, listId, error, label) {
+        const summary = byId(summaryId);
+        const list = byId(listId);
+        if (summary) summary.textContent = `${label} unavailable`;
+        if (list) {
+            list.replaceChildren();
+            const message = document.createElement('section');
+            message.className = 'queue-empty';
+            message.innerHTML = `<h2>${escapeHtml(label)} unavailable</h2><p>Confirm the location and logistics migrations are installed, then refresh.</p>`;
+            list.append(message);
+        }
+        window.AsyncFeedback?.log(`admin-logistics-${label.toLowerCase().replaceAll(' ', '-')}`,
+            window.AsyncFeedback?.createRequestId('admin-logistics'), error);
+    }
+
+    function renderShopLocationReviews() {
+        const list = byId('physicalLocationQueue');
+        const rows = state.shopLocationReviews;
+        byId('physicalLocationSummary').textContent = `${rows.length} shop location${rows.length === 1 ? '' : 's'}`;
+        if (!rows.length) {
+            list.innerHTML = '<section class="queue-empty"><h2>No shop locations in this view</h2><p>Submitted physical store addresses appear here for review.</p></section>';
+            return;
+        }
+        list.innerHTML = rows.map((location) => {
+            const directions = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${location.latitude},${location.longitude}`)}`;
+            const address = [location.address, location.city, location.state_or_region, location.postcode,
+                location.country_code === 'GB' ? 'United Kingdom' : 'Nigeria'].filter(Boolean).join(', ');
+            return `<article class="application-card" data-location-card="${escapeHtml(location.id)}">
+                <header class="application-header"><div><h2>${escapeHtml(location.shop_name)}</h2>
+                    <p class="application-handle">/${escapeHtml(location.shop_slug || '')} · Submitted ${escapeHtml(formatDate(location.submitted_at))}</p></div>
+                    <span class="status-pill ${location.review_status === 'approved' ? 'approved' : location.review_status === 'rejected' ? 'rejected' : ''}">${escapeHtml(statusLabel(location.review_status))}</span></header>
+                <div class="application-details">
+                    <div><span class="detail-label">Physical address</span><span class="detail-value">${escapeHtml(address)}</span></div>
+                    <div><span class="detail-label">Shop eligibility</span><span class="detail-value">${location.shop_status === 'active' && location.shop_verified ? 'Active and verified' : 'Shop approval required before publishing a marker'}</span></div>
+                    <div><span class="detail-label">Coordinates</span><span class="detail-value">${escapeHtml(Number(location.latitude).toFixed(6))}, ${escapeHtml(Number(location.longitude).toFixed(6))}</span></div>
+                    <div><span class="detail-label">Previous note</span><span class="detail-value">${escapeHtml(location.review_note || 'None')}</span></div>
+                </div>
+                <p><a class="document-button" href="${directions}" target="_blank" rel="noopener noreferrer">Check map pin</a></p>
+                <form class="review-actions">
+                    <label>Review note <span>(required when rejecting)</span></label>
+                    <textarea class="review-note" maxlength="2000" placeholder="Explain any address or pin issue."></textarea>
+                    <p class="review-action-message" role="alert" hidden></p>
+                    <div class="review-action-buttons">
+                        <button class="review-action approve" type="button" data-location-decision="approve">Approve map marker</button>
+                        <button class="review-action reject" type="button" data-location-decision="reject">Reject location</button>
+                    </div>
+                </form>
+            </article>`;
+        }).join('');
+    }
+
+    async function loadShopLocationReviews() {
+        const summary = byId('physicalLocationSummary');
+        summary.textContent = 'Loading shop locations…';
+        try {
+            const { data, error } = await state.supabase.rpc('admin_list_shop_location_reviews', {
+                p_status: byId('physicalLocationStatusFilter').value
+            });
+            if (error) throw error;
+            state.shopLocationReviews = Array.isArray(data) ? data : [];
+            renderShopLocationReviews();
+        } catch (error) {
+            logisticsQueueError('physicalLocationSummary', 'physicalLocationQueue', error, 'Shop location reviews');
+        }
+    }
+
+    async function reviewShopLocation(button) {
+        const card = button.closest('[data-location-card]');
+        const form = card?.querySelector('.review-actions');
+        const message = form?.querySelector('.review-action-message');
+        const decision = button.dataset.locationDecision;
+        const note = form?.querySelector('.review-note')?.value.trim() || '';
+        if (decision === 'reject' && note.length < 3) {
+            message.textContent = 'Add a short reason before rejecting this location.';
+            message.hidden = false;
+            return;
+        }
+        if (decision === 'approve' && !window.confirm('Approve this physical shop address and publish its map marker?')) return;
+        form.querySelectorAll('button').forEach((item) => { item.disabled = true; });
+        try {
+            const { error } = await state.supabase.rpc('admin_review_shop_physical_location', {
+                p_location_id: card.dataset.locationCard,
+                p_decision: decision,
+                p_note: note || null
+            });
+            if (error) throw error;
+            await loadShopLocationReviews();
+            setGlobalMessage(`Shop location ${decision === 'approve' ? 'approved' : 'rejected'}.`);
+        } catch (error) {
+            message.textContent = window.AsyncFeedback?.errorMessage(error, 'The location review could not be saved.', 'admin-location-review') || 'The location review could not be saved.';
+            message.hidden = false;
+            form.querySelectorAll('button').forEach((item) => { item.disabled = false; });
+        }
+    }
+
+    function renderDeliveryProviders() {
+        const list = byId('deliveryProviderQueue');
+        const rows = state.deliveryProviders;
+        byId('deliveryProviderSummary').textContent = `${rows.length} provider profile${rows.length === 1 ? '' : 's'}`;
+        if (!rows.length) {
+            list.innerHTML = '<section class="queue-empty"><h2>No providers in this view</h2><p>Company and independent rider applications appear here after submission.</p></section>';
+            return;
+        }
+        list.innerHTML = rows.map((provider) => {
+            const verification = provider.verification || {};
+            const areas = Array.isArray(provider.service_areas) ? provider.service_areas : [];
+            const history = Array.isArray(provider.review_history) ? provider.review_history : [];
+            const documents = Array.isArray(verification.document_paths) ? verification.document_paths : [];
+            const actions = provider.status === 'suspended'
+                ? '<button class="review-action approve" type="button" data-provider-decision="restore">Restore provider</button>'
+                : provider.status === 'approved'
+                    ? '<button class="review-action reject" type="button" data-provider-decision="suspend">Suspend provider</button>'
+                    : '<button class="review-action approve" type="button" data-provider-decision="approve">Approve provider</button><button class="review-action request" type="button" data-provider-decision="request_resubmission">Request updated documents</button><button class="review-action reject" type="button" data-provider-decision="reject">Reject provider</button>';
+            return `<article class="application-card" data-provider-card="${escapeHtml(provider.provider_id)}">
+                <header class="application-header"><div><h2>${escapeHtml(provider.display_name)}</h2>
+                    <p class="application-handle">${provider.provider_type === 'logistics_company' ? 'Logistics company' : 'Independent dispatch rider'} · ${provider.country_code === 'GB' ? 'United Kingdom' : 'Nigeria'} · Submitted ${escapeHtml(formatDate(provider.created_at))}</p></div>
+                    <span class="status-pill ${provider.status === 'approved' ? 'approved' : provider.status === 'rejected' || provider.status === 'suspended' ? 'rejected' : ''}">${escapeHtml(provider.status)}${provider.is_verified ? ' · verified' : ''}</span></header>
+                <p>${escapeHtml(provider.description || 'No service description provided.')}</p>
+                <div class="application-details">
+                    <div><span class="detail-label">Vehicle or fleet</span><span class="detail-value">${escapeHtml(provider.vehicle_type)}</span></div>
+                    <div><span class="detail-label">Current delivery availability</span><span class="detail-value">${provider.is_available ? `Available until ${escapeHtml(formatDate(provider.available_until))}` : 'Not available now'}</span></div>
+                    <div><span class="detail-label">Legal name</span><span class="detail-value">${escapeHtml(verification.legal_name || 'Not submitted')}</span></div>
+                    <div><span class="detail-label">Business details</span><span class="detail-value">${escapeHtml([verification.registered_business_name, verification.registration_number].filter(Boolean).join(' · ') || verification.identity_document_type || 'Not provided')}</span></div>
+                    <div><span class="detail-label">Verification status</span><span class="detail-value">${escapeHtml(verification.status || 'Not submitted')}${verification.review_note ? ` · ${escapeHtml(verification.review_note)}` : ''}</span></div>
+                </div>
+                <section><span class="detail-label">Submitted private documents</span><div class="document-list">${documents.length
+                    ? documents.map((path, index) => `<button class="document-button" type="button" data-provider-document="${escapeHtml(path)}">Open document ${index + 1}</button>`).join('')
+                    : 'No documents attached.'}</div></section>
+                <section><span class="detail-label">Service areas and rates</span><div class="review-history">${areas.length
+                    ? areas.map((area) => `<div class="history-entry"><strong>${escapeHtml(area.city)}, ${escapeHtml(area.state_or_region)}</strong> · ${escapeHtml(area.coverage_radius_km)} km · ${escapeHtml(area.currency_code)} ${escapeHtml(area.base_fee)} + ${escapeHtml(area.per_km_fee)}/km · ${escapeHtml(area.eta_min_minutes)}–${escapeHtml(area.eta_max_minutes)} min · ${area.is_active ? 'active' : 'inactive'}</div>`).join('')
+                    : 'No service areas configured.'}</div></section>
+                <section><span class="detail-label">Review history</span><div class="review-history">${history.length
+                    ? history.map((item) => `<div class="history-entry"><strong>${escapeHtml(statusLabel(item.decision))}</strong> · ${escapeHtml(formatDate(item.created_at))}${item.reviewer_email ? ` · ${escapeHtml(item.reviewer_email)}` : ''}${item.note ? `<br>${escapeHtml(item.note)}` : ''}</div>`).join('')
+                    : '<div class="history-entry">No previous review actions.</div>'}</div></section>
+                <form class="review-actions">
+                    <label>Administrator note <span>(required for rejection, resubmission, or suspension)</span></label>
+                    <textarea class="review-note" maxlength="2000" placeholder="Record the reason for this decision."></textarea>
+                    <p class="review-action-message" role="alert" hidden></p>
+                    <div class="review-action-buttons">${actions}</div>
+                </form>
+            </article>`;
+        }).join('');
+    }
+
+    async function loadDeliveryProviders() {
+        byId('deliveryProviderSummary').textContent = 'Loading providers…';
+        try {
+            const { data, error } = await state.supabase.rpc('admin_list_delivery_providers', {
+                p_status: byId('deliveryProviderStatusFilter').value
+            });
+            if (error) throw error;
+            state.deliveryProviders = Array.isArray(data) ? data : [];
+            renderDeliveryProviders();
+        } catch (error) {
+            logisticsQueueError('deliveryProviderSummary', 'deliveryProviderQueue', error, 'Delivery providers');
+        }
+    }
+
+    async function reviewDeliveryProvider(button) {
+        const card = button.closest('[data-provider-card]');
+        const form = card?.querySelector('.review-actions');
+        const message = form?.querySelector('.review-action-message');
+        const decision = button.dataset.providerDecision;
+        const note = form?.querySelector('.review-note')?.value.trim() || '';
+        if (['reject', 'request_resubmission', 'suspend'].includes(decision) && note.length < 3) {
+            message.textContent = 'Add a short note explaining this decision.';
+            message.hidden = false;
+            return;
+        }
+        if (decision === 'approve' && !window.confirm('Approve this provider and make it eligible for matching?')) return;
+        form.querySelectorAll('button').forEach((item) => { item.disabled = true; });
+        try {
+            const { error } = await state.supabase.rpc('admin_review_delivery_provider', {
+                p_provider_id: card.dataset.providerCard,
+                p_decision: decision,
+                p_note: note || null
+            });
+            if (error) throw error;
+            await Promise.all([loadDeliveryProviders(), loadDeliveryActivity()]);
+            setGlobalMessage(`Provider review saved: ${decision.replaceAll('_', ' ')}.`);
+        } catch (error) {
+            message.textContent = window.AsyncFeedback?.errorMessage(error, 'The provider review could not be saved.', 'admin-provider-review') || 'The provider review could not be saved.';
+            message.hidden = false;
+            form.querySelectorAll('button').forEach((item) => { item.disabled = false; });
+        }
+    }
+
+    function renderDeliveryReports() {
+        const list = byId('deliveryReportQueue');
+        const rows = state.deliveryReports;
+        byId('deliveryReportSummary').textContent = `${rows.length} provider report${rows.length === 1 ? '' : 's'}`;
+        if (!rows.length) {
+            list.innerHTML = '<section class="queue-empty"><h2>No provider reports in this view</h2><p>Buyer and seller complaints appear here for review.</p></section>';
+            return;
+        }
+        list.innerHTML = rows.map((report) => `<article class="application-card" data-report-card="${escapeHtml(report.id)}">
+            <header class="application-header"><div><h2>${escapeHtml(report.provider_name)}</h2><p class="application-handle">${report.provider_type === 'independent_rider' ? 'Independent rider' : 'Logistics company'} · ${escapeHtml(report.reason)} · ${escapeHtml(formatDate(report.created_at))}</p></div><span class="status-pill">${escapeHtml(report.status)}</span></header>
+            <p>${escapeHtml(report.details)}</p>${report.request_id ? `<p class="application-handle">Delivery request: ${escapeHtml(report.request_id)}</p>` : ''}
+            ${report.admin_note ? `<p><strong>Previous admin note:</strong> ${escapeHtml(report.admin_note)}</p>` : ''}
+            <form class="review-actions"><label>Administrator note <span>(optional)</span></label><textarea class="review-note" maxlength="2000" placeholder="Record investigation notes."></textarea><p class="review-action-message" role="alert" hidden></p>
+                <div class="review-action-buttons"><button class="review-action request" type="button" data-report-status="reviewing">Mark in review</button><button class="review-action approve" type="button" data-report-status="resolved">Resolve</button><button class="review-action reject" type="button" data-report-status="dismissed">Dismiss</button></div>
+            </form>
+        </article>`).join('');
+    }
+
+    async function loadDeliveryReports() {
+        byId('deliveryReportSummary').textContent = 'Loading provider reports…';
+        try {
+            const { data, error } = await state.supabase.rpc('admin_list_delivery_provider_reports', {
+                p_status: byId('deliveryReportStatusFilter').value
+            });
+            if (error) throw error;
+            state.deliveryReports = Array.isArray(data) ? data : [];
+            renderDeliveryReports();
+        } catch (error) {
+            logisticsQueueError('deliveryReportSummary', 'deliveryReportQueue', error, 'Provider reports');
+        }
+    }
+
+    async function reviewDeliveryReport(button) {
+        const card = button.closest('[data-report-card]');
+        const form = card?.querySelector('.review-actions');
+        const message = form?.querySelector('.review-action-message');
+        form.querySelectorAll('button').forEach((item) => { item.disabled = true; });
+        try {
+            const { error } = await state.supabase.rpc('admin_review_delivery_provider_report', {
+                p_report_id: card.dataset.reportCard,
+                p_status: button.dataset.reportStatus,
+                p_note: form.querySelector('.review-note').value.trim() || null
+            });
+            if (error) throw error;
+            await loadDeliveryReports();
+            setGlobalMessage(`Provider report marked ${button.dataset.reportStatus}.`);
+        } catch (error) {
+            message.textContent = window.AsyncFeedback?.errorMessage(error, 'The report review could not be saved.', 'admin-provider-report') || 'The report review could not be saved.';
+            message.hidden = false;
+            form.querySelectorAll('button').forEach((item) => { item.disabled = false; });
+        }
+    }
+
+    function renderDeliverySettings() {
+        const country = byId('deliverySettingsCountry').value;
+        const settings = state.deliverySettings.find((item) => item.country_code === country);
+        if (!settings) return;
+        byId('deliveryExchangeRate').value = settings.currency_per_usd;
+        byId('deliveryCommission').value = settings.platform_commission_percent;
+        byId('deliveryFixedFee').value = settings.fixed_delivery_fee;
+        byId('deliveryMarketEnabled').checked = settings.is_enabled === true;
+    }
+
+    async function loadDeliverySettings() {
+        const message = byId('deliverySettingsMessage');
+        message.hidden = true;
+        try {
+            const { data, error } = await state.supabase.rpc('admin_get_delivery_settings');
+            if (error) throw error;
+            state.deliverySettings = Array.isArray(data) ? data : [];
+            renderDeliverySettings();
+        } catch (error) {
+            message.textContent = /does not exist|schema cache|pgrst202/i.test(error?.message || '')
+                ? 'Delivery settings are not installed. Apply the location and logistics migrations.'
+                : window.AsyncFeedback?.errorMessage(error, 'Delivery settings could not be loaded.', 'admin-delivery-settings') || 'Delivery settings could not be loaded.';
+            message.classList.add('is-error');
+            message.hidden = false;
+        }
+    }
+
+    async function saveDeliverySettings(event) {
+        event.preventDefault();
+        const form = event.currentTarget;
+        if (!form.reportValidity()) return;
+        const button = form.querySelector('button[type="submit"]');
+        const message = byId('deliverySettingsMessage');
+        button.disabled = true;
+        message.hidden = true;
+        message.classList.remove('is-error');
+        const country = byId('deliverySettingsCountry').value;
+        try {
+            const { error } = await state.supabase.rpc('admin_save_delivery_settings', {
+                p_country_code: country,
+                p_currency_per_usd: Number(byId('deliveryExchangeRate').value),
+                p_commission_percent: Number(byId('deliveryCommission').value),
+                p_fixed_delivery_fee: Number(byId('deliveryFixedFee').value),
+                p_is_enabled: byId('deliveryMarketEnabled').checked
+            });
+            if (error) throw error;
+            await loadDeliverySettings();
+            message.textContent = `Delivery settings saved for ${country === 'GB' ? 'the United Kingdom' : 'Nigeria'}.`;
+            message.hidden = false;
+        } catch (error) {
+            message.textContent = window.AsyncFeedback?.errorMessage(error, 'Delivery settings could not be saved.', 'admin-delivery-settings-save') || 'Delivery settings could not be saved.';
+            message.classList.add('is-error');
+            message.hidden = false;
+        } finally {
+            button.disabled = false;
+        }
+    }
+
+    async function loadDeliveryActivity() {
+        try {
+            const { data, error } = await state.supabase.rpc('admin_list_delivery_activity', { p_limit: 100 });
+            if (error) throw error;
+            state.deliveryActivity = data || {};
+            const counts = Array.isArray(state.deliveryActivity.provider_counts) ? state.deliveryActivity.provider_counts : [];
+            const recent = Array.isArray(state.deliveryActivity.recent_deliveries) ? state.deliveryActivity.recent_deliveries : [];
+            byId('deliveryActivitySummary').textContent =
+                `${counts.reduce((total, item) => total + Number(item.provider_count || 0), 0)} providers · ${state.deliveryActivity.service_area_count || 0} active service areas · ${recent.length} recent deliveries`;
+            byId('deliveryActivityList').innerHTML = recent.length ? recent.map((item) => `
+                <article class="application-card">
+                    <header class="application-header"><div><h2>${escapeHtml(item.order_number || item.order_id)}</h2><p class="application-handle">${escapeHtml(item.provider_name)} · ${item.provider_type === 'independent_rider' ? 'Independent rider' : 'Logistics company'}</p></div><span class="status-pill">${escapeHtml(item.status)}</span></header>
+                    <p>${escapeHtml([item.destination?.city, item.destination?.country].filter(Boolean).join(', ') || 'Destination not available')} · ${escapeHtml(item.currency_code)} ${escapeHtml(item.total_fee_amount)} · Updated ${escapeHtml(formatDate(item.updated_at))}</p>
+                </article>`).join('') : '<section class="queue-empty"><h2>No delivery activity yet</h2><p>Delivery requests will appear here.</p></section>';
+        } catch (error) {
+            logisticsQueueError('deliveryActivitySummary', 'deliveryActivityList', error, 'Delivery activity');
+        }
+    }
+
+    function loadLogisticsWorkspace() {
+        return Promise.all([
+            loadShopLocationReviews(),
+            loadDeliveryProviders(),
+            loadDeliveryReports(),
+            loadDeliverySettings(),
+            loadDeliveryActivity()
+        ]);
     }
 
     async function reviewApplication(card, application, decision) {
@@ -559,7 +890,8 @@
             systemErrors: ['systemErrorsPanel', 'systemErrorsTab'],
             paymentSettings: ['paymentSettingsPanel', 'paymentSettingsTab'],
             mediaSettings: ['mediaSettingsPanel', 'mediaSettingsTab'],
-            phoneVerificationSettings: ['phoneVerificationSettingsPanel', 'phoneVerificationSettingsTab']
+            phoneVerificationSettings: ['phoneVerificationSettingsPanel', 'phoneVerificationSettingsTab'],
+            logistics: ['logisticsPanel', 'logisticsTab']
         };
         if (!views[view]) return;
         state.activeView = view;
@@ -577,6 +909,7 @@
         }
         else if (view === 'mediaSettings') loadMarketplaceMediaLimits();
         else if (view === 'phoneVerificationSettings') loadPhoneVerificationSettings();
+        else if (view === 'logistics') loadLogisticsWorkspace();
         else loadQueue();
     }
 
@@ -1088,6 +1421,7 @@
             }
             else if (state.activeView === 'mediaSettings') loadMarketplaceMediaLimits();
             else if (state.activeView === 'phoneVerificationSettings') loadPhoneVerificationSettings();
+            else if (state.activeView === 'logistics') loadLogisticsWorkspace();
             else loadQueue();
         });
         byId('refreshSystemErrors').addEventListener('click', loadSystemErrors);
@@ -1097,6 +1431,28 @@
         byId('marketplacePaymentSettingsForm').addEventListener('submit', saveMarketplacePaymentSettings);
         byId('marketplaceMediaSettingsForm').addEventListener('submit', saveMarketplaceMediaLimits);
         byId('phoneVerificationSettingsForm').addEventListener('submit', savePhoneVerificationSettings);
+        byId('deliveryPlatformSettingsForm').addEventListener('submit', saveDeliverySettings);
+        byId('deliverySettingsCountry').addEventListener('change', renderDeliverySettings);
+        byId('physicalLocationStatusFilter').addEventListener('change', loadShopLocationReviews);
+        byId('deliveryProviderStatusFilter').addEventListener('change', loadDeliveryProviders);
+        byId('deliveryReportStatusFilter').addEventListener('change', loadDeliveryReports);
+        byId('physicalLocationQueue').addEventListener('click', (event) => {
+            const button = event.target.closest('[data-location-decision]');
+            if (button) reviewShopLocation(button);
+        });
+        byId('deliveryProviderQueue').addEventListener('click', (event) => {
+            const documentButton = event.target.closest('[data-provider-document]');
+            if (documentButton) {
+                openPrivateDocument(documentButton.dataset.providerDocument, 'delivery-provider-verification-private');
+                return;
+            }
+            const button = event.target.closest('[data-provider-decision]');
+            if (button) reviewDeliveryProvider(button);
+        });
+        byId('deliveryReportQueue').addEventListener('click', (event) => {
+            const button = event.target.closest('[data-report-status]');
+            if (button) reviewDeliveryReport(button);
+        });
         byId('marketplacePaymentRegion').addEventListener('change', renderMarketplacePaymentSettings);
         byId('marketplacePaymentEnabled').addEventListener('change', setPaymentFieldRequirements);
         byId('refreshManualPaymentOrders').addEventListener('click', loadPendingManualPayments);

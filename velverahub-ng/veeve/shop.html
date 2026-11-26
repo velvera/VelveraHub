@@ -29,6 +29,7 @@
         <link href="pages.css" rel="stylesheet" />
         <link href="../assets/css/components/custom-select.css" rel="stylesheet" />
         <link href="../assets/css/components/smart-features.css" rel="stylesheet" />
+        <link href="../assets/css/components/logistics.css" rel="stylesheet" />
         <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="icon" href="../img/favicon.ico">
     <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
@@ -135,6 +136,13 @@
             </header>
 
             <main class="page-main">
+                <section class="logistics-page logistics-card logistics-card--wide logistics-hidden" id="publicShopLocation" aria-labelledby="publicShopLocationTitle">
+                    <h2 id="publicShopLocationTitle">Visit this shop</h2>
+                    <p id="publicShopAddress"></p>
+                    <div class="logistics-map logistics-map--large" id="publicShopMap" aria-label="Approved physical shop location map"></div>
+                    <p class="logistics-map-attribution">Map data © OpenStreetMap contributors.</p>
+                    <a class="logistics-directions" id="publicShopDirections" target="_blank" rel="noopener noreferrer">Open directions</a>
+                </section>
                 <section class="products-page-section">
                     <div class="section-container">
                         <div class="products-header">
@@ -356,6 +364,7 @@
                 window.RegionService?.syncLocationSelect(locationSelect);
                 window.RegionService?.syncLocationSelect(document.getElementById("headerLocationSelect"));
                 document.title = `${shop.name} - VelveraHub`;
+                window.dispatchEvent(new CustomEvent('velveraShopLoaded', { detail: { shopId: shop.id } }));
             }
 
             function renderShopUnavailable(message) {
@@ -521,5 +530,7 @@
         </nav>
         <script src="../assets/js/services/campuses.js"></script>
         <script src="../assets/js/components/custom-select.js"></script>
+        <script src="../assets/js/services/logistics.js"></script>
+        <script src="../assets/js/pages/shop-physical-location.js"></script>
     </body>
 </html>

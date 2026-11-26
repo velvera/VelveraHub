@@ -7,6 +7,7 @@
         shops: [],
         areaMap: null,
         selectedAreaPoint: null,
+        editingAreaId: null,
         authUser: null
     };
     const byId = (id) => document.getElementById(id);
@@ -98,10 +99,10 @@
                     <header><strong>${escapeHtml(area.city)}, ${escapeHtml(area.state_or_region)}</strong><span class="logistics-badge">${area.is_active ? 'Active coverage' : 'Inactive'}</span></header>
                     <p>${escapeHtml(area.coverage_radius_km)} km radius · ${escapeHtml((area.service_types || []).join(', '))} · ${service().formatFee(Number(area.base_fee) || 0, area.currency_code)} base + ${service().formatFee(Number(area.per_km_fee) || 0, area.currency_code)}/km</p>
                     <p class="logistics-help">${escapeHtml(area.eta_min_minutes)}–${escapeHtml(area.eta_max_minutes)} minutes · ${escapeHtml(area.coverage_radius_km)} km coverage</p>
-                    <button class="logistics-button logistics-button--danger" type="button" data-delete-area="${escapeHtml(area.id)}">Remove area</button>
+                    <div class="logistics-actions"><button class="logistics-button logistics-button--secondary" type="button" data-edit-area="${escapeHtml(area.id)}">Edit area</button><button class="logistics-button logistics-button--danger" type="button" data-delete-area="${escapeHtml(area.id)}">Remove area</button></div>
                 </article>`).join('') : '<p>No service areas yet. Add a real operating point and coverage radius.</p>'}</div>
             <form id="serviceAreaForm">
-                <h3>Add service area</h3>
+                <h3 id="serviceAreaFormTitle">Add service area</h3>
                 <div class="logistics-form-grid">
                     <div class="logistics-field"><label for="areaCountry">Market</label><select id="areaCountry"><option value="NG" ${provider.country_code === 'NG' ? 'selected' : ''}>Nigeria</option><option value="GB" ${provider.country_code === 'GB' ? 'selected' : ''}>United Kingdom</option></select></div>
                     <div class="logistics-field"><label for="areaRegion">State or region</label><input id="areaRegion" maxlength="120" required></div>
@@ -119,7 +120,7 @@
                 </div>
                 <div class="logistics-map" id="serviceAreaMap" aria-label="Service area center map; click to place the center pin"></div>
                 <p class="logistics-help">Click the map to set the service-area center. The coverage radius is measured from this real point.</p>
-                <div class="logistics-actions"><button class="logistics-button" type="submit">Save service area</button></div>
+                <div class="logistics-actions"><button class="logistics-button" type="submit" id="saveServiceAreaButton">Save service area</button><button class="logistics-button logistics-button--secondary logistics-hidden" type="button" id="cancelAreaEdit">Cancel editing</button></div>
             </form>
             <hr>
             <h3>Delivery requests</h3>
@@ -160,8 +161,10 @@
         }
         byId('areaCountry')?.addEventListener('change', () => {
             state.selectedAreaPoint = null;
+            state.areaMap?.clearLocation(byId('areaCountry').value);
             setStatus('providerRegistrationStatus', 'Choose a new map pin for this market.');
         });
+        byId('cancelAreaEdit')?.addEventListener('click', cancelAreaEdit);
         byId('geocodeAreaAddress')?.addEventListener('click', async () => {
             try {
                 const found = await service().geocodeAddress(byId('areaAddress').value, byId('areaCountry').value);
@@ -288,7 +291,7 @@
             const serviceTypes = Array.from(document.querySelectorAll('[name="areaServiceType"]:checked')).map((input) => input.value);
             await service().rpc('delivery_provider_save_service_area', {
                 p_provider_id: provider.id,
-                p_area_id: null,
+                p_area_id: state.editingAreaId,
                 p_country_code: byId('areaCountry').value,
                 p_state_or_region: byId('areaRegion').value.trim(),
                 p_city: byId('areaCity').value.trim(),
@@ -302,6 +305,7 @@
                 p_eta_max_minutes: Number(byId('areaEtaMax').value),
                 p_is_active: true
             });
+            state.editingAreaId = null;
             await refreshProfiles(provider.id);
             setStatus('providerRegistrationStatus', 'Service area saved. It becomes matchable after provider approval.', 'success');
         } catch (error) {
@@ -344,12 +348,37 @@
     }
 
     async function handleProviderDashboardClick(event) {
+        const editArea = event.target.closest('[data-edit-area]');
         const area = event.target.closest('[data-delete-area]');
         const request = event.target.closest('[data-request-status]');
         const engagement = event.target.closest('[data-engagement-decision]');
         const providerId = byId('providerProfileSelect').value;
         try {
-            if (area) {
+            if (editArea) {
+                const current = state.dashboard?.service_areas?.find((item) => item.id === editArea.dataset.editArea);
+                if (!current) throw new Error('That service area is no longer available. Refresh and try again.');
+                state.editingAreaId = current.id;
+                byId('areaCountry').value = current.country_code;
+                byId('areaRegion').value = current.state_or_region;
+                byId('areaCity').value = current.city;
+                byId('areaRadius').value = current.coverage_radius_km;
+                byId('areaBaseFee').value = current.base_fee;
+                byId('areaPerKmFee').value = current.per_km_fee;
+                byId('areaEtaMin').value = current.eta_min_minutes;
+                byId('areaEtaMax').value = current.eta_max_minutes;
+                document.querySelectorAll('[name="areaServiceType"]').forEach((input) => {
+                    input.checked = current.service_types.includes(input.value);
+                });
+                state.selectedAreaPoint = {
+                    latitude: Number(current.latitude),
+                    longitude: Number(current.longitude)
+                };
+                state.areaMap?.setLocation(current.latitude, current.longitude);
+                byId('serviceAreaFormTitle').textContent = 'Edit service area';
+                byId('saveServiceAreaButton').textContent = 'Save area changes';
+                byId('cancelAreaEdit').classList.remove('logistics-hidden');
+                byId('serviceAreaForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else if (area) {
                 await service().rpc('delivery_provider_delete_service_area', {
                     p_provider_id: providerId,
                     p_area_id: area.dataset.deleteArea
@@ -378,6 +407,16 @@
         }
     }
 
+    function cancelAreaEdit() {
+        state.editingAreaId = null;
+        state.selectedAreaPoint = null;
+        byId('serviceAreaForm')?.reset();
+        byId('serviceAreaFormTitle').textContent = 'Add service area';
+        byId('saveServiceAreaButton').textContent = 'Save service area';
+        byId('cancelAreaEdit').classList.add('logistics-hidden');
+        state.areaMap?.clearLocation(byId('areaCountry').value);
+    }
+
     async function loadSellerShops() {
         const { data, error } = await state.supabase.from('shops')
             .select('id,name,status,verified')
@@ -389,6 +428,59 @@
         select.innerHTML = state.shops.map((shop) => `<option value="${escapeHtml(shop.id)}">${escapeHtml(shop.name)}</option>`).join('');
         byId('sellerHiringCard').hidden = state.shops.length === 0;
         if (state.shops.length) await loadRiderMatches();
+    }
+
+    async function loadBuyerDeliveryRequests() {
+        const host = byId('buyerDeliveryRequests');
+        if (!state.authUser) {
+            host.innerHTML = '<p>Sign in to view delivery requests linked to your orders.</p>';
+            return;
+        }
+        host.innerHTML = '<p>Loading delivery updates…</p>';
+        try {
+            const requests = await service().rpc('buyer_list_my_delivery_requests', { p_limit: 50 });
+            host.innerHTML = requests.length ? requests.map((request) => `
+                <article class="logistics-result">
+                    <header><strong>Order ${escapeHtml(request.order_number || request.order_id)}</strong><span class="logistics-badge">${escapeHtml(request.status)}</span></header>
+                    <p>${escapeHtml(request.provider_name)} · ${escapeHtml(request.provider_type === 'independent_rider' ? 'Independent rider' : 'Logistics company')}</p>
+                    <p>${escapeHtml([request.destination_city, request.destination_region].filter(Boolean).join(', ') || 'Delivery address')} · ${service().formatFee(request.total_fee_amount, request.currency_code)} · ${escapeHtml(request.eta_min_minutes)}–${escapeHtml(request.eta_max_minutes)} minutes</p>
+                    ${request.response_note ? `<p>${escapeHtml(request.response_note)}</p>` : ''}
+                    <details><summary>Delivery updates</summary><ol>${(request.events || []).map((item) => `<li><strong>${escapeHtml(item.status)}</strong> · ${escapeHtml(new Date(item.created_at).toLocaleString())}${item.note ? ` — ${escapeHtml(item.note)}` : ''}</li>`).join('')}</ol></details>
+                    <form data-report-delivery="${escapeHtml(request.request_id)}" data-provider-id="${escapeHtml(request.provider_id)}">
+                        <div class="logistics-form-grid">
+                            <div class="logistics-field"><label>Report reason</label><select name="reason" required><option value="safety">Safety</option><option value="late_delivery">Late delivery</option><option value="misconduct">Misconduct</option><option value="fraud">Fraud</option><option value="other">Other</option></select></div>
+                            <div class="logistics-field logistics-field--wide"><label>Details</label><textarea name="details" minlength="10" maxlength="2000" required placeholder="Describe the delivery issue."></textarea></div>
+                        </div>
+                        <div class="logistics-actions"><button class="logistics-button logistics-button--secondary" type="submit">Report this delivery</button></div>
+                    </form>
+                </article>`).join('') : '<p>No delivery requests are linked to your orders yet.</p>';
+            setStatus('buyerDeliveryStatus', requests.length ? `${requests.length} delivery request${requests.length === 1 ? '' : 's'} loaded.` : '');
+        } catch (error) {
+            reportError('buyerDeliveryStatus', error, 'Delivery status could not be loaded. Refresh and try again.');
+            host.innerHTML = '<p>Delivery updates are temporarily unavailable.</p>';
+        }
+    }
+
+    async function loadShopDeliveryTracking(shopId) {
+        const host = byId('shopDeliveryRequests');
+        if (!shopId) return;
+        host.innerHTML = '<p>Loading order-delivery status…</p>';
+        try {
+            const requests = await service().rpc('shop_owner_list_delivery_requests', {
+                p_shop_id: shopId,
+                p_limit: 50
+            });
+            host.innerHTML = requests.length ? requests.map((request) => `
+                <article class="logistics-result">
+                    <header><strong>Order ${escapeHtml(request.order_number || request.order_id)}</strong><span class="logistics-badge">${escapeHtml(request.status)}</span></header>
+                    <p>${escapeHtml(request.provider_name)} · ${escapeHtml(request.provider_type === 'independent_rider' ? 'Independent rider' : 'Logistics company')}</p>
+                    <p>${escapeHtml([request.destination_city, request.destination_region].filter(Boolean).join(', ') || 'Delivery address')} · ${service().formatFee(request.total_fee_amount, request.currency_code)} · ${escapeHtml(request.eta_min_minutes)}–${escapeHtml(request.eta_max_minutes)} minutes</p>
+                    <details><summary>Delivery updates</summary><ol>${(request.events || []).map((item) => `<li><strong>${escapeHtml(item.status)}</strong> · ${escapeHtml(new Date(item.created_at).toLocaleString())}${item.note ? ` — ${escapeHtml(item.note)}` : ''}</li>`).join('')}</ol></details>
+                </article>`).join('') : '<p>No provider delivery requests for this shop yet.</p>';
+        } catch (error) {
+            window.AsyncFeedback?.log('seller-delivery-tracking', window.AsyncFeedback?.createRequestId('seller-delivery-tracking'), error);
+            host.innerHTML = '<p>Order-delivery tracking is temporarily unavailable. Confirm the location and logistics migrations are installed.</p>';
+        }
     }
 
     async function loadRiderMatches() {
@@ -421,6 +513,7 @@
                 <article class="logistics-result"><header><strong>${escapeHtml(item.rider_name)} · ${escapeHtml(item.engagement_type)}</strong><span class="logistics-badge">${escapeHtml(item.status)}</span></header>
                 <p>${escapeHtml(item.start_date)}${item.end_date ? ` to ${escapeHtml(item.end_date)}` : ''} · ${escapeHtml(item.terms?.summary || '')}</p>
                 ${['invited','accepted'].includes(item.status) ? `<button class="logistics-button logistics-button--danger" type="button" data-shop-engagement="${escapeHtml(item.id)}" data-action="${item.status === 'accepted' ? 'end' : 'cancel'}">${item.status === 'accepted' ? 'End arrangement' : 'Cancel invitation'}</button>` : ''}</article>`).join('') : '<p>No rider work arrangements yet.</p>'}`;
+            await loadShopDeliveryTracking(shopId);
         } catch (error) {
             reportError('sellerHiringStatus', error, 'Rider matching is unavailable. Confirm the shop has an approved physical location.');
             container.replaceChildren();
@@ -461,6 +554,33 @@
         }
     }
 
+    async function handleBuyerReport(event) {
+        const form = event.target.closest('[data-report-delivery]');
+        if (!form) return;
+        event.preventDefault();
+        const data = new FormData(form);
+        const details = String(data.get('details') || '').trim();
+        if (details.length < 10) {
+            setStatus('buyerDeliveryStatus', 'Describe the issue in at least 10 characters.', 'error');
+            return;
+        }
+        const button = form.querySelector('button[type="submit"]');
+        button.disabled = true;
+        try {
+            await service().rpc('delivery_provider_report', {
+                p_provider_id: form.dataset.providerId,
+                p_request_id: form.dataset.reportDelivery,
+                p_reason: String(data.get('reason')),
+                p_details: details
+            });
+            setStatus('buyerDeliveryStatus', 'Your delivery report was sent to the VelveraHub admin team.', 'success');
+            form.replaceWith(document.createTextNode('Report submitted for administrator review.'));
+        } catch (error) {
+            reportError('buyerDeliveryStatus', error, 'Your report could not be submitted. Please try again.');
+            button.disabled = false;
+        }
+    }
+
     async function initialize() {
         if (window.supabaseConfigReady) await window.supabaseConfigReady;
         state.supabase = service().client();
@@ -480,6 +600,8 @@
         byId('hiringShopSelect').addEventListener('change', loadRiderMatches);
         byId('sellerHiringCard').addEventListener('submit', handleSellerHiring);
         byId('sellerHiringCard').addEventListener('click', handleSellerHiring);
+        byId('buyerDeliveryRequests').addEventListener('submit', handleBuyerReport);
+        byId('refreshBuyerDeliveries').addEventListener('click', loadBuyerDeliveryRequests);
         if (!user) {
             setStatus('logisticsAuthStatus', 'Sign in or create a VelveraHub account to register as a provider or manage a shop.');
             byId('providerRegistrationForm').querySelectorAll('input,select,textarea,button').forEach((element) => element.disabled = true);
@@ -489,6 +611,7 @@
         try {
             await refreshProfiles();
             await loadSellerShops();
+            await loadBuyerDeliveryRequests();
         } catch (error) {
             reportError('logisticsAuthStatus', error, 'Your logistics workspace could not load. Refresh and try again.');
         }

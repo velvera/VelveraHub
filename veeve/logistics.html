@@ -20,9 +20,9 @@
         <div class="nav-container">
             <div class="nav-left"><a class="logo" href="/"><span class="logo-text">Velvera<span class="accent">Hub</span></span></a></div>
             <div class="nav-right"><div class="nav-icons">
-                <a class="nav-icon-item" href="/pages/shops.html"><i class="fas fa-store"></i><span class="icon-label">Shops</span></a>
-                <a class="nav-icon-item" href="/pages/seller.html"><i class="fas fa-shop"></i><span class="icon-label">Seller space</span></a>
-                <a class="nav-icon-item" href="/pages/account.html"><i class="fas fa-user"></i><span class="icon-label">Account</span></a>
+                <a class="nav-icon-item" href="/veeve/shops.html"><i class="fas fa-store"></i><span class="icon-label">Shops</span></a>
+                <a class="nav-icon-item" href="/veeve/seller.html"><i class="fas fa-shop"></i><span class="icon-label">Seller space</span></a>
+                <a class="nav-icon-item" href="/veeve/account.html"><i class="fas fa-user"></i><span class="icon-label">Account</span></a>
             </div></div>
         </div>
     </nav>
@@ -35,6 +35,13 @@
         </header>
 
         <div class="logistics-grid">
+            <section class="logistics-card logistics-card--wide" id="buyerDeliveryTracking" aria-labelledby="buyerDeliveryTrackingTitle">
+                <h2 id="buyerDeliveryTrackingTitle">Track my delivery requests</h2>
+                <p>Review provider responses, delivery progress, fees, and timing for your orders.</p>
+                <div class="logistics-actions"><button class="logistics-button logistics-button--secondary" type="button" id="refreshBuyerDeliveries">Refresh delivery status</button></div>
+                <div class="logistics-results" id="buyerDeliveryRequests" aria-live="polite"><p>Sign in to view delivery requests.</p></div>
+                <p class="logistics-status" id="buyerDeliveryStatus" role="status" aria-live="polite"></p>
+            </section>
             <section class="logistics-card" id="providerRegistrationCard" aria-labelledby="providerRegistrationTitle">
                 <h2 id="providerRegistrationTitle">Register a provider profile</h2>
                 <p>Companies and independent riders register separately. A provider is not publicly listed until its verification is approved.</p>
@@ -100,6 +107,9 @@
                 </div>
                 <div class="logistics-results" id="riderMatches" aria-live="polite"></div>
                 <div class="logistics-results" id="shopEngagements" aria-live="polite"></div>
+                <h3>Delivery requests for this shop</h3>
+                <p class="logistics-help">Track order-delivery requests separately from rider work arrangements.</p>
+                <div class="logistics-results" id="shopDeliveryRequests" aria-live="polite"></div>
                 <p class="logistics-status" id="sellerHiringStatus" role="status" aria-live="polite"></p>
             </section>
         </div>

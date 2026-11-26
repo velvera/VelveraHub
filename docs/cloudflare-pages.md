@@ -115,6 +115,14 @@ Run these files in order in the Supabase SQL editor:
      Supabase Storage contentLength metadata.
 18. `database/fix-product-media-upload-quota-conflict.sql` — fixes the
      PostgreSQL name collision that caused product image uploads to fail.
+19. `database/phone-verification.sql` — optional phone verification and private
+    OTP state; requires the Supabase Edge Function setup documented separately.
+20. `database/physical-store-logistics.sql` — physical shop locations,
+    provider identity verification, mapped service areas, delivery requests,
+    separate rider engagements, complaint queues, and admin controls.
+21. `database/location-logistics-workflows.sql` — live buyer matching,
+    provider availability, order delivery status tracking, buyer/seller
+    tracking, and temporary/permanent rider hiring.
 
 For an existing database that reports PostgreSQL error `42702` while removing
 or cleaning up failed listing media uploads, apply
@@ -135,6 +143,14 @@ for shops. Neither migration enables provider checkout.
 The delivery-options migration adds seller-selected pickup/local/regional
 delivery indicators and an optional 300-character note. It does not set prices,
 delivery coverage, or timing; sellers and buyers must confirm those separately.
+
+The physical-store and location-logistics migrations add a separate reviewed
+shop-visit address, exact approved public map locations, private provider
+verification documents, service-area matching, buyer-selected delivery
+providers, and distinct rider work engagements. Apply migrations 20 and 21
+after migration 19. The migrations do not change existing pickup or seller
+delivery-address fields. Provider matching remains disabled per market until
+an administrator enables it and providers are approved and currently available.
 
 The manual-payment migration adds regional VelveraHub receiving destinations,
 KYC-gated seller payment preferences, order instruction snapshots, and

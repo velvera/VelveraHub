@@ -15,6 +15,7 @@
     <link href="../assets/css/components/navbar.css" rel="stylesheet">
     <link href="../assets/css/components/custom-select.css" rel="stylesheet">
     <link href="../assets/css/components/legal.css" rel="stylesheet">
+    <link href="../assets/css/components/logistics.css" rel="stylesheet">
     <style>
         .checkout-container {
             max-width: 1200px;
@@ -546,6 +547,18 @@
                     </div>
                 </div>
                 
+                <div class="form-section logistics-page" id="deliveryProviderPicker">
+                    <h2 class="form-section-title"><i class="fas fa-truck-fast"></i> Choose a delivery provider</h2>
+                    <p class="logistics-help">Optional. Compare approved providers currently available for both this shop and your delivery address. Provider requests are checked again when the order is placed.</p>
+                    <div class="logistics-form-grid">
+                        <div class="logistics-field"><label for="deliveryServiceType">Delivery service</label><select id="deliveryServiceType"><option value="same_day">Same day</option><option value="next_day">Next day</option><option value="scheduled">Scheduled</option><option value="standard">Standard</option></select></div>
+                    </div>
+                    <div class="logistics-actions"><button class="logistics-button logistics-button--secondary" type="button" id="findDeliveryProviders">Find available providers</button></div>
+                    <div class="logistics-results" id="deliveryProviderMatches" aria-live="polite"></div>
+                    <p class="logistics-help" id="deliveryProviderQuote" aria-live="polite"></p>
+                    <p class="logistics-status" id="deliveryProviderStatus" role="status" aria-live="polite"></p>
+                </div>
+
                 <div class="form-section">
                     <h2 class="form-section-title"><i class="fas fa-map-marker-alt"></i> Shipping Address</h2>
                     <div class="form-group">
@@ -661,6 +674,8 @@
     <script src="../assets/js/services/observability.js"></script>
     <script src="../assets/js/services/cart.js"></script>
     <script src="../assets/js/components/async-feedback.js"></script>
+    <script src="../assets/js/services/logistics.js"></script>
+    <script src="../assets/js/pages/checkout-logistics.js"></script>
     <link href="../assets/css/components/smart-features.css" rel="stylesheet">
     <style>
         .payment-disclaimer {
@@ -1045,6 +1060,16 @@
                         throw new Error('Order confirmation was incomplete. Please retry.');
                     }
 
+                    let deliveryRequestState = 'not-requested';
+                    if (window.CheckoutLogistics?.hasSelection() && orderId) {
+                        try {
+                            const deliveryRequest = await window.CheckoutLogistics.requestProvider(orderId);
+                            deliveryRequestState = deliveryRequest?.requested ? 'requested' : 'request-failed';
+                        } catch (deliveryError) {
+                            AsyncFeedback.log('checkout-delivery-request', AsyncFeedback.createRequestId('delivery-request'), deliveryError);
+                            deliveryRequestState = 'request-failed';
+                        }
+                    }
                     localStorage.removeItem('velverahub_cart');
                     sessionStorage.removeItem('velverahub_checkout_idempotency');
                     checkoutIdempotencyKey = null;
@@ -1052,6 +1077,7 @@
                     window.Observability?.completeCheckout();
                     const successParams = new URLSearchParams({ type: 'order' });
                     if (orderReference) successParams.set('order', orderReference);
+                    if (deliveryRequestState !== 'not-requested') successParams.set('delivery', deliveryRequestState);
                     if (orderInput.p_payment_method === 'bank_transfer') {
                         successParams.set('payment', 'manual');
                         if (/^[0-9a-f-]{36}$/i.test(String(orderId || ''))) {

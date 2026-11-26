@@ -64,12 +64,12 @@
                 if (!document.querySelector('[data-leaflet-css]')) {
                     const link = document.createElement('link');
                     link.rel = 'stylesheet';
-                    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+                    link.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css';
                     link.dataset.leafletCss = 'true';
                     document.head.append(link);
                 }
                 const script = document.createElement('script');
-                script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js';
                 script.async = true;
                 script.onload = () => window.L ? resolve(window.L) : reject(new Error('Map library did not load.'));
                 script.onerror = () => reject(new Error('Interactive maps are temporarily unavailable.'));
@@ -122,6 +122,11 @@
                     const selected = marker.getLatLng();
                     options.onSelect?.(selected.lat, selected.lng);
                 });
+            },
+            clearLocation(countryCode = options.countryCode) {
+                if (marker) map.removeLayer(marker);
+                marker = null;
+                map.setView(countryCode === 'GB' ? [54.5, -2.5] : [9.082, 8.6753], 5);
             },
             addMarker(latitude, longitude, label) {
                 const point = [Number(latitude), Number(longitude)];
