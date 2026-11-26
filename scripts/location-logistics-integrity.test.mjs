@@ -78,6 +78,17 @@ includes(standaloneShopPortalScript, 'data-marketplace-link', 'Shop portal links
 includes(shopLocationPage, 'get_public_shop_physical_location', 'Public shop profiles must load only approved locations.');
 includes(checkoutPage, 'get_available_delivery_providers_for_shop', 'Checkout must use live location-based provider matching.');
 includes(checkoutPage, 'buyer_request_order_delivery', 'Provider choice must create a server-validated request.');
+includes(checkoutPage, 'The delivery provider request could not be confirmed.', 'Checkout must reject incomplete provider-request responses.');
+for (const successPath of [
+    'veeve/success.html',
+    'velverahub-ng/veeve/success.html',
+    'velverahub-uk/veeve/success.html'
+]) {
+    const successPage = read(successPath);
+    includes(successPage, 'deliveryRequestNotice', `${successPath} must expose delivery-request feedback.`);
+    includes(successPage, 'awaiting acceptance', `${successPath} must explain submitted provider requests.`);
+    includes(successPage, 'could not be assigned', `${successPath} must explain failed provider requests.`);
+}
 includes(providerPage, 'shop_owner_invite_rider', 'Seller rider hiring must use engagement RPCs.');
 includes(providerPage, 'shop_owner_find_available_delivery_providers', 'Sellers must be able to discover currently available delivery companies and riders separately from hiring.');
 includes(read('veeve/logistics.html'), 'id="sellerDeliveryProviderMatches"', 'The seller logistics workspace must display delivery-provider matches separately from workforce matches.');

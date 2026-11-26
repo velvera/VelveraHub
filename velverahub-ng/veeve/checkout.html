@@ -1197,13 +1197,15 @@
                     }
 
                     let deliveryRequestState = 'not-requested';
-                    if (window.CheckoutLogistics?.hasSelection() && orderId) {
-                        try {
-                            const deliveryRequest = await window.CheckoutLogistics.requestProvider(orderId);
-                            deliveryRequestState = deliveryRequest?.requested ? 'requested' : 'request-failed';
-                        } catch (deliveryError) {
-                            AsyncFeedback.log('checkout-delivery-request', AsyncFeedback.createRequestId('delivery-request'), deliveryError);
-                            deliveryRequestState = 'request-failed';
+                    if (window.CheckoutLogistics?.hasSelection()) {
+                        deliveryRequestState = 'request-failed';
+                        if (/^[0-9a-f-]{36}$/i.test(String(orderId || ''))) {
+                            try {
+                                const deliveryRequest = await window.CheckoutLogistics.requestProvider(orderId);
+                                deliveryRequestState = deliveryRequest?.requested ? 'requested' : 'request-failed';
+                            } catch (deliveryError) {
+                                AsyncFeedback.log('checkout-delivery-request', AsyncFeedback.createRequestId('delivery-request'), deliveryError);
+                            }
                         }
                     }
                     localStorage.removeItem('velverahub_cart');

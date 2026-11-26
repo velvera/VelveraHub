@@ -135,6 +135,40 @@ async function openCheckout(browser, { rpcResult, failOrder = false, viewport = 
     return page;
 }
 
+async function submitCheckoutWithProvider(browser, { requestResult, failRequest = false }) {
+    const page = await openCheckout(browser, {
+        rpcResult: {
+            success: true,
+            orderId: 'bbba6360-a22a-4647-8bc1-95cda070b65d',
+            orderNumber: 'VH-DELIVERY-ORDER'
+        }
+    });
+    await page.evaluate(({ requestResult, failRequest }) => {
+        window.CheckoutLogistics = {
+            hasSelection: () => true,
+            getSelectedProvider: () => ({ fee: 1800, currency: 'NGN', etaMin: 45, etaMax: 90 }),
+            requestProvider: async () => {
+                if (failRequest) throw new Error('Provider request unavailable');
+                return requestResult;
+            }
+        };
+    }, { requestResult, failRequest });
+    for (const [selector, value] of [
+        ['#email', 'buyer@example.test'],
+        ['#firstName', 'Test'],
+        ['#lastName', 'Buyer'],
+        ['#address', '12 Test Street'],
+        ['#city', 'Lagos']
+    ]) {
+        await page.locator(selector).fill(value);
+    }
+    await page.locator('#checkoutPolicyConsent').check();
+    await page.locator('#placeOrderBtn').click();
+    await page.waitForURL((url) => url.pathname.includes('success.html'), { timeout: 10000 });
+    await page.waitForFunction(() => !document.getElementById('deliveryRequestNotice')?.hidden);
+    return page;
+}
+
 async function testCheckout(browser) {
     const successPage = await openCheckout(browser, {
         rpcResult: {
@@ -233,6 +267,21 @@ async function testCheckout(browser) {
     assert.equal(await successPage.evaluate(() => sessionStorage.getItem('checkout-regression-rpc-name')), 'place_order_secure');
     console.log('PASS checkout creates a confirmed order request and redirects only after a valid response');
     await successPage.close();
+
+    const providerSuccessPage = await submitCheckoutWithProvider(browser, {
+        requestResult: { requested: true, result: { request_id: '97fb3184-3231-47fb-bb67-49c8260c02b0', status: 'requested' } }
+    });
+    assert.equal(new URL(providerSuccessPage.url()).searchParams.get('delivery'), 'requested');
+    assert.match(await providerSuccessPage.locator('#deliveryRequestNotice').innerText(), /awaiting acceptance/i);
+    await providerSuccessPage.close();
+
+    const providerFailurePage = await submitCheckoutWithProvider(browser, {
+        requestResult: { requested: false }
+    });
+    assert.equal(new URL(providerFailurePage.url()).searchParams.get('delivery'), 'request-failed');
+    assert.match(await providerFailurePage.locator('#deliveryRequestNotice').innerText(), /could not be assigned/i);
+    await providerFailurePage.close();
+    console.log('PASS checkout confirmation distinguishes submitted and failed provider requests');
 
     const failurePage = await openCheckout(browser, { failOrder: true });
     for (const [selector, value] of [

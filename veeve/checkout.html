@@ -1198,15 +1198,16 @@
                         throw new Error('Order confirmation was incomplete. Please retry.');
                     }
 
-                    let deliveryRequestUnavailable = false;
+                    let deliveryRequestState = null;
                     if (window.CheckoutLogistics?.hasSelection()) {
                         if (!/^[0-9a-f-]{36}$/i.test(String(orderId || ''))) {
-                            deliveryRequestUnavailable = true;
+                            deliveryRequestState = 'request-failed';
                         } else {
                             try {
-                                await window.CheckoutLogistics.requestProvider(orderId);
+                                const deliveryRequest = await window.CheckoutLogistics.requestProvider(orderId);
+                                deliveryRequestState = deliveryRequest?.requested ? 'requested' : 'request-failed';
                             } catch (deliveryError) {
-                                deliveryRequestUnavailable = true;
+                                deliveryRequestState = 'request-failed';
                                 AsyncFeedback.log('checkout-provider-request', AsyncFeedback.createRequestId('delivery-request'), deliveryError, {
                                     order_id: orderId
                                 });
@@ -1220,7 +1221,7 @@
                     window.Observability?.completeCheckout();
                     const successParams = new URLSearchParams({ type: 'order' });
                     if (orderReference) successParams.set('order', orderReference);
-                    if (deliveryRequestUnavailable) successParams.set('delivery', 'not-requested');
+                    if (deliveryRequestState) successParams.set('delivery', deliveryRequestState);
                     if (orderInput.p_payment_method === 'bank_transfer') {
                         successParams.set('payment', 'manual');
                         if (/^[0-9a-f-]{36}$/i.test(String(orderId || ''))) {

@@ -127,9 +127,13 @@
             document.title = `${selected.title} - VelveraHub`;
             document.getElementById('successTitle').textContent = selected.title;
             document.getElementById('successMessage').textContent = selected.message;
-            if (type === 'order' && params.get('delivery') === 'not-requested') {
+            if (type === 'order' && ['not-requested', 'request-failed'].includes(params.get('delivery'))) {
                 const notice = document.getElementById('deliveryRequestNotice');
                 notice.textContent = 'Your order was created, but the selected provider could not be assigned. No provider delivery is confirmed. Contact the seller to arrange delivery.';
+                notice.hidden = false;
+            } else if (type === 'order' && params.get('delivery') === 'requested') {
+                const notice = document.getElementById('deliveryRequestNotice');
+                notice.textContent = 'Your provider request was submitted and is awaiting acceptance. The provider will confirm delivery timing and availability before pickup.';
                 notice.hidden = false;
             }
             const detail = document.getElementById('successDetail');

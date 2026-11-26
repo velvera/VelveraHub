@@ -129,7 +129,7 @@
 
     async function requestProvider(orderId) {
         if (!selectedProvider) return { requested: false };
-        const result = await service().rpc('buyer_request_order_delivery', {
+        const response = await service().rpc('buyer_request_order_delivery', {
             p_order_id: orderId,
             p_provider_id: selectedProvider.providerId,
             p_service_area_id: selectedProvider.serviceAreaId,
@@ -137,6 +137,12 @@
             p_destination_longitude: selectedProvider.destination.longitude,
             p_service_type: byId('deliveryServiceType').value
         });
+        const result = Array.isArray(response) ? response[0] : response;
+        if (!result || typeof result !== 'object'
+            || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(result.request_id || ''))
+            || !['requested', 'accepted', 'picked_up', 'in_transit', 'issue_reported'].includes(String(result.status || ''))) {
+            throw new Error('The delivery provider request could not be confirmed.');
+        }
         return { requested: true, result };
     }
 
