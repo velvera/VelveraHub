@@ -1300,6 +1300,7 @@
     display: flex;
     gap: .6rem;
     margin-top: .7rem;
+    margin-bottom: .5rem;
     overflow-x: auto;
 }
 
