@@ -96,15 +96,15 @@ async function testCartDoesNotTrustCachedAvailability() {
     console.log('PASS checkout revalidation rejects cached listings absent from live inventory');
 }
 
-async function openCheckout(browser, { rpcResult, failOrder = false }) {
-    const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+async function openCheckout(browser, { rpcResult, failOrder = false, viewport = { width: 390, height: 844 } }) {
+    const page = await browser.newPage({ viewport });
     const product = {
         id: '49b0aef1-8052-4f6c-93ac-25b4375f1e20',
         title: 'Checkout regression item',
         price: 20,
         stock: 5,
         product_images: [],
-        shops: {}
+        shops: { name: 'Verified regression shop', verified: true }
     };
     await page.addInitScript((item) => {
         if (location.pathname.endsWith('/checkout.html')) {
@@ -114,6 +114,8 @@ async function openCheckout(browser, { rpcResult, failOrder = false }) {
 
     await page.goto('http://127.0.0.1:5000/veeve/checkout.html', { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => Boolean(window.CartService && window.ProductsService && document.getElementById('placeOrderBtn')));
+    const acceptCookies = page.locator('#cookieConsentBanner [data-cookie-choice="granted"]');
+    if (await acceptCookies.isVisible().catch(() => false)) await acceptCookies.click();
     await page.evaluate(({ product, rpcResult, failOrder }) => {
         const cartItem = { product, quantity: 1, currency: window.RegionService?.currency?.code || 'NGN' };
         window.CartService.cart = [cartItem];
@@ -141,6 +143,22 @@ async function testCheckout(browser) {
             orderNumber: 'VH-TEST-ORDER'
         }
     });
+    const checkoutUi = await successPage.evaluate(() => ({
+        seller: document.querySelector('.summary-item-seller')?.textContent || '',
+        itemCount: document.getElementById('summaryItemCount')?.textContent || '',
+        amount: document.getElementById('placeOrderAmount')?.textContent || '',
+        actionPosition: getComputedStyle(document.querySelector('.checkout-action')).position,
+        actionBottomGap: Math.round(innerHeight - document.querySelector('.checkout-action').getBoundingClientRect().bottom),
+        buttonHeight: Math.round(document.getElementById('placeOrderBtn').getBoundingClientRect().height),
+        documentWidth: document.documentElement.scrollWidth
+    }));
+    assert.match(checkoutUi.seller, /Verified regression shop.*Verified/);
+    assert.equal(checkoutUi.itemCount, '1 item');
+    assert.ok(checkoutUi.amount, 'the primary action shows the order amount');
+    assert.equal(checkoutUi.actionPosition, 'fixed');
+    assert.equal(checkoutUi.actionBottomGap, 0);
+    assert.ok(checkoutUi.buttonHeight >= 48);
+    assert.equal(checkoutUi.documentWidth, 390);
     for (const [selector, value] of [
         ['#email', 'buyer@example.test'],
         ['#firstName', 'Test'],
@@ -177,10 +195,45 @@ async function testCheckout(browser) {
     await failurePage.close();
 }
 
+async function testCheckoutPhoneLayouts(browser) {
+    for (const viewport of [
+        { width: 320, height: 740 },
+        { width: 360, height: 800 },
+        { width: 402, height: 874 },
+        { width: 440, height: 956 }
+    ]) {
+        const page = await openCheckout(browser, { viewport });
+        const layout = await page.evaluate(() => {
+            const button = document.getElementById('placeOrderBtn');
+            const action = document.querySelector('.checkout-action');
+            return {
+                width: document.documentElement.scrollWidth,
+                actionPosition: getComputedStyle(action).position,
+                actionBottomGap: Math.round(innerHeight - action.getBoundingClientRect().bottom),
+                buttonHeight: Math.round(button.getBoundingClientRect().height),
+                emailHeight: Math.round(document.getElementById('email').getBoundingClientRect().height)
+            };
+        });
+        assert.equal(layout.width, viewport.width, `${viewport.width}px checkout must not overflow horizontally`);
+        assert.equal(layout.actionPosition, 'fixed', `${viewport.width}px order action stays pinned`);
+        assert.equal(layout.actionBottomGap, 0, `${viewport.width}px order action sits on the screen edge`);
+        assert.ok(layout.buttonHeight >= 48, `${viewport.width}px primary action is touch-safe`);
+        assert.ok(layout.emailHeight >= 48, `${viewport.width}px form controls are touch-safe`);
+        await page.close();
+        console.log(`PASS checkout layout at ${viewport.width}px`);
+    }
+}
+
 async function testResponsiveAndGeneratedCopies() {
     const productPaths = ['veeve/product.html', 'velverahub-ng/veeve/product.html', 'velverahub-uk/veeve/product.html'];
     const pagePaths = ['veeve/pages.css', 'velverahub-ng/veeve/pages.css', 'velverahub-uk/veeve/pages.css'];
     const cartPaths = ['veeve/cart.html', 'velverahub-ng/veeve/cart.html', 'velverahub-uk/veeve/cart.html'];
+    const checkoutPaths = ['veeve/checkout.html', 'velverahub-ng/veeve/checkout.html', 'velverahub-uk/veeve/checkout.html'];
+    const checkoutCssPaths = [
+        'assets/css/components/checkout-responsive.css',
+        'velverahub-ng/assets/css/components/checkout-responsive.css',
+        'velverahub-uk/assets/css/components/checkout-responsive.css'
+    ];
 
     for (const path of productPaths) {
         const html = read(path);
@@ -201,6 +254,19 @@ async function testResponsiveAndGeneratedCopies() {
         const html = read(path);
         assert.match(html, /\.cart-page-item-actions\s*\{[^}]*justify-content:flex-end/s, `${path}: cart controls align right`);
         assert.match(html, /\.cart-page-remove\s*\{[^}]*color:#b42318/s, `${path}: remove control must be red`);
+    }
+    for (const path of checkoutPaths) {
+        const html = read(path);
+        assert.ok(html.includes('viewport-fit=cover'), `${path}: mobile safe-area support`);
+        assert.ok(html.includes('id="summaryItemCount"'), `${path}: item count is visible`);
+        assert.ok(html.includes('id="placeOrderAmount"'), `${path}: order amount is shown on the primary action`);
+        assert.ok(html.includes('checkout-security-note'), `${path}: secure checkout cue is visible`);
+    }
+    for (const path of checkoutCssPaths) {
+        const css = read(path);
+        assert.match(css, /\.checkout-page \.checkout-action\s*\{[^}]*position:\s*fixed/s, `${path}: mobile order action stays pinned`);
+        assert.match(css, /\.checkout-page \.checkout-action \.place-order-btn\s*\{[^}]*min-height:\s*56px/s, `${path}: mobile action has a touch-safe height`);
+        assert.match(css, /@media\s*\(max-width:\s*370px\)/, `${path}: very narrow phones have dedicated layout rules`);
     }
     for (const path of [
         'assets/css/seller-dashboard.css',
@@ -224,6 +290,7 @@ const browser = await chromium.launch({
 });
 try {
     await testCheckout(browser);
+    await testCheckoutPhoneLayouts(browser);
 } finally {
     await browser.close();
 }

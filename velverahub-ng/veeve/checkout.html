@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <title>Checkout - VelveraHub</title>
     <meta name="description" content="Complete your VelveraHub order with clear delivery details, payment options, and order totals.">
@@ -503,8 +503,9 @@
     <div class="checkout-breadcrumb"><a href="/">Home</a><i class="fas fa-chevron-right"></i><a href="/veeve/cart.html">Your Cart</a><i class="fas fa-chevron-right"></i><span>Checkout</span></div>
     <div class="checkout-container">
         <div class="checkout-header">
-            <a href="/veeve/cart.html" class="back-to-cart"><i class="fas fa-arrow-left"></i> Back to cart</a>
+            <a href="/veeve/cart.html" class="back-to-cart" aria-label="Return to cart"><i class="fas fa-arrow-left" aria-hidden="true"></i><span>Back to cart</span></a>
             <h1>Checkout</h1>
+            <div class="checkout-security-note"><i class="fas fa-shield-halved" aria-hidden="true"></i><span>Secure checkout</span></div>
         </div>
         
         <div class="checkout-steps">
@@ -619,7 +620,7 @@
             </div>
             
             <div class="order-summary">
-                <h2 class="summary-title">Order Summary</h2>
+                <h2 class="summary-title"><span>Order Summary</span><span class="summary-item-count" id="summaryItemCount">0 items</span></h2>
                 
                 <div class="summary-items" id="summaryItems"></div>
                  <div class="checkout-corrections" id="checkoutCorrections" hidden></div>
@@ -652,9 +653,10 @@
                         <span>Total</span>
                         <span>$0.00</span>
                     </div>
-                    <button class="place-order-btn" id="placeOrderBtn" type="button">
+                    <button class="place-order-btn" id="placeOrderBtn" type="button" aria-busy="false">
                         <i class="fas fa-lock" aria-hidden="true"></i>
-                        Place order
+                        <span class="place-order-label" id="placeOrderLabel">Place order</span>
+                        <span class="place-order-amount" id="placeOrderAmount"></span>
                     </button>
                     <div class="secure-badge">
                         <i class="fas fa-shield-alt" aria-hidden="true"></i>
@@ -792,6 +794,9 @@
         function loadCartItems() {
             const cart = JSON.parse(localStorage.getItem('velverahub_cart') || '[]');
             const summaryItems = document.getElementById('summaryItems');
+            const itemCount = cart.reduce((sum, item) => sum + Math.max(1, Number(item.quantity) || 1), 0);
+            const itemCountNode = document.getElementById('summaryItemCount');
+            if (itemCountNode) itemCountNode.textContent = `${itemCount} ${itemCount === 1 ? 'item' : 'items'}`;
             
             if (cart.length === 0) {
                 summaryItems.innerHTML = '<p style="text-align: center; padding: 2rem; color: var(--gray-500);">Your cart is empty. <a href="/veeve/cart.html" style="color:var(--primary);">Return to cart</a></p>';
@@ -802,15 +807,25 @@
             const fmt = (usd) => region ? region.formatPrice(usd) : '$' + parseFloat(usd).toFixed(2);
             summaryItems.innerHTML = cart.map(item => {
                 const product = item.product || item;
-                    const imageUrl = product.product_images?.[0]?.url || product.image_url || product.image || '/img/product-placeholder.svg';
+                const imageUrl = product.product_images?.[0]?.url || product.image_url || product.image || '/img/product-placeholder.svg';
                 const title = product.title || 'Product';
                 const price = parseFloat(product.price) || 0;
                 const qty = item.quantity || 1;
+                const shop = Array.isArray(product.shops) ? product.shops[0] || {} : product.shops || {};
+                const shopName = shop.name || product.shop_name || product.seller_display_name || '';
+                const shopVerified = shop.verified === true || product.shop_verified === true;
+                const imageMarkup = window.responsiveImageMarkup
+                    ? responsiveImageMarkup(product, { width: 96, height: 96, alt: title })
+                    : `<img src="${escapeCheckoutHtml(imageUrl)}" alt="${escapeCheckoutHtml(title)}" width="96" height="96" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='/img/product-placeholder.svg';">`;
+                const sellerMeta = shopName
+                    ? `<span class="summary-item-seller">Sold by ${escapeCheckoutHtml(shopName)}${shopVerified ? ' <span class="summary-item-verified"><i class="fas fa-circle-check" aria-hidden="true"></i> Verified</span>' : ''}</span>`
+                    : '';
                 return `
                 <div class="summary-item">
-                    ${window.responsiveImageMarkup ? responsiveImageMarkup(product, { width: 96, height: 96, alt: title }) : `<img src="${imageUrl}" alt="${title}" width="96" height="96" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='/img/product-placeholder.svg';">`}
+                    ${imageMarkup}
                     <div class="summary-item-info">
-                        <h4 class="summary-item-title">${title}</h4>
+                        <h4 class="summary-item-title">${escapeCheckoutHtml(title)}</h4>
+                        ${sellerMeta}
                         <span class="summary-item-qty">Qty: ${qty}</span>
                     </div>
                     <span class="summary-item-price">${fmt(price * qty)}</span>
@@ -849,6 +864,8 @@
             if (rows[2]) rows[2].querySelector('span:last-child').textContent = fmt(taxUSD);
             const totalRow = document.querySelector('.summary-row.total');
             if (totalRow) totalRow.querySelector('span:last-child').textContent = fmt(totalUSD);
+            const orderAmount = document.getElementById('placeOrderAmount');
+            if (orderAmount) orderAmount.textContent = fmt(totalUSD);
         }
         
         function initPaymentMethods() {
@@ -918,6 +935,32 @@
                 document.querySelector('[data-payment-method="cash_on_delivery"]')?.classList.add('selected');
             }
         }
+
+        function setCheckoutButton(label, { loading = false, disabled = false, amount = '' } = {}) {
+            const button = document.getElementById('placeOrderBtn');
+            if (!button) return;
+            const icon = document.createElement('i');
+            icon.className = loading ? 'fas fa-spinner fa-spin' : 'fas fa-lock';
+            icon.setAttribute('aria-hidden', 'true');
+            const labelNode = document.createElement('span');
+            labelNode.className = 'place-order-label';
+            labelNode.id = 'placeOrderLabel';
+            labelNode.textContent = label;
+            button.replaceChildren(icon, labelNode);
+            if (amount) {
+                const amountNode = document.createElement('span');
+                amountNode.className = 'place-order-amount';
+                amountNode.id = 'placeOrderAmount';
+                amountNode.textContent = amount;
+                button.append(amountNode);
+            }
+            button.disabled = disabled;
+            button.setAttribute('aria-busy', String(loading));
+        }
+
+        function currentCheckoutButtonAmount() {
+            return document.querySelector('.summary-row.total span:last-child')?.textContent?.trim() || '';
+        }
         
         function initPlaceOrder() {
             document.getElementById('placeOrderBtn')?.addEventListener('click', async () => {
@@ -959,8 +1002,7 @@
                 window.Observability?.startCheckout();
                 
                 const btn = document.getElementById('placeOrderBtn');
-                btn.disabled = true;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking latest order details...';
+                setCheckoutButton('Checking latest order details…', { loading: true, disabled: true });
                 document.getElementById('checkoutStatus').textContent = 'Checking current prices, stock, and delivery availability…';
 
                 try {
@@ -979,15 +1021,13 @@
                     loadCartItems();
                     if (!preflight.cart.length) {
                         renderCheckoutCorrections(preflight.corrections);
-                        btn.disabled = true;
-                        btn.innerHTML = '<i class="fas fa-cart-shopping"></i> Return to cart';
-                        btn.onclick = () => window.location.assign('/pages/cart.html');
+                        setCheckoutButton('Return to cart');
+                        btn.onclick = () => window.location.assign('/veeve/cart.html');
                         return;
                     }
                     if (preflight.corrections.length && !checkoutUpdatesAccepted) {
                         renderCheckoutCorrections(preflight.corrections);
-                        btn.disabled = false;
-                        btn.innerHTML = '<i class="fas fa-check"></i> Review updated order';
+                        setCheckoutButton('Review updated order');
                         return;
                     }
                     clearCheckoutCorrections();
@@ -1115,8 +1155,7 @@
                         }
                     }
                     if (!correctionsShown) {
-                        btn.disabled = false;
-                        btn.innerHTML = '<i class="fas fa-lock"></i> Place Order';
+                        setCheckoutButton('Place order', { amount: currentCheckoutButtonAmount() });
                     }
                 }
             });
@@ -1140,8 +1179,7 @@
                 checkoutUpdatesAccepted = true;
                 panel.hidden = true;
                 status.textContent = 'Updates accepted. Select Place Order to run one final live check.';
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-lock"></i> Place Order';
+                setCheckoutButton('Place order', { amount: currentCheckoutButtonAmount() });
             });
         }
 
