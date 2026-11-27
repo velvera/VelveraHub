@@ -8,7 +8,7 @@
     }
 
     function marketCountry(region = window.RegionService?.region) {
-        return String(region || '').toLowerCase() === 'uk' ? 'GB' : 'NG';
+        return ['uk', 'gb'].includes(String(region || '').toLowerCase()) ? 'GB' : 'NG';
     }
 
     function escapeHtml(value) {
@@ -31,7 +31,7 @@
     }
 
     function marketCurrency(region = window.RegionService?.region) {
-        return String(region || '').toLowerCase() === 'uk' ? 'GBP' : 'NGN';
+        return ['uk', 'gb'].includes(String(region || '').toLowerCase()) ? 'GBP' : 'NGN';
     }
 
     async function getDeliveryPromise(productId, location, region) {

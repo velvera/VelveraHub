@@ -3043,6 +3043,18 @@ body::-webkit-scrollbar-thumb,
     color: #b42318;
 }
 
+.seller-sales-trend[data-empty="true"] {
+    color: #686772;
+    font-weight: 600;
+}
+
+.seller-analytics-revenue__amount[data-empty="true"],
+.seller-revenue-stat .stat-info h3[data-empty="true"] {
+    color: #686772;
+    font-size: .98rem;
+    font-weight: 650;
+}
+
 .seller-analytics {
     display: grid;
     gap: 14px;

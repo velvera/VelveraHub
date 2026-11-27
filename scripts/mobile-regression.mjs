@@ -1707,6 +1707,34 @@ async function assertShopPortalMobile(page, width) {
     if (footerLayout.toggleExpanded !== 'false' || footerLayout.contentHidden !== 'true') {
         throw new Error(`velverahub-shop ${width}px mobile footer did not start collapsed accessibly`);
     }
+    const mainScrollport = page.locator('.main-content');
+    const hasLongContent = width <= 768;
+    if (hasLongContent) {
+        await page.evaluate(() => {
+            const spacer = document.createElement('div');
+            spacer.id = 'footer-layout-regression-spacer';
+            spacer.style.height = '900px';
+            document.querySelector('#dashboardContent')?.append(spacer);
+        });
+        await mainScrollport.evaluate((node) => { node.scrollTop = node.scrollHeight; });
+        await page.waitForTimeout(40);
+        const collapsedLongFooter = await siteFooter.evaluate((footer) => {
+            const scrollport = footer.closest('.main-content');
+            const nav = document.querySelector('.mobile-bottom-nav');
+            return {
+                footerBottom: footer.getBoundingClientRect().bottom,
+                scrollportBottom: scrollport.getBoundingClientRect().bottom,
+                reservedBottom: parseFloat(getComputedStyle(footer).paddingBottom) || 0,
+                navHeight: nav?.getBoundingClientRect().height || 0,
+                bodyPaddingBottom: parseFloat(getComputedStyle(document.body).paddingBottom) || 0
+            };
+        });
+        if (Math.abs(collapsedLongFooter.footerBottom - collapsedLongFooter.scrollportBottom) > 1 ||
+            collapsedLongFooter.reservedBottom + 1 < collapsedLongFooter.navHeight ||
+            collapsedLongFooter.bodyPaddingBottom > 1) {
+            throw new Error(`velverahub-shop ${width}px long collapsed footer leaves a gap or overlaps mobile navigation`);
+        }
+    }
     const footerToggle = siteFooter.locator('[data-footer-toggle]');
     await footerToggle.scrollIntoViewIfNeeded();
     await footerToggle.click();
@@ -1717,6 +1745,27 @@ async function assertShopPortalMobile(page, width) {
     );
     if (await siteFooter.locator('[data-footer-content]').getAttribute('aria-hidden') !== 'false') {
         throw new Error(`velverahub-shop ${width}px marketplace footer did not expand`);
+    }
+    if (hasLongContent) {
+        await page.waitForTimeout(360);
+        await mainScrollport.evaluate((node) => { node.scrollTop = node.scrollHeight; });
+        await page.waitForTimeout(40);
+        const expandedLongFooter = await siteFooter.evaluate((footer) => {
+            const scrollport = footer.closest('.main-content');
+            const nav = document.querySelector('.mobile-bottom-nav');
+            return {
+                footerBottom: footer.getBoundingClientRect().bottom,
+                scrollportBottom: scrollport.getBoundingClientRect().bottom,
+                reservedBottom: parseFloat(getComputedStyle(footer).paddingBottom) || 0,
+                navHeight: nav?.getBoundingClientRect().height || 0
+            };
+        });
+        if (Math.abs(expandedLongFooter.footerBottom - expandedLongFooter.scrollportBottom) > 1 ||
+            expandedLongFooter.reservedBottom + 1 < expandedLongFooter.navHeight) {
+            throw new Error(`velverahub-shop ${width}px long expanded footer leaves a gap or overlaps mobile navigation`);
+        }
+        await page.evaluate(() => document.querySelector('#footer-layout-regression-spacer')?.remove());
+        await mainScrollport.evaluate((node) => { node.scrollTop = 0; });
     }
 
     await page.locator('#mobileToggle').click();

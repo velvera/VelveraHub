@@ -6,6 +6,7 @@
         dashboard: null,
         shops: [],
         areaMap: null,
+        dashboardRequestId: 0,
         selectedAreaPoint: null,
         editingAreaId: null,
         authUser: null
@@ -48,6 +49,9 @@
 
     function renderProviderDashboard() {
         const data = state.dashboard;
+        state.areaMap?.map?.remove?.();
+        state.areaMap = null;
+        state.selectedAreaPoint = null;
         const card = byId('providerProfileCard');
         const registrationCard = byId('providerRegistrationCard');
         const host = byId('providerDashboard');
@@ -108,8 +112,8 @@
                     <div class="logistics-field"><label for="areaRegion">State or region</label><input id="areaRegion" maxlength="120" required></div>
                     <div class="logistics-field"><label for="areaCity">City</label><input id="areaCity" maxlength="120" required></div>
                     <div class="logistics-field"><label for="areaRadius">Coverage radius (km)</label><input id="areaRadius" type="number" min="1" max="200" step="0.5" value="15" required></div>
-                    <div class="logistics-field"><label for="areaBaseFee">Base fee</label><input id="areaBaseFee" type="number" min="0" step="0.01" required></div>
-                    <div class="logistics-field"><label for="areaPerKmFee">Fee per km</label><input id="areaPerKmFee" type="number" min="0" step="0.01" required></div>
+                    <div class="logistics-field"><label for="areaBaseFee" id="areaBaseFeeLabel">Base fee (${service().marketCurrency(provider.country_code)})</label><input id="areaBaseFee" type="number" min="0" step="0.01" required></div>
+                    <div class="logistics-field"><label for="areaPerKmFee" id="areaPerKmFeeLabel">Fee per km (${service().marketCurrency(provider.country_code)})</label><input id="areaPerKmFee" type="number" min="0" step="0.01" required></div>
                     <div class="logistics-field"><label for="areaEtaMin">Fastest estimate (minutes)</label><input id="areaEtaMin" type="number" min="5" max="10080" value="60" required></div>
                     <div class="logistics-field"><label for="areaEtaMax">Longest estimate (minutes)</label><input id="areaEtaMax" type="number" min="5" max="10080" value="180" required></div>
                     <div class="logistics-field logistics-field--wide"><label>Service types</label><div>${[['standard','Standard'],['same_day','Same day'],['next_day','Next day'],['express','Express'],['scheduled','Scheduled']].map(([value,label]) => `<label class="logistics-checkline"><input type="checkbox" name="areaServiceType" value="${value}" ${value === 'standard' ? 'checked' : ''}><span>${label}</span></label>`).join('')}</div></div>
@@ -147,22 +151,48 @@
     }
 
     async function initializeProviderControls(provider) {
+        const dashboardRequestId = state.dashboardRequestId;
+        const mapContainer = byId('serviceAreaMap');
         const country = byId('areaCountry')?.value || provider.country_code;
         try {
-            state.areaMap = await service().createMap(byId('serviceAreaMap'), null, {
+            const map = await service().createMap(mapContainer, null, {
                 draggable: true,
                 countryCode: country,
                 onSelect: (latitude, longitude) => {
                     state.selectedAreaPoint = { latitude, longitude };
                 }
             });
+            if (dashboardRequestId !== state.dashboardRequestId || !mapContainer?.isConnected) {
+                map.map?.remove?.();
+                return;
+            }
+            state.areaMap = map;
         } catch (error) {
+            if (dashboardRequestId !== state.dashboardRequestId) return;
             setStatus('providerRegistrationStatus', error.message, 'error');
         }
+        syncServiceAreaCurrency();
         byId('areaCountry')?.addEventListener('change', () => {
             state.selectedAreaPoint = null;
+            state.editingAreaId = null;
+            byId('areaRegion').value = '';
+            byId('areaCity').value = '';
+            byId('areaAddress').value = '';
+            byId('areaBaseFee').value = '';
+            byId('areaPerKmFee').value = '';
+            byId('serviceAreaFormTitle').textContent = 'Add service area';
+            byId('saveServiceAreaButton').textContent = 'Save service area';
+            byId('cancelAreaEdit').classList.add('logistics-hidden');
+            syncServiceAreaCurrency();
             state.areaMap?.clearLocation(byId('areaCountry').value);
-            setStatus('providerRegistrationStatus', 'Choose a new map pin for this market.');
+            const isSupportedMarket = byId('areaCountry').value === provider.country_code;
+            setStatus(
+                'providerRegistrationStatus',
+                isSupportedMarket
+                    ? 'Market changed. Re-enter the location and fees, then place a new map pin.'
+                    : `This profile is registered for ${provider.country_code === 'GB' ? 'the United Kingdom' : 'Nigeria'}. Service areas must use that market.`,
+                isSupportedMarket ? '' : 'error'
+            );
         });
         byId('cancelAreaEdit')?.addEventListener('click', cancelAreaEdit);
         byId('geocodeAreaAddress')?.addEventListener('click', async () => {
@@ -183,25 +213,53 @@
         byId('providerDashboard')?.addEventListener('click', handleProviderDashboardClick);
     }
 
+    function syncServiceAreaCurrency() {
+        const countryCode = byId('areaCountry')?.value || state.dashboard?.provider?.country_code;
+        if (!countryCode) return;
+        const currency = service().marketCurrency(countryCode);
+        const baseLabel = byId('areaBaseFeeLabel');
+        const perKmLabel = byId('areaPerKmFeeLabel');
+        if (baseLabel) baseLabel.textContent = `Base fee (${currency})`;
+        if (perKmLabel) perKmLabel.textContent = `Fee per km (${currency})`;
+    }
+
+    function syncProviderRegistrationFields() {
+        const company = byId('providerType')?.value === 'logistics_company';
+        const vehicleLabel = byId('providerVehicleLabel');
+        const vehicleHelp = byId('providerVehicleHelp');
+        if (vehicleLabel) vehicleLabel.textContent = company ? 'Primary fleet vehicle' : 'Primary vehicle';
+        if (vehicleHelp) {
+            vehicleHelp.textContent = company
+                ? 'Choose the vehicle type that best represents your delivery fleet.'
+                : 'Choose the vehicle you use for rider deliveries.';
+        }
+    }
+
     async function refreshProfiles(chooseId) {
         state.profiles = await service().rpc('delivery_provider_list_my_profiles');
         const select = byId('providerProfileSelect');
+        const preferredId = chooseId || select.value;
         select.innerHTML = state.profiles.map((profile) =>
             `<option value="${escapeHtml(profile.id)}">${escapeHtml(profile.display_name)} · ${escapeHtml(providerLabel(profile))}</option>`
         ).join('');
-        if (chooseId && state.profiles.some((profile) => profile.id === chooseId)) select.value = chooseId;
+        if (state.profiles.some((profile) => profile.id === preferredId)) select.value = preferredId;
         if (state.profiles.length) await loadDashboard(select.value);
         else renderProviderDashboard();
     }
 
     async function loadDashboard(providerId) {
-        state.dashboard = await service().rpc('delivery_provider_get_dashboard', { p_provider_id: providerId });
+        const requestId = ++state.dashboardRequestId;
+        const dashboard = await service().rpc('delivery_provider_get_dashboard', { p_provider_id: providerId });
+        if (requestId !== state.dashboardRequestId || byId('providerProfileSelect')?.value !== providerId) return;
+        state.dashboard = dashboard;
         renderProviderDashboard();
     }
 
     async function registerProvider(event) {
         event.preventDefault();
         const form = event.currentTarget;
+        const selectedRegistrationValues = ['providerType', 'providerCountry', 'providerVehicle']
+            .map((id) => [id, byId(id).value]);
         const button = form.querySelector('button[type="submit"]');
         button.disabled = true;
         try {
@@ -213,6 +271,8 @@
                 p_vehicle_type: byId('providerVehicle').value
             });
             form.reset();
+            selectedRegistrationValues.forEach(([id, value]) => { byId(id).value = value; });
+            syncProviderRegistrationFields();
             await refreshProfiles(id);
             setStatus('providerRegistrationStatus', 'Profile created. Submit verification documents before you can become available to buyers.', 'success');
         } catch (error) {
@@ -281,6 +341,14 @@
         event.preventDefault();
         const provider = state.dashboard?.provider;
         const point = state.selectedAreaPoint;
+        if (provider?.country_code && byId('areaCountry').value !== provider.country_code) {
+            setStatus(
+                'providerRegistrationStatus',
+                `Service areas must use this profile’s registered market (${provider.country_code === 'GB' ? 'United Kingdom' : 'Nigeria'}).`,
+                'error'
+            );
+            return;
+        }
         if (!provider?.id || !point) {
             setStatus('providerRegistrationStatus', 'Place a service-area pin on the map before saving.', 'error');
             return;
@@ -425,7 +493,9 @@
         if (error) throw error;
         state.shops = data || [];
         const select = byId('hiringShopSelect');
+        const preferredId = select.value;
         select.innerHTML = state.shops.map((shop) => `<option value="${escapeHtml(shop.id)}">${escapeHtml(shop.name)}</option>`).join('');
+        if (state.shops.some((shop) => shop.id === preferredId)) select.value = preferredId;
         byId('sellerHiringCard').hidden = state.shops.length === 0;
         if (state.shops.length) {
             await loadRiderMatches();
@@ -626,6 +696,8 @@
         const { data: { user } } = await state.supabase.auth.getUser();
         state.authUser = user;
         byId('providerCountry').value = service().marketCountry();
+        syncProviderRegistrationFields();
+        byId('providerType').addEventListener('change', syncProviderRegistrationFields);
         byId('providerRegistrationForm').addEventListener('submit', registerProvider);
         byId('providerProfileSelect').addEventListener('change', (event) => loadDashboard(event.target.value).catch((error) =>
             reportError('providerRegistrationStatus', error, 'Provider profile could not be loaded.')

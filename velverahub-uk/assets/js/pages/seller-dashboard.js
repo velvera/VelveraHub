@@ -941,18 +941,21 @@ function describeSellerRevenueTrend(summary, periodDays) {
     if (!currentCount && !previousCount) {
         return {
             tone: 'neutral',
-            message: `No eligible orders in the last ${days} days or the previous ${days} days.`
+            empty: true,
+            message: `No eligible order history for the last ${days} days or the preceding ${days} days. No comparison is available.`
         };
     }
     if (!previousCount) {
         return {
             tone: 'neutral',
+            empty: false,
             message: `Not enough order history to compare the last ${days} days with the previous ${days} days.`
         };
     }
     if (summary.previous.revenue <= 0) {
         return {
             tone: 'neutral',
+            empty: false,
             message: `The previous ${days} days had no recorded revenue, so no percentage comparison is shown.`
         };
     }
@@ -962,11 +965,13 @@ function describeSellerRevenueTrend(summary, periodDays) {
     if (roundedChange === 0) {
         return {
             tone: 'neutral',
+            empty: false,
             message: `Revenue is unchanged from the previous ${days} days.`
         };
     }
     return {
         tone: change > 0 ? 'positive' : 'negative',
+        empty: false,
         message: `Revenue ${change > 0 ? 'increased' : 'decreased'} ${Math.abs(roundedChange).toLocaleString(undefined, { maximumFractionDigits: 1 })}% compared with the previous ${days} days.`
     };
 }
@@ -1002,6 +1007,7 @@ function setSellerRevenueUnavailable(message) {
     document.querySelectorAll('[data-seller-revenue-trend]').forEach((node) => {
         node.textContent = message;
         node.dataset.trend = 'neutral';
+        delete node.dataset.empty;
     });
 }
 
@@ -1022,6 +1028,7 @@ function bindSellerRevenuePeriodSelectors(context) {
 
 async function refreshSellerRevenueSummary(context, periodDays = selectedSellerRevenuePeriod) {
     const days = normalizeSellerRevenuePeriod(periodDays);
+    const requestId = ++sellerRevenueRequestSequence;
     selectedSellerRevenuePeriod = days;
     document.querySelectorAll('[data-seller-revenue-period]').forEach((selector) => {
         selector.value = String(days);
@@ -1045,15 +1052,20 @@ async function refreshSellerRevenueSummary(context, periodDays = selectedSellerR
 
     try {
         const { summary } = await fetchSellerRevenueComparison(context, days);
+        if (requestId !== sellerRevenueRequestSequence) return;
+        const hasHistory = summary.current.orderCount > 0 || summary.previous.orderCount > 0;
         values.forEach((node) => {
-            node.textContent = formatSellerPrice(summary.current.revenue);
+            node.textContent = hasHistory ? formatSellerPrice(summary.current.revenue) : 'No order history';
+            node.dataset.empty = String(!hasHistory);
         });
         const trend = describeSellerRevenueTrend(summary, days);
         trends.forEach((node) => {
             node.textContent = trend.message;
             node.dataset.trend = trend.tone;
+            node.dataset.empty = String(trend.empty);
         });
     } catch (error) {
+        if (requestId !== sellerRevenueRequestSequence) return;
         window.AsyncFeedback?.log(
             'seller-revenue-history',
             window.AsyncFeedback?.createRequestId('seller-revenue-history'),
@@ -2527,6 +2539,7 @@ function initProductForm() {
 
 let currentProducts = [];
 let selectedSellerRevenuePeriod = 30;
+let sellerRevenueRequestSequence = 0;
 let sellerMessagesRefreshTimer = null;
 let selectedSellerConversationId = null;
 let editingProductId = null;

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -9,6 +10,7 @@ const physical = read('database/physical-store-logistics.sql');
 const workflows = read('database/location-logistics-workflows.sql');
 const marketReadiness = read('database/location-logistics-market-readiness.sql');
 const service = read('assets/js/services/logistics.js');
+const logisticsStyles = read('assets/css/components/logistics.css');
 const providerPage = read('assets/js/pages/logistics.js');
 const checkoutPage = read('assets/js/pages/checkout-logistics.js');
 const discoveryPage = read('assets/js/pages/shop-discovery.js');
@@ -94,6 +96,22 @@ includes(providerPage, 'shop_owner_find_available_delivery_providers', 'Sellers 
 includes(read('veeve/logistics.html'), 'id="sellerDeliveryProviderMatches"', 'The seller logistics workspace must display delivery-provider matches separately from workforce matches.');
 includes(providerPage, 'delivery_provider_update_request', 'Providers must be able to update delivery status.');
 includes(providerPage, 'delivery_provider_report', 'Buyers must be able to report a delivery issue.');
+includes(providerPage, "byId('areaRegion').value = ''", 'Changing service-area markets must clear the previous region.');
+includes(providerPage, "byId('areaCity').value = ''", 'Changing service-area markets must clear the previous city.');
+includes(providerPage, "byId('areaBaseFee').value = ''", 'Changing service-area markets must clear the previous currency amount.');
+includes(providerPage, "state.selectedAreaPoint = null;", 'Changing a service-area market must require a new map pin.');
+includes(providerPage, 'syncServiceAreaCurrency();', 'Service-area fees must display the selected market currency.');
+includes(providerPage, 'preferredId = chooseId || select.value', 'Refreshing provider profiles must retain a valid selection.');
+includes(providerPage, 'preferredId = select.value', 'Refreshing shop options must retain a valid selection.');
+includes(logisticsStyles, ':focus-visible', 'Logistics controls must show a visible keyboard focus state.');
+includes(logisticsStyles, '@media (max-width: 420px)', 'Logistics forms must adapt to narrow phones.');
+
+const logisticsWindow = { RegionService: { region: 'ng' } };
+vm.runInNewContext(service, { window: logisticsWindow });
+assert.equal(logisticsWindow.LogisticsService.marketCountry('uk'), 'GB');
+assert.equal(logisticsWindow.LogisticsService.marketCountry('GB'), 'GB');
+assert.equal(logisticsWindow.LogisticsService.marketCurrency('gb'), 'GBP');
+assert.equal(logisticsWindow.LogisticsService.marketCurrency('NG'), 'NGN');
 includes(adminPage, 'admin_review_shop_physical_location', 'Admin UI must review store locations.');
 includes(adminPage, 'admin_review_delivery_provider', 'Admin UI must approve and manage providers.');
 includes(adminPage, 'admin_review_delivery_provider_report', 'Admin UI must process provider complaints.');

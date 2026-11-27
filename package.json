@@ -18,6 +18,7 @@
     "test:trending-carousel": "node scripts/trending-carousel.test.mjs",
     "test:phone-verification": "node scripts/phone-verification.test.mjs",
     "test:location-logistics": "node scripts/location-logistics-integrity.test.mjs",
+    "test:seller-revenue-analytics": "node scripts/seller-revenue-analytics.test.mjs",
     "auth:browser": "node scripts/authenticated-browser.mjs",
     "auth:seller:acceptance": "node scripts/authenticated-browser.mjs --seller-acceptance",
     "mobile:regression": "node scripts/mobile-regression.mjs",

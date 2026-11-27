@@ -5,6 +5,7 @@
 
 .shared-footer {
     margin-top: 2rem;
+    margin-bottom: 0;
 }
 
 .shared-footer .footer-intro {
@@ -483,11 +484,16 @@
         background: #6D28D9;
         color: var(--white);
         /*
-         * The mobile bottom nav is fixed to the viewport. Keep the footer's
-         * own background behind that nav while reserving the nav's height so
-         * the footer-bottom content is never covered.
+         * Reserve the fixed navigation's actual 59px content footprint plus
+         * the device safe area. This keeps footer content clear of the nav
+         * without leaving an extra blank strip after the footer.
          */
-        padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+        padding-bottom: calc(59px + env(safe-area-inset-bottom, 0px));
+        margin-bottom: 0;
+    }
+
+    body:has(.shared-footer) {
+        padding-bottom: 0 !important;
     }
 
     .footer-mobile-bar {
