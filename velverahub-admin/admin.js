@@ -90,6 +90,13 @@
     }
 
     async function checkAdminAccess() {
+        const { data: { session } = {}, error: sessionError } = await state.supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+        if (!session?.user) {
+            showPanel('adminAuthPanel');
+            return false;
+        }
+
         const { data: { user }, error: userError } = await state.supabase.auth.getUser();
         if (userError) throw userError;
         if (!user) {

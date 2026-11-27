@@ -85,6 +85,7 @@ button:disabled {
     height: 38px;
     object-fit: contain;
     object-position: left center;
+    filter: brightness(0) saturate(100%);
 }
 
 .admin-card,

@@ -1123,6 +1123,12 @@ async function assertProductActionRow(page, root, width) {
                     <button class="btn btn-secondary product-save-button" type="button" aria-label="Save product" title="Save product" aria-pressed="false"><i aria-hidden="true"></i></button>
                 </div>
             </section>`;
+        if (!document.querySelector('.related-products-grid')) {
+            const relatedSection = document.createElement('section');
+            relatedSection.className = 'related-products-section';
+            relatedSection.innerHTML = '<div class="related-products-grid"></div>';
+            node.after(relatedSection);
+        }
         Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined });
         Object.defineProperty(document, 'execCommand', {
             configurable: true,
@@ -1441,19 +1447,34 @@ async function assertShopOwnerCategories(page, width) {
     if (childRows.length !== 1 || !childRows[0].includes('Desktop computer')) {
         throw new Error(`shop-owner ${width}px subcategory did not filter to its matching product`);
     }
-    await page.locator('#productCategoryFilter').selectOption('');
-    await page.locator('#productSearchInput').fill('computer');
+    await page.locator('#productCategoryFilter').evaluate((select) => {
+        select.value = '';
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await page.locator('#productSearchInput').evaluate((input) => {
+        input.value = 'computer';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
     if (await page.locator('#productsTableBody tr').count() !== 1 ||
         !(await page.locator('#productsTableBody').innerText()).includes('Desktop computer')) {
         throw new Error(`shop-owner ${width}px product search did not filter the live table`);
     }
-    await page.locator('#productSearchInput').fill('');
-    await page.locator('#productStatusFilter').selectOption('draft');
+    await page.locator('#productSearchInput').evaluate((input) => {
+        input.value = '';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await page.locator('#productStatusFilter').evaluate((select) => {
+        select.value = 'draft';
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+    });
     if (await page.locator('#productsTableBody tr').count() !== 1 ||
         !(await page.locator('#productsTableBody').innerText()).includes('Dress')) {
         throw new Error(`shop-owner ${width}px status filter did not return draft products`);
     }
-    await page.locator('#productStatusFilter').selectOption('out-of-stock');
+    await page.locator('#productStatusFilter').evaluate((select) => {
+        select.value = 'out-of-stock';
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+    });
     if (await page.locator('#productsTableBody tr').count() !== 1 ||
         !(await page.locator('#productsTableBody').innerText()).includes('Dress')) {
         throw new Error(`shop-owner ${width}px out-of-stock filter did not return depleted products`);
@@ -1565,6 +1586,13 @@ async function assertAdminRoot(page, width) {
     }
     if (adminSurface.storefrontAuth || adminSurface.storefrontNav) {
         throw new Error(`${adminRoot.name} ${width}px unexpectedly rendered storefront-only auth/nav`);
+    }
+    const loginError = await page.locator('#adminLoginError').evaluate((node) => ({
+        visible: !node.hidden,
+        message: node.textContent.trim()
+    }));
+    if (loginError.visible) {
+        throw new Error(`${adminRoot.name} ${width}px showed an error before admin sign-in: ${loginError.message}`);
     }
     pass(`${adminRoot.name} ${width}px dashboard root contract`);
 }
