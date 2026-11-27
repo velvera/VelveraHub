@@ -1,0 +1,324 @@
+.seller-verification-panel,
+#sellerTrustPanel {
+    display: grid;
+    gap: 1rem;
+    margin-block: 1rem;
+}
+
+.seller-verification-heading h2,
+.seller-verification-admin-heading h2 {
+    margin: 0 0 0.35rem;
+}
+
+.seller-verification-heading p,
+.seller-verification-admin-heading p,
+.seller-verification-detail,
+.seller-verification-privacy {
+    color: #596579;
+    line-height: 1.55;
+}
+
+.seller-verification-eyebrow {
+    margin: 0 0 0.25rem;
+    color: #6d28d9;
+    font-size: 0.75rem;
+    font-weight: 750;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.seller-verification-progress {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.65rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.seller-verification-progress li {
+    display: grid;
+    grid-template-columns: 2rem 1fr;
+    align-items: center;
+    column-gap: 0.5rem;
+    padding: 0.7rem;
+    border: 1px solid #e3e7ee;
+    border-radius: 0.75rem;
+    background: #fff;
+}
+
+.seller-verification-progress li > span {
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+    border-radius: 50%;
+    background: #eef0f5;
+    color: #414a5b;
+    font-weight: 700;
+}
+
+.seller-verification-progress li.is-complete > span {
+    background: #dcf5e8;
+    color: #16633f;
+}
+
+.seller-verification-progress strong,
+.seller-verification-progress small {
+    grid-column: 2;
+}
+
+.seller-verification-progress small {
+    color: #667085;
+    line-height: 1.35;
+}
+
+.seller-verification-cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.8rem;
+}
+
+.seller-verification-card,
+.seller-verification-admin-case {
+    min-width: 0;
+    padding: 1rem;
+    border: 1px solid #e1e5ec;
+    border-radius: 0.85rem;
+    background: #fff;
+}
+
+.seller-verification-card-heading,
+.seller-verification-admin-case > header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.8rem;
+}
+
+.seller-verification-card-heading h3,
+.seller-verification-admin-case h3 {
+    margin: 0 0 0.25rem;
+    color: #222b3b;
+    font-size: 1rem;
+}
+
+.seller-verification-card-heading p,
+.seller-verification-admin-case header p {
+    margin: 0;
+    color: #667085;
+    line-height: 1.45;
+}
+
+.seller-verification-status {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    padding: 0.25rem 0.55rem;
+    border: 1px solid #d8dee8;
+    border-radius: 999px;
+    background: #f5f6f8;
+    color: #475467;
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
+.seller-verification-status--approved {
+    border-color: #a8dbbf;
+    background: #edf9f2;
+    color: #17613d;
+}
+
+.seller-verification-status--pending_review,
+.seller-verification-status--pending_provider,
+.seller-verification-status--submitted,
+.seller-verification-status--scheduled,
+.seller-verification-status--requested {
+    border-color: #f1d28c;
+    background: #fff9e9;
+    color: #835700;
+}
+
+.seller-verification-status--rejected,
+.seller-verification-status--suspended,
+.seller-verification-status--revoked,
+.seller-verification-status--expired {
+    border-color: #efb8b8;
+    background: #fff2f2;
+    color: #9a2929;
+}
+
+.seller-identity-form,
+.seller-identity-review-form,
+.seller-inspection-review-form {
+    display: grid;
+    gap: 0.8rem;
+    margin-top: 0.8rem;
+}
+
+.seller-verification-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.7rem;
+}
+
+.seller-verification-panel label,
+#sellerTrustPanel label {
+    display: grid;
+    gap: 0.35rem;
+    color: #344054;
+    font-size: 0.88rem;
+    font-weight: 650;
+}
+
+.seller-verification-panel input:not([type="checkbox"]),
+.seller-verification-panel select,
+.seller-verification-panel textarea,
+#sellerTrustPanel input:not([type="checkbox"]),
+#sellerTrustPanel select,
+#sellerTrustPanel textarea {
+    width: 100%;
+    min-width: 0;
+    padding: 0.65rem 0.7rem;
+    border: 1px solid #cfd5df;
+    border-radius: 0.55rem;
+    background: #fff;
+    color: #202939;
+    font: inherit;
+}
+
+.seller-verification-panel input:focus-visible,
+.seller-verification-panel select:focus-visible,
+.seller-verification-panel textarea:focus-visible,
+#sellerTrustPanel input:focus-visible,
+#sellerTrustPanel select:focus-visible,
+#sellerTrustPanel textarea:focus-visible {
+    outline: 2px solid #6d28d9;
+    outline-offset: 2px;
+}
+
+.seller-verification-panel input[type="file"] {
+    padding: 0.45rem;
+}
+
+.seller-verification-panel label small {
+    color: #667085;
+    font-weight: 400;
+    line-height: 1.45;
+}
+
+.seller-verification-consent {
+    display: flex !important;
+    align-items: flex-start;
+    gap: 0.55rem !important;
+    font-weight: 500 !important;
+}
+
+.seller-verification-consent input {
+    flex: 0 0 auto;
+    margin-top: 0.25rem;
+}
+
+.seller-verification-actions,
+.seller-verification-admin-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+}
+
+.seller-verification-message,
+.seller-verification-form-message {
+    color: #344054;
+    line-height: 1.5;
+}
+
+.seller-verification-message.is-error,
+.seller-verification-form-message.is-error {
+    color: #b42318;
+}
+
+.seller-verification-history {
+    display: grid;
+    gap: 0.6rem;
+    margin: 0.8rem 0 0;
+    padding-left: 1.2rem;
+}
+
+.seller-verification-history li,
+.seller-verification-history > li {
+    color: #475467;
+    line-height: 1.5;
+}
+
+.seller-verification-history time {
+    display: block;
+    color: #667085;
+    font-size: 0.8rem;
+}
+
+.seller-verification-admin-details {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+    margin: 0.9rem 0;
+}
+
+.seller-verification-admin-details div {
+    min-width: 0;
+    padding: 0.6rem;
+    border-radius: 0.55rem;
+    background: #f6f7f9;
+}
+
+.seller-verification-admin-details dt {
+    color: #667085;
+    font-size: 0.76rem;
+}
+
+.seller-verification-admin-details dd {
+    margin: 0.2rem 0 0;
+    overflow-wrap: anywhere;
+    color: #344054;
+    font-size: 0.85rem;
+}
+
+.seller-verification-admin-filters {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(8rem, 1fr));
+    align-items: end;
+    gap: 0.7rem;
+}
+
+.seller-verification-admin-heading {
+    margin-block: 1.2rem 0.7rem;
+}
+
+.seller-verification-admin-case-list {
+    display: grid;
+    gap: 0.8rem;
+    margin-block: 0.8rem 1.5rem;
+}
+
+@media (max-width: 760px) {
+    .seller-verification-progress {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .seller-verification-admin-filters {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 520px) {
+    .seller-verification-cards,
+    .seller-verification-form-grid,
+    .seller-verification-admin-details,
+    .seller-verification-admin-filters {
+        grid-template-columns: 1fr;
+    }
+
+    .seller-verification-card,
+    .seller-verification-admin-case {
+        padding: 0.8rem;
+    }
+}

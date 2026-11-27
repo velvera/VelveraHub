@@ -55,7 +55,13 @@ DROP POLICY IF EXISTS seller_verification_country_config_read
     ON public.seller_verification_country_config;
 CREATE POLICY seller_verification_country_config_read
 ON public.seller_verification_country_config FOR SELECT TO anon, authenticated
-USING (manual_review_enabled IS TRUE);
+USING (
+    manual_review_enabled IS TRUE
+    OR (
+        auth.role() = 'authenticated'
+        AND public.current_profile_role() = 'admin'
+    )
+);
 
 CREATE TABLE IF NOT EXISTS public.seller_identity_verification_cases (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -300,6 +306,10 @@ REVOKE ALL ON FUNCTION public.seller_identity_upload_reserve(UUID, UUID)
 GRANT EXECUTE ON FUNCTION public.seller_identity_upload_reserve(UUID, UUID)
     TO service_role;
 
+DROP FUNCTION IF EXISTS public.seller_prepare_identity_verification(
+    TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, UUID
+);
+
 CREATE OR REPLACE FUNCTION public.seller_prepare_identity_verification(
     p_country_code TEXT,
     p_seller_type TEXT,
@@ -307,7 +317,8 @@ CREATE OR REPLACE FUNCTION public.seller_prepare_identity_verification(
     p_legal_last_name TEXT,
     p_document_type TEXT,
     p_consent_version TEXT,
-    p_shop_id UUID DEFAULT NULL
+    p_shop_id UUID DEFAULT NULL,
+    p_consent BOOLEAN DEFAULT FALSE
 )
 RETURNS UUID
 LANGUAGE plpgsql
@@ -325,7 +336,8 @@ BEGIN
     IF p_seller_type NOT IN ('individual', 'registered_business', 'sole_trader')
        OR length(btrim(coalesce(p_legal_first_name, ''))) NOT BETWEEN 1 AND 100
        OR length(btrim(coalesce(p_legal_last_name, ''))) NOT BETWEEN 1 AND 100
-       OR length(btrim(coalesce(p_consent_version, ''))) NOT BETWEEN 1 AND 40 THEN
+       OR length(btrim(coalesce(p_consent_version, ''))) NOT BETWEEN 1 AND 40
+       OR p_consent IS NOT TRUE THEN
         RAISE EXCEPTION 'Identity details are incomplete' USING ERRCODE = '22023';
     END IF;
     IF NOT EXISTS (
@@ -844,6 +856,41 @@ CREATE TRIGGER prevent_shop_business_registry_check_mutation
 BEFORE UPDATE OR DELETE ON public.shop_business_registry_checks
 FOR EACH ROW EXECUTE FUNCTION public.prevent_seller_identity_history_mutation();
 
+CREATE TABLE IF NOT EXISTS public.shop_business_verification_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    submission_id UUID NOT NULL
+        REFERENCES public.shop_verification_submissions(id) ON DELETE RESTRICT,
+    shop_id UUID NOT NULL REFERENCES public.shops(id) ON DELETE RESTRICT,
+    reviewer_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+    decision TEXT NOT NULL
+        CHECK (decision IN ('approve', 'request_resubmission', 'reject')),
+    verification_basis TEXT,
+    registry_source TEXT,
+    registry_reference TEXT,
+    business_evidence_reference TEXT,
+    representative_authorized BOOLEAN NOT NULL DEFAULT FALSE,
+    seller_message TEXT NOT NULL
+        CHECK (char_length(btrim(seller_message)) BETWEEN 3 AND 2000),
+    internal_note TEXT NOT NULL
+        CHECK (char_length(btrim(internal_note)) BETWEEN 3 AND 2000),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS shop_business_verification_events_case_idx
+    ON public.shop_business_verification_events(submission_id, created_at DESC);
+ALTER TABLE public.shop_business_verification_events ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.shop_business_verification_events FROM PUBLIC, anon, authenticated;
+GRANT SELECT ON public.shop_business_verification_events TO authenticated;
+DROP POLICY IF EXISTS shop_business_verification_events_admin_read
+    ON public.shop_business_verification_events;
+CREATE POLICY shop_business_verification_events_admin_read
+ON public.shop_business_verification_events FOR SELECT TO authenticated
+USING (public.current_profile_role() = 'admin');
+DROP TRIGGER IF EXISTS prevent_shop_business_verification_event_mutation
+    ON public.shop_business_verification_events;
+CREATE TRIGGER prevent_shop_business_verification_event_mutation
+BEFORE UPDATE OR DELETE ON public.shop_business_verification_events
+FOR EACH ROW EXECUTE FUNCTION public.prevent_seller_identity_history_mutation();
+
 CREATE OR REPLACE FUNCTION public.admin_review_shop_verification_with_registry(
     p_submission_id UUID,
     p_decision TEXT,
@@ -874,6 +921,10 @@ BEGIN
     IF NOT FOUND OR v_submission.status <> 'pending' THEN
         RAISE EXCEPTION 'Only pending shop verification cases can be reviewed'
             USING ERRCODE = '23514';
+    END IF;
+    IF public.shop_portal_owns_shop(v_submission.shop_id) THEN
+        RAISE EXCEPTION 'A shop owner cannot review their own business verification'
+            USING ERRCODE = '42501';
     END IF;
     IF p_decision = 'approve' AND p_registry_checked IS TRUE
        AND (v_source IS NULL OR v_reference IS NULL
@@ -946,6 +997,7 @@ DECLARE
     v_country TEXT;
     v_country_code TEXT;
     v_expected_registry_source TEXT;
+    v_applicant_user_id UUID;
     v_registry_source TEXT := nullif(left(btrim(coalesce(p_registry_source, '')), 80), '');
     v_registry_reference TEXT := nullif(left(btrim(coalesce(p_registry_reference, '')), 200), '');
     v_evidence_reference TEXT := nullif(left(btrim(coalesce(p_business_evidence_reference, '')), 500), '');
@@ -974,6 +1026,11 @@ BEGIN
             USING ERRCODE = '23514';
     END IF;
 
+    IF public.shop_portal_owns_shop(v_submission.shop_id) THEN
+        RAISE EXCEPTION 'A shop owner cannot review their own business verification'
+            USING ERRCODE = '42501';
+    END IF;
+
     IF p_decision = 'approve' THEN
         IF v_submission.business_type IN ('registered', 'partnership') THEN
             IF p_verification_basis IS DISTINCT FROM 'registry'
@@ -985,6 +1042,31 @@ BEGIN
             SELECT shop.country::TEXT INTO v_country
             FROM public.shops AS shop
             WHERE shop.id = v_submission.shop_id;
+            SELECT coalesce(owner_profile.user_id, owner_profile.id)
+              INTO v_applicant_user_id
+            FROM public.shops AS shop
+            LEFT JOIN LATERAL (
+                SELECT profile.id, profile.user_id
+                FROM public.profiles AS profile
+                WHERE profile.id = shop.owner_id
+                   OR profile.id = shop.current_owner_id
+                   OR profile.user_id = shop.owner_id
+                   OR profile.user_id = shop.current_owner_id
+                ORDER BY (profile.id = shop.owner_id OR profile.id = shop.current_owner_id) DESC
+                LIMIT 1
+            ) AS owner_profile ON TRUE
+            WHERE shop.id = v_submission.shop_id;
+            IF NOT EXISTS (
+                SELECT 1
+                FROM public.seller_identity_verification_cases AS identity
+                WHERE identity.applicant_user_id = v_applicant_user_id
+                  AND identity.status = 'approved'
+                  AND identity.expires_at > now()
+                  AND identity.seller_type = 'registered_business'
+            ) THEN
+                RAISE EXCEPTION 'Approve a current identity verification for the business representative first'
+                    USING ERRCODE = '23514';
+            END IF;
             SELECT config.country_code, config.business_registry_source
               INTO v_country_code, v_expected_registry_source
             FROM public.seller_verification_country_config AS config
@@ -1004,6 +1086,31 @@ BEGIN
                 RAISE EXCEPTION 'Record the sole-trader evidence reviewed and confirm the applicant is the proprietor'
                     USING ERRCODE = '22023';
             END IF;
+            SELECT coalesce(owner_profile.user_id, owner_profile.id)
+              INTO v_applicant_user_id
+            FROM public.shops AS shop
+            LEFT JOIN LATERAL (
+                SELECT profile.id, profile.user_id
+                FROM public.profiles AS profile
+                WHERE profile.id = shop.owner_id
+                   OR profile.id = shop.current_owner_id
+                   OR profile.user_id = shop.owner_id
+                   OR profile.user_id = shop.current_owner_id
+                ORDER BY (profile.id = shop.owner_id OR profile.id = shop.current_owner_id) DESC
+                LIMIT 1
+            ) AS owner_profile ON TRUE
+            WHERE shop.id = v_submission.shop_id;
+            IF NOT EXISTS (
+                SELECT 1
+                FROM public.seller_identity_verification_cases AS identity
+                WHERE identity.applicant_user_id = v_applicant_user_id
+                  AND identity.status = 'approved'
+                  AND identity.expires_at > now()
+                  AND identity.seller_type = 'sole_trader'
+            ) THEN
+                RAISE EXCEPTION 'Approve a current identity verification for the sole trader first'
+                    USING ERRCODE = '23514';
+            END IF;
         ELSE
             IF p_verification_basis IS NOT NULL THEN
                 RAISE EXCEPTION 'Individual shop approval does not establish business verification'
@@ -1013,6 +1120,26 @@ BEGIN
     END IF;
 
     PERFORM public.admin_review_shop_verification(p_submission_id, p_decision, v_note);
+
+    INSERT INTO public.shop_business_verification_events (
+        submission_id, shop_id, reviewer_user_id, decision,
+        verification_basis, registry_source, registry_reference,
+        business_evidence_reference, representative_authorized,
+        seller_message, internal_note
+    )
+    VALUES (
+        p_submission_id, v_submission.shop_id, auth.uid(), p_decision,
+        p_verification_basis,
+        CASE WHEN p_decision = 'approve' AND p_verification_basis = 'registry'
+            THEN v_registry_source ELSE NULL END,
+        CASE WHEN p_decision = 'approve' AND p_verification_basis = 'registry'
+            THEN v_registry_reference ELSE NULL END,
+        CASE WHEN p_decision = 'approve' AND p_verification_basis = 'sole_trader_manual'
+            THEN v_evidence_reference ELSE NULL END,
+        p_decision = 'approve' AND p_representative_authorized IS TRUE,
+        v_note,
+        v_internal_note
+    );
 
     IF p_decision = 'approve' THEN
         UPDATE public.shop_verification_submissions
@@ -1136,6 +1263,9 @@ BEGIN
     IF NOT public.shop_portal_owns_shop(p_shop_id) THEN
         RAISE EXCEPTION 'You do not own this shop' USING ERRCODE = '42501';
     END IF;
+    PERFORM pg_advisory_xact_lock(
+        hashtextextended(p_shop_id::TEXT || ':physical-inspection', 0)
+    );
     IF NOT EXISTS (
         SELECT 1 FROM public.shops AS shop
         JOIN public.shop_physical_locations AS location ON location.shop_id = shop.id
@@ -1305,6 +1435,9 @@ BEGIN
     IF NOT FOUND THEN
         RAISE EXCEPTION 'Inspection request not found' USING ERRCODE = 'P0002';
     END IF;
+    IF public.shop_portal_owns_shop(v_inspection.shop_id) THEN
+        RAISE EXCEPTION 'A shop owner cannot review their own inspection' USING ERRCODE = '42501';
+    END IF;
     IF p_action = 'schedule' THEN
         IF v_inspection.status NOT IN ('requested', 'rejected', 'revoked') THEN
             RAISE EXCEPTION 'Only a requested inspection can be scheduled' USING ERRCODE = '23514';
@@ -1472,7 +1605,7 @@ AS $$
 $$;
 
 REVOKE ALL ON FUNCTION public.seller_prepare_identity_verification(
-    TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, UUID
+    TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, UUID, BOOLEAN
 ) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.seller_submit_identity_verification(UUID, TEXT)
     FROM PUBLIC, anon;
@@ -1503,7 +1636,7 @@ REVOKE ALL ON FUNCTION public.get_public_seller_verification_badges(UUID[])
     FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION public.seller_prepare_identity_verification(
-    TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, UUID
+    TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, UUID, BOOLEAN
 ) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.seller_submit_identity_verification(UUID, TEXT)
     TO authenticated;

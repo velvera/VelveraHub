@@ -32,6 +32,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             return;
         }
         const context = await getSupabaseSellerContext();
+        void window.SellerVerification?.mountSellerPanel(context);
         updateSellerAvatar(context?.shop?.logo_url);
         updateShopNavigation(context);
         document.getElementById('userRoleLabel')?.replaceChildren(

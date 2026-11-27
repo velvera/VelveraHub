@@ -340,6 +340,7 @@ async function renderShopPortalState(context) {
     const verificationPanel = document.getElementById('shopVerificationPanel');
     const verificationForm = document.getElementById('shopVerificationForm');
     if (!panel || !form || !settings) return;
+    void window.SellerVerification?.mountSellerPanel(context);
 
     panel.hidden = false;
     settings.classList.add('hidden');

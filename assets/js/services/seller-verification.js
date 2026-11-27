@@ -6,6 +6,7 @@
     let countryConfig = [];
     let adminSupabase = null;
     let adminHandlersBound = false;
+    let currentAdminUserId = null;
     let identityLoading = false;
     let inspectionsLoading = false;
 
@@ -41,7 +42,9 @@
             suspended: 'Suspended',
             revoked: 'Revoked',
             requested: 'Inspection requested',
-            scheduled: 'Inspection scheduled'
+            scheduled: 'Inspection scheduled',
+            pending: 'Pending review',
+            resubmission_required: 'Action required'
         })[status] || 'Status unavailable';
     }
 
@@ -84,7 +87,7 @@
         if (!context.shop?.id) return null;
         const { data, error } = await context.supabase
             .from('shop_verification_submissions')
-            .select('status, submitted_at, reviewed_at, registry_checked, registry_checked_at, representative_authorized, business_verification_basis')
+            .select('status, submitted_at, reviewed_at, review_note, registry_checked, registry_checked_at, representative_authorized, business_verification_basis')
             .eq('shop_id', context.shop.id)
             .maybeSingle();
         if (error) throw error;
@@ -163,7 +166,8 @@
                     ${!contactVerified ? `<p class="seller-verification-detail">${emailVerified ? 'Confirm your phone number in account settings.' : 'Confirm your email and phone number in account settings.'} ${window.RegionService?.isUK && !phoneVerified ? 'The current OTP provider is configured for Nigeria; UK phone verification is not available yet.' : ''}</p>` : ''}
                 </article>
                 <article class="seller-verification-card">
-                    <div class="seller-verification-card-heading"><div><h3>Identity review</h3><p>Manual review is used until a qualified provider is configured. A submitted image is never marked as verified automatically.</p></div>${renderStatus(identityStatus, identity.submitted_at ? `Submitted ${formatDate(identity.submitted_at)}` : '')}</div>
+                    <div class="seller-verification-card-heading"><div><h3>Identity review</h3><p>Manual review is used until a qualified provider is configured. A submitted image is never marked as verified automatically.</p></div>${renderStatus(identityStatus, identity.expires_at && identityStatus === 'approved' ? `Verified until ${formatDate(identity.expires_at)}` : identity.submitted_at ? `Submitted ${formatDate(identity.submitted_at)}` : '')}</div>
+                    ${identity.case_id ? `<p class="seller-verification-detail">Case ID: <code>${escapeHtml(identity.case_id)}</code></p>` : ''}
                     ${latestSellerMessage ? `<p class="seller-verification-message">${escapeHtml(latestSellerMessage)}</p>` : ''}
                     ${showForm ? `
                         <form class="seller-identity-form" id="sellerIdentityForm">
@@ -188,7 +192,7 @@
                                     <select name="document_type" required>${typeOptions}</select>
                                 </label>
                                 <label>Identity document
-                                    <input name="document" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" ${identityStatus === 'draft' ? '' : 'required'}>
+                                    <input name="document" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png">
                                     <small>PDF, JPG, or PNG · maximum 5 MB. File contents are checked before private storage.</small>
                                 </label>
                             </div>
@@ -208,6 +212,7 @@
                 </article>
                 <article class="seller-verification-card">
                     <div class="seller-verification-card-heading"><div><h3>Business Verified</h3><p>Registered businesses need an official registry check. Sole traders need documented evidence and confirmation that the applicant is the proprietor.</p></div>${renderStatus(businessVerified ? 'approved' : business?.status || 'not_started', business?.reviewed_at ? `Reviewed ${formatDate(business.reviewed_at)}` : '')}</div>
+                    ${business?.review_note ? `<p class="seller-verification-message">${escapeHtml(business.review_note)}</p>` : ''}
                     ${business?.status === 'approved' && !businessVerified ? '<p class="seller-verification-detail">Shop documents were reviewed, but the required business evidence and representative checks are not recorded. No Business Verified badge is shown.</p>' : ''}
                     ${!currentShop ? '<p class="seller-verification-detail">Create a shop profile to start business verification. Existing shop onboarding rules are unchanged.</p>' : ''}
                 </article>
@@ -241,6 +246,7 @@
             legalFirstName: form.elements.legal_first_name.value.trim(),
             legalLastName: form.elements.legal_last_name.value.trim(),
             documentType: form.elements.document_type.value,
+            consent: form.elements.consent.checked,
             consentVersion: countryConfig.find((country) => country.country_code === form.elements.country_code.value)?.privacy_notice_version || IDENTITY_CONSENT_VERSION,
             shopId: sellerContext?.shop?.id || null
         };
@@ -255,7 +261,8 @@
             p_legal_last_name: values.legalLastName,
             p_document_type: values.documentType,
             p_consent_version: values.consentVersion,
-            p_shop_id: values.shopId
+            p_shop_id: values.shopId,
+            p_consent: values.consent
         });
         if (error) throw error;
         if (typeof caseId !== 'string') throw new Error('The verification draft could not be saved.');
@@ -407,7 +414,10 @@
         }
         container.innerHTML = cases.map((item) => {
             const history = Array.isArray(item.review_history) ? item.review_history : [];
-            const canReview = ['submitted', 'pending_provider', 'pending_review'].includes(item.status);
+            const canReview = ['submitted', 'pending_provider', 'pending_review'].includes(item.status)
+                && (!item.assigned_reviewer_id || item.assigned_reviewer_id === currentAdminUserId);
+            const canAssign = ['submitted', 'pending_provider', 'pending_review'].includes(item.status)
+                && !item.assigned_reviewer_id;
             const canRevoke = item.status === 'approved';
             const canRestore = item.status === 'suspended';
             const historyHtml = history.length
@@ -424,12 +434,12 @@
                         <div><dt>Case</dt><dd>${escapeHtml(item.case_id)}</dd></div>
                         <div><dt>Applicant</dt><dd>${escapeHtml(item.applicant_user_id)}</dd></div>
                         <div><dt>Submitted</dt><dd>${escapeHtml(formatDate(item.submitted_at))}</dd></div>
-                        <div><dt>Assigned reviewer</dt><dd>${escapeHtml(item.assigned_reviewer_id || 'Unassigned')}</dd></div>
+                        <div><dt>Assigned reviewer</dt><dd>${escapeHtml(item.assigned_reviewer_id === currentAdminUserId ? 'You' : item.assigned_reviewer_id || 'Unassigned')}</dd></div>
                         <div><dt>Expiry</dt><dd>${escapeHtml(formatDate(item.expires_at))}</dd></div>
                     </dl>
                     <div class="seller-verification-admin-actions">
                         <button class="admin-secondary-button" type="button" data-open-identity-document="${escapeHtml(item.document_path || '')}" ${item.document_path ? '' : 'disabled'}>Open private document</button>
-                        ${canReview ? '<button class="admin-secondary-button" type="button" data-assign-identity>Assign to me</button>' : ''}
+                        ${canAssign ? '<button class="admin-secondary-button" type="button" data-assign-identity>Assign to me</button>' : ''}
                     </div>
                     ${canReview || canRevoke || canRestore ? `
                         <form class="seller-identity-review-form">
@@ -454,6 +464,9 @@
         identityLoading = true;
         const container = adminContainer('sellerIdentityQueue', 'Loading identity cases…');
         try {
+            const { data: { user } = {}, error: userError } = await adminSupabase.auth.getUser();
+            if (userError) throw userError;
+            currentAdminUserId = user?.id || null;
             const { data, error } = await adminSupabase.rpc('admin_list_seller_identity_cases', identityFilters());
             if (error) throw error;
             renderIdentityQueue(Array.isArray(data) ? data : []);
@@ -532,13 +545,16 @@
     async function openIdentityDocument(path, button) {
         if (!path || !adminSupabase) return;
         button.disabled = true;
+        let popup = null;
         try {
+            popup = window.open('about:blank', '_blank');
+            if (!popup) throw new Error('Allow pop-ups to open the private document.');
+            popup.opener = null;
             const { data, error } = await adminSupabase.storage.from(PRIVATE_BUCKET).createSignedUrl(path, 120);
             if (error || !data?.signedUrl) throw new Error('Document access is unavailable.');
-            const popup = window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
-            if (popup) popup.opener = null;
-            else throw new Error('Allow pop-ups to open the private document.');
+            popup.location.replace(data.signedUrl);
         } catch (error) {
+            popup?.close();
             const card = button.closest('.seller-verification-admin-case');
             const message = card?.querySelector('.seller-verification-form-message');
             if (message) setMessage(message, error.message, true);
@@ -627,6 +643,26 @@
 
     function initAdmin(supabase) {
         adminSupabase = supabase;
+        const countrySelect = document.getElementById('sellerIdentityCountry');
+        if (countrySelect && supabase?.from) {
+            supabase.from('seller_verification_country_config')
+                .select('country_code, country_name')
+                .order('country_name')
+                .then(({ data, error }) => {
+                    if (error || !Array.isArray(data)) return;
+                    const selected = countrySelect.value;
+                    countrySelect.replaceChildren(new Option('All configured countries', ''));
+                    data.forEach((country) => {
+                        countrySelect.add(new Option(
+                            `${country.country_name} (${country.country_code})`,
+                            country.country_code
+                        ));
+                    });
+                    countrySelect.value = data.some((country) => country.country_code === selected)
+                        ? selected
+                        : '';
+                });
+        }
         if (adminHandlersBound) return;
         adminHandlersBound = true;
         document.getElementById('sellerIdentityFilterForm')?.addEventListener('submit', (event) => {

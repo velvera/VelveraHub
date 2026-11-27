@@ -111,6 +111,7 @@
             return false;
         }
         showPanel('adminWorkspace');
+        window.SellerVerification?.initAdmin(state.supabase);
         return true;
     }
 
@@ -269,6 +270,39 @@
             ['Location', [application.city, application.country].filter(Boolean).join(', ') || 'Not provided']
         ];
         const canReview = application.verification_status === 'pending';
+        const businessReviewFields = application.business_type === 'registered'
+            || application.business_type === 'partnership'
+            ? `
+                <fieldset class="seller-business-review-fields">
+                    <legend>Registered business checks</legend>
+                    <p>Confirm the configured official registry and approve the representative’s identity before approving business verification.</p>
+                    <input type="hidden" name="verification_basis" value="registry">
+                    <label>Registry source
+                        <input name="registry_source" type="text" maxlength="80" value="${application.country === 'Nigeria' ? 'CAC' : application.country === 'United Kingdom' ? 'Companies House' : ''}" required>
+                    </label>
+                    <label>Registry record reference
+                        <input name="registry_reference" type="text" maxlength="200" required>
+                    </label>
+                    <label class="seller-review-checkbox">
+                        <input name="representative_authorized" type="checkbox" required>
+                        <span>I confirmed the applicant is authorized to represent this business.</span>
+                    </label>
+                </fieldset>`
+            : application.business_type === 'sole_trader'
+                ? `
+                    <fieldset class="seller-business-review-fields">
+                        <legend>Sole trader checks</legend>
+                        <p>Do not use Companies House registration as a requirement for sole traders. Confirm current identity and proprietor evidence.</p>
+                        <input type="hidden" name="verification_basis" value="sole_trader_manual">
+                        <label>Evidence reference
+                            <input name="business_evidence_reference" type="text" maxlength="500" required>
+                        </label>
+                        <label class="seller-review-checkbox">
+                            <input name="representative_authorized" type="checkbox" required>
+                            <span>I confirmed the applicant is the sole trader/proprietor.</span>
+                        </label>
+                    </fieldset>`
+                : '';
 
         card.innerHTML = `
             <header class="application-header">
@@ -291,8 +325,12 @@
             </section>
             ${canReview ? `
                 <form class="review-actions" data-submission-id="${escapeHtml(application.submission_id)}">
-                    <label for="review-note-${escapeHtml(application.submission_id)}">Review note <span>(required for changes or rejection)</span></label>
-                    <textarea class="review-note" id="review-note-${escapeHtml(application.submission_id)}" maxlength="2000" placeholder="Explain what is missing or why the application cannot be approved."></textarea>
+                    ${businessReviewFields}
+                    <label for="review-note-${escapeHtml(application.submission_id)}">Message for seller <span>(required for every decision)</span></label>
+                    <textarea class="review-note" id="review-note-${escapeHtml(application.submission_id)}" name="seller_message" maxlength="2000" required placeholder="Explain the outcome or next step."></textarea>
+                    <label>Internal review note <span>(visible only to authorized admins)</span>
+                        <textarea name="internal_note" maxlength="2000" required placeholder="Record what you checked and the basis for your decision."></textarea>
+                    </label>
                     <p class="review-action-message" role="alert" hidden></p>
                     <div class="review-action-buttons">
                         <button class="review-action approve" type="button" data-review-decision="approve">Approve shop</button>
@@ -678,11 +716,13 @@
 
     async function reviewApplication(card, application, decision) {
         const form = card.querySelector('.review-actions');
-        const note = form.querySelector('.review-note').value.trim();
+        const note = form.elements.seller_message.value.trim();
+        const internalNote = form.elements.internal_note.value.trim();
         const error = form.querySelector('.review-action-message');
         const buttons = [...form.querySelectorAll('button')];
-        if (decision !== 'approve' && note.length < 3) {
-            error.textContent = 'Enter a note explaining this decision.';
+        if (!form.reportValidity()) return;
+        if (note.length < 3 || internalNote.length < 3) {
+            error.textContent = 'Add a clear seller message and an internal review note.';
             error.hidden = false;
             return;
         }
@@ -692,10 +732,16 @@
         error.hidden = true;
         buttons.forEach((button) => { button.disabled = true; });
         try {
-            const { error: reviewError } = await state.supabase.rpc('admin_review_shop_verification', {
+            const { error: reviewError } = await state.supabase.rpc('admin_review_shop_verification_with_basis', {
                 p_submission_id: application.submission_id,
                 p_decision: decision,
-                p_note: note || null
+                p_seller_message: note,
+                p_internal_note: internalNote,
+                p_verification_basis: form.elements.verification_basis?.value || null,
+                p_registry_source: form.elements.registry_source?.value.trim() || null,
+                p_registry_reference: form.elements.registry_reference?.value.trim() || null,
+                p_business_evidence_reference: form.elements.business_evidence_reference?.value.trim() || null,
+                p_representative_authorized: form.elements.representative_authorized?.checked === true
             });
             if (reviewError) throw reviewError;
             await loadQueue();
@@ -892,6 +938,7 @@
     function switchAdminView(view) {
         const views = {
             verification: ['verificationPanel', 'verificationTab'],
+            sellerTrust: ['sellerTrustPanel', 'sellerTrustTab'],
             deletion: ['deletionPanel', 'deletionTab'],
             listingReviews: ['listingReviewPanel', 'listingReviewTab'],
             systemErrors: ['systemErrorsPanel', 'systemErrorsTab'],
@@ -907,7 +954,11 @@
             byId(tabId).classList.toggle('is-active', name === view);
             byId(tabId).setAttribute('aria-pressed', String(name === view));
         });
-        if (view === 'deletion') loadDeletionQueue();
+        if (view === 'sellerTrust') {
+            window.SellerVerification?.loadAdminIdentityQueue();
+            window.SellerVerification?.loadPhysicalInspectionQueue();
+        }
+        else if (view === 'deletion') loadDeletionQueue();
         else if (view === 'listingReviews') loadProductReviewQueue();
         else if (view === 'systemErrors') loadSystemErrors();
         else if (view === 'paymentSettings') {
@@ -1419,7 +1470,11 @@
         byId('adminDeniedSignOut').addEventListener('click', signOut);
         byId('adminSignOut').addEventListener('click', signOut);
         byId('refreshQueue').addEventListener('click', () => {
-            if (state.activeView === 'deletion') loadDeletionQueue();
+            if (state.activeView === 'sellerTrust') {
+                window.SellerVerification?.loadAdminIdentityQueue();
+                window.SellerVerification?.loadPhysicalInspectionQueue();
+            }
+            else if (state.activeView === 'deletion') loadDeletionQueue();
             else if (state.activeView === 'listingReviews') loadProductReviewQueue();
             else if (state.activeView === 'systemErrors') loadSystemErrors();
             else if (state.activeView === 'paymentSettings') {

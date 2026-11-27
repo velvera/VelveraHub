@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="admin.css">
+    <link rel="stylesheet" href="/assets/css/components/seller-verification.css">
     <link rel="canonical" href="https://velverahub.org">
     <meta name="robots" content="noindex,nofollow">
     <link rel="icon" href="/favicon.ico" type="image/x-icon">
@@ -66,6 +67,7 @@
 
             <div class="admin-tabs" role="group" aria-label="Administration queues">
                 <button class="admin-tab is-active" id="verificationTab" type="button" aria-pressed="true" aria-controls="verificationPanel" data-admin-view="verification">Shop verification</button>
+                <button class="admin-tab" id="sellerTrustTab" type="button" aria-pressed="false" aria-controls="sellerTrustPanel" data-admin-view="sellerTrust">Seller trust</button>
                 <button class="admin-tab" id="deletionTab" type="button" aria-pressed="false" aria-controls="deletionPanel" data-admin-view="deletion">Account deletion</button>
                 <button class="admin-tab" id="listingReviewTab" type="button" aria-pressed="false" aria-controls="listingReviewPanel" data-admin-view="listingReviews">Product listings</button>
                 <button class="admin-tab" id="systemErrorsTab" type="button" aria-pressed="false" aria-controls="systemErrorsPanel" data-admin-view="systemErrors">System errors</button>
@@ -91,6 +93,82 @@
                     <p id="queueSummary" aria-live="polite">Loading applications…</p>
                 </section>
                 <div class="verification-list" id="verificationList" aria-live="polite"></div>
+            </section>
+
+            <section id="sellerTrustPanel" aria-labelledby="sellerTrustTab" hidden>
+                <div class="deletion-review-note">
+                    <strong>Restricted identity and premises review.</strong>
+                    <span>Only authorized administrators can load these cases or open private evidence. Business verification also requires a current identity approval for the representative.</span>
+                </div>
+                <section aria-labelledby="sellerIdentityQueueHeading">
+                    <div class="seller-verification-admin-heading">
+                        <h2 id="sellerIdentityQueueHeading">Identity verification</h2>
+                        <p>Review seller-submitted identity cases. A document upload alone is not verification.</p>
+                    </div>
+                    <form class="seller-verification-admin-filters" id="sellerIdentityFilterForm">
+                        <label>Status
+                            <select id="sellerIdentityStatus" name="status">
+                                <option value="pending_review">Pending review</option>
+                                <option value="pending_provider">Pending provider</option>
+                                <option value="submitted">Submitted</option>
+                                <option value="action_required">Action required</option>
+                                <option value="rejected">Rejected</option>
+                                <option value="approved">Approved</option>
+                                <option value="expired">Expired</option>
+                                <option value="suspended">Suspended</option>
+                                <option value="revoked">Revoked</option>
+                                <option value="all">All cases</option>
+                            </select>
+                        </label>
+                        <label>Country
+                            <select id="sellerIdentityCountry" name="country_code">
+                                <option value="">All configured countries</option>
+                            </select>
+                        </label>
+                        <label>Seller type
+                            <select id="sellerIdentityType" name="seller_type">
+                                <option value="">All seller types</option>
+                                <option value="individual">Individual</option>
+                                <option value="registered_business">Registered business</option>
+                                <option value="sole_trader">Sole trader</option>
+                            </select>
+                        </label>
+                        <label>Submitted after
+                            <input id="sellerIdentityAfter" name="submitted_after" type="date">
+                        </label>
+                        <label>Submitted before
+                            <input id="sellerIdentityBefore" name="submitted_before" type="date">
+                        </label>
+                        <button class="admin-secondary-button" type="submit">Apply filters</button>
+                        <button class="admin-secondary-button" id="sellerIdentityRefresh" type="button">Refresh cases</button>
+                    </form>
+                    <p id="sellerIdentitySummary" aria-live="polite">Identity cases not loaded.</p>
+                    <div class="seller-verification-admin-case-list" id="sellerIdentityQueue" aria-live="polite"></div>
+                </section>
+
+                <section aria-labelledby="sellerInspectionQueueHeading">
+                    <div class="seller-verification-admin-heading">
+                        <h2 id="sellerInspectionQueueHeading">Physical-store inspections</h2>
+                        <p>Schedule an inspection, then record its actual date, outcome, and evidence reference.</p>
+                    </div>
+                    <section class="queue-toolbar" aria-label="Physical-store inspection filters">
+                        <div>
+                            <label for="sellerInspectionStatus">Status</label>
+                            <select id="sellerInspectionStatus">
+                                <option value="requested">Requested</option>
+                                <option value="scheduled">Scheduled</option>
+                                <option value="approved">Approved</option>
+                                <option value="rejected">Not confirmed</option>
+                                <option value="suspended">Suspended</option>
+                                <option value="revoked">Revoked</option>
+                                <option value="all">All inspections</option>
+                            </select>
+                        </div>
+                        <p id="sellerInspectionSummary" aria-live="polite">Inspections not loaded.</p>
+                        <button class="admin-secondary-button" id="sellerInspectionRefresh" type="button">Refresh inspections</button>
+                    </section>
+                    <div class="seller-verification-admin-case-list" id="sellerInspectionQueue" aria-live="polite"></div>
+                </section>
             </section>
 
             <section id="deletionPanel" aria-labelledby="deletionTab" hidden>
@@ -315,6 +393,7 @@
     <script src="/assets/js/components/focus-manager.js"></script>
     <script src="/assets/js/services/auth.js"></script>
     <script src="/assets/js/services/observability.js"></script>
+    <script src="/assets/js/services/seller-verification.js"></script>
     <script src="/assets/js/components/password-visibility.js"></script>
     <script src="admin.js"></script>
 </body>
