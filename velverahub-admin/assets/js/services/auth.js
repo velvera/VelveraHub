@@ -99,16 +99,27 @@ const AuthService = {
         }
 
         try {
-            const { data: profile, error } = await supabase
+            let { data: profile, error } = await supabase
                 .from('profiles')
                 .select('id, user_id, email, first_name, last_name, avatar_url, phone, phone_e164, phone_verified, phone_verified_at, role, business_name, business_state')
-                .or(`user_id.eq.${user.id},id.eq.${user.id}`)
-                .limit(1)
+                .eq('user_id', user.id)
                 .maybeSingle();
 
             if (error) {
                 window.Observability?.reportError('auth-profile-load', `auth-profile-${Date.now().toString(36)}`, error, { source: 'auth-service' });
                 return fallbackProfile;
+            }
+            if (!profile) {
+                const legacyLookup = await supabase
+                    .from('profiles')
+                    .select('id, user_id, email, first_name, last_name, avatar_url, phone, phone_e164, phone_verified, phone_verified_at, role, business_name, business_state')
+                    .eq('id', user.id)
+                    .maybeSingle();
+                if (legacyLookup.error) {
+                    window.Observability?.reportError('auth-profile-load', `auth-profile-${Date.now().toString(36)}`, legacyLookup.error, { source: 'auth-service' });
+                    return fallbackProfile;
+                }
+                profile = legacyLookup.data;
             }
 
             return profile

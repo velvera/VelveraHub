@@ -42,7 +42,8 @@ AS $$
       FROM public.profiles AS p
      WHERE p.user_id = auth.uid()
         OR p.id = auth.uid()
-     ORDER BY (p.user_id = auth.uid()) DESC
+     ORDER BY coalesce(p.user_id = auth.uid(), FALSE) DESC,
+              coalesce(p.id = auth.uid(), FALSE) DESC
      LIMIT 1;
 $$;
 
@@ -57,7 +58,8 @@ AS $$
       FROM public.profiles AS p
      WHERE p.user_id = auth.uid()
         OR p.id = auth.uid()
-     ORDER BY (p.user_id = auth.uid()) DESC
+     ORDER BY coalesce(p.user_id = auth.uid(), FALSE) DESC,
+              coalesce(p.id = auth.uid(), FALSE) DESC
      LIMIT 1;
 $$;
 

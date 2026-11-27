@@ -495,6 +495,16 @@
             const areas = Array.isArray(provider.service_areas) ? provider.service_areas : [];
             const history = Array.isArray(provider.review_history) ? provider.review_history : [];
             const documents = Array.isArray(verification.document_paths) ? verification.document_paths : [];
+            const documentManifest = Array.isArray(verification.document_manifest)
+                ? verification.document_manifest
+                : documents.map((storage_path) => ({ document_kind: 'supporting', storage_path }));
+            const documentLabels = {
+                representative_identity: 'Representative identity',
+                business_registration: 'Business registration',
+                representative_selfie: 'Representative selfie',
+                drivers_license: 'Driver’s licence',
+                supporting: 'Supporting document'
+            };
             const actions = provider.status === 'suspended'
                 ? '<button class="review-action approve" type="button" data-provider-decision="restore">Restore provider</button>'
                 : provider.status === 'approved'
@@ -509,11 +519,12 @@
                     <div><span class="detail-label">Vehicle or fleet</span><span class="detail-value">${escapeHtml(provider.vehicle_type)}</span></div>
                     <div><span class="detail-label">Current delivery availability</span><span class="detail-value">${provider.is_available ? `Available until ${escapeHtml(formatDate(provider.available_until))}` : 'Not available now'}</span></div>
                     <div><span class="detail-label">Legal name</span><span class="detail-value">${escapeHtml(verification.legal_name || 'Not submitted')}</span></div>
-                    <div><span class="detail-label">Business details</span><span class="detail-value">${escapeHtml([verification.registered_business_name, verification.registration_number].filter(Boolean).join(' · ') || verification.identity_document_type || 'Not provided')}</span></div>
+                    <div><span class="detail-label">Business details</span><span class="detail-value">${escapeHtml([verification.registered_business_name, verification.registration_number].filter(Boolean).join(' · ') || 'Not provided')}</span></div>
+                    <div><span class="detail-label">Representative identity type</span><span class="detail-value">${escapeHtml(verification.identity_document_type || 'Not provided')}</span></div>
                     <div><span class="detail-label">Verification status</span><span class="detail-value">${escapeHtml(verification.status || 'Not submitted')}${verification.review_note ? ` · ${escapeHtml(verification.review_note)}` : ''}</span></div>
                 </div>
                 <section><span class="detail-label">Submitted private documents</span><div class="document-list">${documents.length
-                    ? documents.map((path, index) => `<button class="document-button" type="button" data-provider-document="${escapeHtml(path)}">Open document ${index + 1}</button>`).join('')
+                    ? documentManifest.map((document, index) => `<button class="document-button" type="button" data-provider-document="${escapeHtml(document.storage_path || documents[index] || '')}">${escapeHtml(documentLabels[document.document_kind] || `Document ${index + 1}`)}</button>`).join('')
                     : 'No documents attached.'}</div></section>
                 <section><span class="detail-label">Service areas and rates</span><div class="review-history">${areas.length
                     ? areas.map((area) => `<div class="history-entry"><strong>${escapeHtml(area.city)}, ${escapeHtml(area.state_or_region)}</strong> · ${escapeHtml(area.coverage_radius_km)} km · ${escapeHtml(area.currency_code)} ${escapeHtml(area.base_fee)} + ${escapeHtml(area.per_km_fee)}/km · ${escapeHtml(area.eta_min_minutes)}–${escapeHtml(area.eta_max_minutes)} min · ${area.is_active ? 'active' : 'inactive'}</div>`).join('')

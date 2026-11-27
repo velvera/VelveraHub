@@ -45,7 +45,8 @@ as $$
     from public.profiles as p
     where p.user_id = auth.uid()
        or p.id = auth.uid()
-    order by (p.user_id = auth.uid()) desc
+    order by coalesce(p.user_id = auth.uid(), false) desc,
+             coalesce(p.id = auth.uid(), false) desc
     limit 1;
 $$;
 
@@ -79,7 +80,8 @@ begin
              and lower(p.email) = lower(new.email)
            )
         or p.user_id = new.id
-     order by (p.user_id = new.id) desc
+     order by coalesce(p.user_id = new.id, false) desc,
+              coalesce(p.id = new.id, false) desc
      limit 1
      for update;
 
@@ -226,9 +228,9 @@ begin
      where p.user_id = auth_id
         or p.id = auth_id
         or lower(p.email) = normalized_email
-     order by (p.user_id = auth_id) desc,
-              (p.id = auth_id) desc,
-              (lower(p.email) = normalized_email) desc
+     order by coalesce(p.user_id = auth_id, false) desc,
+              coalesce(p.id = auth_id, false) desc,
+              coalesce(lower(p.email) = normalized_email, false) desc
      limit 1
      for update;
 

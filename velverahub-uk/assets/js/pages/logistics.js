@@ -65,6 +65,14 @@
         const provider = data.provider;
         const verification = data.verification;
         const approved = provider.status === 'approved' && provider.is_verified === true;
+        const isCompany = provider.provider_type === 'logistics_company';
+        const isNigeria = provider.country_code === 'NG';
+        const identityDocumentOptions = isNigeria
+            ? [['national_id', 'National ID / NIN'], ['passport', 'Passport'], ['drivers_license', 'Driver’s license'], ['voters_card', 'Voter’s card']]
+            : [['passport', 'Passport'], ['drivers_license', 'Driver’s license'], ['residence_permit', 'Residence permit'], ['other', 'Other government photo ID']];
+        const identityDocumentLabel = isCompany
+            ? 'Authorized representative identity document'
+            : isNigeria ? 'National ID / NIN document' : 'Government identity document';
         const areas = Array.isArray(data.service_areas) ? data.service_areas : [];
         const requests = Array.isArray(data.requests) ? data.requests : [];
         const engagements = Array.isArray(data.engagements) ? data.engagements : [];
@@ -80,14 +88,23 @@
             <p><span class="logistics-badge">${escapeHtml(provider.status)}${provider.is_verified ? ' · verified' : ''}</span> ${verification?.status ? `<span class="logistics-badge">Documents: ${escapeHtml(verification.status)}</span>` : ''}</p>
             <form id="providerVerificationForm">
                 <h3>Identity and business verification</h3>
-                <p class="logistics-help">Documents are stored in private storage. Administrators review them before the profile can be matched to buyers.</p>
+                <p class="logistics-help">${isCompany
+                    ? 'Upload the authorized representative’s photo ID and business registration evidence. Files stay private until an administrator reviews them.'
+                    : isNigeria
+                        ? 'Upload your National ID/NIN document and a selfie. A driver’s licence can be added when applicable. Files stay private until an administrator reviews them.'
+                        : 'Upload a government photo ID and a selfie. A driver’s licence can be added when applicable. Files stay private until an administrator reviews them.'}</p>
                 <div class="logistics-form-grid">
                     <div class="logistics-field"><label for="legalName">Legal name</label><input id="legalName" minlength="2" maxlength="160" value="${escapeHtml(verification?.legal_name || '')}" required></div>
-                    <div class="logistics-field ${provider.provider_type === 'logistics_company' ? '' : 'logistics-hidden'}" id="companyRegistrationFields"><label for="businessName">Registered business name</label><input id="businessName" maxlength="160" value="${escapeHtml(verification?.registered_business_name || '')}"></div>
-                    <div class="logistics-field ${provider.provider_type === 'logistics_company' ? '' : 'logistics-hidden'}" id="companyNumberField"><label for="registrationNumber">Business registration number</label><input id="registrationNumber" maxlength="120" value="${escapeHtml(verification?.registration_number || '')}"></div>
-                    <div class="logistics-field ${provider.provider_type === 'independent_rider' ? '' : 'logistics-hidden'}" id="identityTypeField"><label for="identityDocumentType">Identity document</label><select id="identityDocumentType"><option value="">Choose one</option>${[['passport','Passport'],['national_id','National ID'],['drivers_license','Driver’s license'],['voters_card','Voter’s card']].map(([v,l]) => `<option value="${v}" ${verification?.identity_document_type === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
-                    <div class="logistics-field logistics-field--wide"><label for="verificationFiles">Verification documents</label><input id="verificationFiles" type="file" accept="application/pdf,image/jpeg,image/png" multiple required><span class="logistics-help">Upload 1–5 PDF, JPEG, or PNG files, up to 5 MiB each.</span></div>
+                    <div class="logistics-field ${isCompany ? '' : 'logistics-hidden'}" id="companyRegistrationFields"><label for="businessName">Registered business name</label><input id="businessName" minlength="2" maxlength="160" value="${escapeHtml(verification?.registered_business_name || '')}" ${isCompany ? 'required' : ''}></div>
+                    <div class="logistics-field ${isCompany ? '' : 'logistics-hidden'}" id="companyNumberField"><label for="registrationNumber">Business registration number</label><input id="registrationNumber" minlength="2" maxlength="120" value="${escapeHtml(verification?.registration_number || '')}" ${isCompany ? 'required' : ''}></div>
+                    <div class="logistics-field"><label for="identityDocumentType">${identityDocumentLabel} type</label><select id="identityDocumentType" required><option value="">Choose one</option>${identityDocumentOptions.map(([value, label]) => `<option value="${value}" ${verification?.identity_document_type === value ? 'selected' : ''}>${label}</option>`).join('')}</select></div>
+                    <div class="logistics-field"><label for="identityDocumentFile">${identityDocumentLabel}</label><input id="identityDocumentFile" type="file" accept="application/pdf,image/jpeg,image/png" required><span class="logistics-help">PDF, JPEG, or PNG · maximum 5 MiB.</span></div>
+                    <div class="logistics-field ${isCompany ? '' : 'logistics-hidden'}" id="businessDocumentsField"><label for="businessVerificationFiles">Business registration and supporting documents</label><input id="businessVerificationFiles" type="file" accept="application/pdf,image/jpeg,image/png" multiple ${isCompany ? 'required' : ''}><span class="logistics-help">Upload 1–5 relevant business registration or supporting documents.</span></div>
+                    <div class="logistics-field ${isCompany ? 'logistics-hidden' : ''}" id="representativeSelfieField"><label for="representativeSelfieFile">Selfie / identity photograph</label><input id="representativeSelfieFile" type="file" accept="image/jpeg,image/png" ${isCompany ? '' : 'required'}><span class="logistics-help">JPEG or PNG · maximum 5 MiB.</span></div>
+                    <div class="logistics-field ${isCompany ? 'logistics-hidden' : ''}" id="driversLicenseField"><label for="driversLicenseFile">Driver’s licence <span>(if applicable)</span></label><input id="driversLicenseFile" type="file" accept="application/pdf,image/jpeg,image/png"></div>
+                    <div class="logistics-field logistics-field--wide"><label for="additionalVerificationFiles">Additional supporting documents <span>(optional)</span></label><input id="additionalVerificationFiles" type="file" accept="application/pdf,image/jpeg,image/png" multiple><span class="logistics-help">Up to two extra files, such as proof of address.</span></div>
                 </div>
+                <label class="logistics-checkline"><input id="providerVerificationConsent" type="checkbox" required><span>I confirm I am authorized to submit these documents and consent to their private manual review under the <a href="/veeve/legal.html#privacy" target="_blank" rel="noopener noreferrer">VelveraHub privacy notice</a>. I will not enter identity numbers into this form.</span></label>
                 <div class="logistics-actions"><button class="logistics-button" type="submit">Submit for review</button></div>
             </form>
             <hr>
@@ -302,35 +319,57 @@
     async function submitVerification(event) {
         event.preventDefault();
         const provider = state.dashboard?.provider;
-        const files = Array.from(byId('verificationFiles').files || []);
         if (!provider?.id) return;
-        if (files.length < 1 || files.length > 5 || files.some((file) => file.size > 5 * 1024 * 1024 || !['application/pdf', 'image/jpeg', 'image/png'].includes(file.type))) {
-            setStatus('providerRegistrationStatus', 'Choose 1–5 PDF, JPEG, or PNG documents, each no larger than 5 MiB.', 'error');
+        const submission = window.LogisticsVerification?.buildDocumentManifest({
+            providerType: provider.provider_type,
+            countryCode: provider.country_code,
+            legalName: byId('legalName').value.trim(),
+            businessName: byId('businessName')?.value.trim() || '',
+            registrationNumber: byId('registrationNumber')?.value.trim() || '',
+            identityDocumentType: byId('identityDocumentType').value,
+            identityFile: byId('identityDocumentFile').files?.[0],
+            selfieFile: byId('representativeSelfieFile')?.files?.[0] || null,
+            driversLicenseFile: byId('driversLicenseFile')?.files?.[0] || null,
+            businessFiles: byId('businessVerificationFiles')?.files || [],
+            supportingFiles: byId('additionalVerificationFiles')?.files || []
+        });
+        if (!submission || submission.error) {
+            setStatus('providerRegistrationStatus', submission?.error || 'Verification form is unavailable.', 'error');
+            return;
+        }
+        if (!byId('providerVerificationConsent').checked) {
+            setStatus('providerRegistrationStatus', 'Confirm the privacy notice before submitting.', 'error');
             return;
         }
         const button = event.currentTarget.querySelector('button[type="submit"]');
         button.disabled = true;
+        const storage = state.supabase.storage.from(service().TABLES.verificationBucket);
+        const uploadedPaths = [];
         try {
-            const storage = state.supabase.storage.from(service().TABLES.verificationBucket);
-            const paths = [];
-            for (const file of files) {
+            const manifest = [];
+            for (const document of submission.documents) {
+                const { file } = document;
                 const extension = file.type === 'application/pdf' ? 'pdf' : file.type === 'image/png' ? 'png' : 'jpg';
                 const path = `${provider.id}/${crypto.randomUUID()}.${extension}`;
                 const { error } = await storage.upload(path, file, { upsert: false, contentType: file.type });
                 if (error) throw error;
-                paths.push(path);
+                uploadedPaths.push(path);
+                manifest.push({ document_kind: document.document_kind, storage_path: path });
             }
-            await service().rpc('delivery_provider_submit_verification', {
+            await service().rpc('delivery_provider_submit_verification_v2', {
                 p_provider_id: provider.id,
                 p_legal_name: byId('legalName').value.trim(),
-                p_registered_business_name: byId('businessName')?.value.trim() || '',
-                p_registration_number: byId('registrationNumber')?.value.trim() || '',
-                p_identity_document_type: byId('identityDocumentType')?.value || '',
-                p_document_paths: paths
+                p_registered_business_name: submission.businessName,
+                p_registration_number: submission.registrationNumber,
+                p_identity_document_type: submission.identityDocumentType,
+                p_document_manifest: manifest,
+                p_consent_version: '2026-11-27',
+                p_consent: byId('providerVerificationConsent').checked
             });
             await refreshProfiles(provider.id);
             setStatus('providerRegistrationStatus', 'Documents submitted privately for administrator review.', 'success');
         } catch (error) {
+            if (uploadedPaths.length) await storage.remove(uploadedPaths).catch(() => {});
             reportError('providerRegistrationStatus', error, 'Verification could not be submitted. Confirm the files are valid and retry.');
         } finally {
             button.disabled = false;
