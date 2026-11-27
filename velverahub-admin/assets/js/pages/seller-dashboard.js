@@ -815,6 +815,7 @@ async function checkSupabaseStatus() {
         renderDashboardSummary([], []);
         updateProductsDisplay([]);
         renderRecentOrders([]);
+        setSellerRevenueUnavailable('Live order history is unavailable in this environment.');
         window.SupabaseClient?.showConfigPrompt?.();
     }
 }
@@ -825,6 +826,7 @@ async function loadRealData() {
         renderDashboardSummary([], []);
         updateProductsDisplay([]);
         renderRecentOrders([]);
+        setSellerRevenueUnavailable('Sign in to see your shop revenue history.');
         return;
     }
     
@@ -861,11 +863,14 @@ async function loadRealData() {
         renderDashboardSummary(liveProducts, liveOrders);
         updateProductsDisplay(liveProducts);
         renderRecentOrders(liveOrders.slice(0, 4));
+        bindSellerRevenuePeriodSelectors(context);
+        void refreshSellerRevenueSummary(context);
     } catch (error) {
         window.AsyncFeedback?.log('seller-product-load', window.AsyncFeedback?.createRequestId('seller-product-load'), error);
         renderDashboardSummary([], []);
         updateProductsDisplay([]);
         renderRecentOrders([]);
+        setSellerRevenueUnavailable('Live order history could not be loaded. Refresh to try again.');
     }
 }
 
@@ -886,6 +891,176 @@ function formatSellerPrice(amount) {
     return window.RegionService?.formatPrice
         ? window.RegionService.formatPrice(amount)
         : `$${Number(amount || 0).toFixed(2)}`;
+}
+
+function normalizeSellerRevenuePeriod(value) {
+    const days = Number(value);
+    return [7, 30, 90].includes(days) ? days : 30;
+}
+
+function getSellerRevenueDateBounds(periodDays, now = new Date()) {
+    const days = normalizeSellerRevenuePeriod(periodDays);
+    const duration = days * 24 * 60 * 60 * 1000;
+    const currentEnd = new Date(now);
+    const currentStart = new Date(currentEnd.getTime() - duration);
+    const previousStart = new Date(currentStart.getTime() - duration);
+    return { days, previousStart, currentStart, currentEnd };
+}
+
+function summarizeSellerRevenueOrders(orders, bounds) {
+    const summary = {
+        current: { revenue: 0, orderCount: 0 },
+        previous: { revenue: 0, orderCount: 0 }
+    };
+    const excludedStatuses = new Set(['cancelled', 'refunded']);
+
+    for (const order of Array.isArray(orders) ? orders : []) {
+        const status = String(order?.status || '').trim().toLowerCase();
+        const createdAt = Date.parse(order?.created_at || '');
+        const amount = order?.total;
+        const revenue = Number(amount);
+        if (excludedStatuses.has(status) || !Number.isFinite(createdAt)
+            || amount === null || amount === undefined || amount === ''
+            || !Number.isFinite(revenue)) continue;
+
+        if (createdAt >= bounds.currentStart.getTime() && createdAt < bounds.currentEnd.getTime()) {
+            summary.current.revenue += revenue;
+            summary.current.orderCount += 1;
+        } else if (createdAt >= bounds.previousStart.getTime() && createdAt < bounds.currentStart.getTime()) {
+            summary.previous.revenue += revenue;
+            summary.previous.orderCount += 1;
+        }
+    }
+    return summary;
+}
+
+function describeSellerRevenueTrend(summary, periodDays) {
+    const days = normalizeSellerRevenuePeriod(periodDays);
+    const currentCount = summary.current.orderCount;
+    const previousCount = summary.previous.orderCount;
+    if (!currentCount && !previousCount) {
+        return {
+            tone: 'neutral',
+            message: `No eligible orders in the last ${days} days or the previous ${days} days.`
+        };
+    }
+    if (!previousCount) {
+        return {
+            tone: 'neutral',
+            message: `Not enough order history to compare the last ${days} days with the previous ${days} days.`
+        };
+    }
+    if (summary.previous.revenue <= 0) {
+        return {
+            tone: 'neutral',
+            message: `The previous ${days} days had no recorded revenue, so no percentage comparison is shown.`
+        };
+    }
+
+    const change = ((summary.current.revenue - summary.previous.revenue) / summary.previous.revenue) * 100;
+    const roundedChange = Math.round(change * 10) / 10;
+    if (roundedChange === 0) {
+        return {
+            tone: 'neutral',
+            message: `Revenue is unchanged from the previous ${days} days.`
+        };
+    }
+    return {
+        tone: change > 0 ? 'positive' : 'negative',
+        message: `Revenue ${change > 0 ? 'increased' : 'decreased'} ${Math.abs(roundedChange).toLocaleString(undefined, { maximumFractionDigits: 1 })}% compared with the previous ${days} days.`
+    };
+}
+
+async function fetchSellerRevenueComparison(context, periodDays, now = new Date()) {
+    if (!context?.shop?.id) return { bounds: null, summary: null };
+    const bounds = getSellerRevenueDateBounds(periodDays, now);
+    const pageSize = 1000;
+    const orders = [];
+
+    for (let offset = 0; ; offset += pageSize) {
+        const { data, error } = await context.supabase
+            .from('orders')
+            .select('status, total, created_at')
+            .eq('shop_id', context.shop.id)
+            .gte('created_at', bounds.previousStart.toISOString())
+            .lt('created_at', bounds.currentEnd.toISOString())
+            .order('created_at', { ascending: true })
+            .range(offset, offset + pageSize - 1);
+        if (error) throw error;
+        const page = Array.isArray(data) ? data : [];
+        orders.push(...page);
+        if (page.length < pageSize) break;
+    }
+
+    return { bounds, summary: summarizeSellerRevenueOrders(orders, bounds) };
+}
+
+function setSellerRevenueUnavailable(message) {
+    document.querySelectorAll('[data-seller-revenue-value]').forEach((node) => {
+        node.textContent = '—';
+    });
+    document.querySelectorAll('[data-seller-revenue-trend]').forEach((node) => {
+        node.textContent = message;
+        node.dataset.trend = 'neutral';
+    });
+}
+
+function bindSellerRevenuePeriodSelectors(context) {
+    document.querySelectorAll('[data-seller-revenue-period]').forEach((selector) => {
+        selector.value = String(selectedSellerRevenuePeriod);
+        if (selector.dataset.revenuePeriodBound === 'true') return;
+        selector.dataset.revenuePeriodBound = 'true';
+        selector.addEventListener('change', () => {
+            selectedSellerRevenuePeriod = normalizeSellerRevenuePeriod(selector.value);
+            document.querySelectorAll('[data-seller-revenue-period]').forEach((otherSelector) => {
+                otherSelector.value = String(selectedSellerRevenuePeriod);
+            });
+            void refreshSellerRevenueSummary(context, selectedSellerRevenuePeriod);
+        });
+    });
+}
+
+async function refreshSellerRevenueSummary(context, periodDays = selectedSellerRevenuePeriod) {
+    const days = normalizeSellerRevenuePeriod(periodDays);
+    selectedSellerRevenuePeriod = days;
+    document.querySelectorAll('[data-seller-revenue-period]').forEach((selector) => {
+        selector.value = String(days);
+    });
+    document.querySelectorAll('[data-seller-revenue-label]').forEach((node) => {
+        node.textContent = `Revenue · last ${days} days`;
+    });
+    const values = [...document.querySelectorAll('[data-seller-revenue-value]')];
+    const trends = [...document.querySelectorAll('[data-seller-revenue-trend]')];
+    if (!values.length && !trends.length) return;
+
+    values.forEach((node) => { node.textContent = '—'; });
+    trends.forEach((node) => {
+        node.textContent = 'Loading dated order history…';
+        node.dataset.trend = 'neutral';
+    });
+    if (!context?.shop?.id) {
+        setSellerRevenueUnavailable('Revenue comparisons are available for sellers with a connected shop.');
+        return;
+    }
+
+    try {
+        const { summary } = await fetchSellerRevenueComparison(context, days);
+        values.forEach((node) => {
+            node.textContent = formatSellerPrice(summary.current.revenue);
+        });
+        const trend = describeSellerRevenueTrend(summary, days);
+        trends.forEach((node) => {
+            node.textContent = trend.message;
+            node.dataset.trend = trend.tone;
+        });
+    } catch (error) {
+        window.AsyncFeedback?.log(
+            'seller-revenue-history',
+            window.AsyncFeedback?.createRequestId('seller-revenue-history'),
+            error
+        );
+        setSellerRevenueUnavailable('Sales history could not be loaded. Try again in a moment.');
+    }
 }
 
 function localSellerAmountToBase(amount) {
@@ -925,18 +1100,15 @@ function syncSellerCurrencyCopy() {
 }
 
 function renderDashboardSummary(products = [], orders = []) {
-    const revenue = orders
-        .filter(order => !['cancelled', 'refunded'].includes(String(order.status || '').toLowerCase()))
-        .reduce((sum, order) => sum + Number(order.total || 0), 0);
     const customerCount = new Set(orders.map(order => order.customer_id).filter(Boolean)).size;
     const setMetric = (id, value, change = '') => {
         const node = document.getElementById(id);
         if (node) node.textContent = value;
         const changeNode = document.getElementById(`${id}Change`);
-        if (changeNode) changeNode.innerHTML = change;
+        if (changeNode) changeNode.textContent = change;
     };
 
-    setMetric('revenueMetric', formatSellerPrice(revenue), orders.length ? `${orders.length} order${orders.length === 1 ? '' : 's'}` : 'No orders yet');
+    setMetric('revenueMetric', '—', 'Loading dated order history…');
     setMetric('ordersMetric', orders.length.toLocaleString(), orders.length ? 'Live orders' : 'No orders yet');
     setMetric('productsMetric', products.length.toLocaleString(), products.length ? 'Live listings' : 'No listings yet');
     setMetric('customersMetric', customerCount.toLocaleString(), customerCount ? 'Unique customers' : 'No customers yet');
@@ -1421,6 +1593,8 @@ async function renderSellerPage(page) {
             const { data, error } = await scopeSellerProducts(supabase.from('products').select('title, price, stock, sales_count, view_count'), context).limit(1000);
             if (error) throw error;
             body.innerHTML = renderSellerAnalytics(data || []);
+            bindSellerRevenuePeriodSelectors(context);
+            void refreshSellerRevenueSummary(context);
         } else if (page === 'reports') {
             body.innerHTML = '<div class="empty-page"><i class="fas fa-file-csv"></i><h3>Reports are ready</h3><p>Export your current products, stock, sales and views as a CSV file.</p></div>';
         }
@@ -1736,11 +1910,50 @@ function renderSellerPromotions(promotions) {
 }
 
 function renderSellerAnalytics(products) {
-    if (!products.length) return sellerEmpty('Add products to start seeing shop analytics.');
-    const sales = products.reduce((sum, product) => sum + Number(product.sales_count || 0), 0);
-    const views = products.reduce((sum, product) => sum + Number(product.view_count || 0), 0);
-    const stock = products.reduce((sum, product) => sum + Number(product.stock || 0), 0);
-    return `<div class="seller-metric-grid"><div class="dashboard-card"><h3>${products.length}</h3><p>Live products</p></div><div class="dashboard-card"><h3>${sales}</h3><p>Units sold</p></div><div class="dashboard-card"><h3>${views}</h3><p>Product views</p></div><div class="dashboard-card"><h3>${stock}</h3><p>Units in stock</p></div></div><div class="dashboard-card"><h2>Top products</h2><div class="products-list">${products.slice().sort((a,b) => Number(b.sales_count || 0) - Number(a.sales_count || 0)).slice(0, 10).map(p => `<div class="product-item"><div class="product-details"><h4>${escapeHtml(p.title)}</h4><p>${p.sales_count || 0} sold · ${p.view_count || 0} views</p></div><strong>${window.RegionService?.formatPrice(p.price) || p.price}</strong></div>`).join('')}</div></div>`;
+    const items = Array.isArray(products) ? products : [];
+    const count = (value) => (Number.isFinite(Number(value)) ? Number(value) : 0).toLocaleString();
+    const totals = [
+        { label: 'Live products', value: items.length, icon: 'fa-box' },
+        { label: 'Units sold', value: items.reduce((sum, item) => sum + (Number(item.sales_count) || 0), 0), icon: 'fa-bag-shopping' },
+        { label: 'Product views', value: items.reduce((sum, item) => sum + (Number(item.view_count) || 0), 0), icon: 'fa-eye' },
+        { label: 'Units in stock', value: items.reduce((sum, item) => sum + (Number(item.stock) || 0), 0), icon: 'fa-cubes-stacked' }
+    ];
+    const period = normalizeSellerRevenuePeriod(selectedSellerRevenuePeriod);
+    const topProducts = items.length
+        ? `<div class="products-list">${items.slice().sort((a, b) => Number(b.sales_count || 0) - Number(a.sales_count || 0)).slice(0, 10).map((product) => `
+            <article class="product-item">
+                <div class="product-details"><h4>${escapeHtml(product.title || 'Untitled product')}</h4><p>${count(product.sales_count)} sold · ${count(product.view_count)} views</p></div>
+                <strong>${formatSellerPrice(product.price)}</strong>
+            </article>`).join('')}</div>`
+        : `<div class="seller-analytics-empty"><i class="fas fa-box-open" aria-hidden="true"></i><h4>No products yet</h4><p>Add products to start seeing product performance here.</p></div>`;
+
+    return `<div class="seller-analytics">
+        <section class="dashboard-card seller-analytics-revenue" aria-labelledby="sellerAnalyticsRevenueTitle">
+            <div class="seller-analytics-revenue__header">
+                <div><h3 id="sellerAnalyticsRevenueTitle">Sales revenue</h3><p data-seller-revenue-label id="analyticsRevenueLabel">Revenue · last ${period} days</p></div>
+                <div class="seller-revenue-period-control">
+                    <label for="analyticsRevenuePeriod">Revenue period</label>
+                    <select id="analyticsRevenuePeriod" data-seller-revenue-period aria-controls="analyticsRevenueTrend analyticsRevenueValue">
+                        <option value="7" ${period === 7 ? 'selected' : ''}>Last 7 days</option>
+                        <option value="30" ${period === 30 ? 'selected' : ''}>Last 30 days</option>
+                        <option value="90" ${period === 90 ? 'selected' : ''}>Last 90 days</option>
+                    </select>
+                </div>
+            </div>
+            <strong class="seller-analytics-revenue__amount" id="analyticsRevenueValue" data-seller-revenue-value>—</strong>
+            <p class="seller-sales-trend" id="analyticsRevenueTrend" data-seller-revenue-trend data-trend="neutral" role="status" aria-live="polite" aria-atomic="true">Loading dated order history…</p>
+        </section>
+        <section class="seller-metric-grid" aria-label="Product performance">
+            ${totals.map((metric) => `<article class="dashboard-card seller-analytics-metric">
+                <span class="seller-analytics-metric__icon"><i class="fas ${metric.icon}" aria-hidden="true"></i></span>
+                <span class="seller-analytics-metric__copy"><strong>${count(metric.value)}</strong><span>${metric.label}</span></span>
+            </article>`).join('')}
+        </section>
+        <section class="dashboard-card seller-analytics-products" aria-labelledby="sellerTopProductsTitle">
+            <div class="seller-analytics-products__header"><h3 id="sellerTopProductsTitle">Top products</h3><p>Ranked by recorded units sold</p></div>
+            ${topProducts}
+        </section>
+    </div>`;
 }
 
 async function exportSellerReport() {
@@ -2309,6 +2522,7 @@ function initProductForm() {
 }
 
 let currentProducts = [];
+let selectedSellerRevenuePeriod = 30;
 let sellerMessagesRefreshTimer = null;
 let selectedSellerConversationId = null;
 let editingProductId = null;

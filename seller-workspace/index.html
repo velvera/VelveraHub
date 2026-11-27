@@ -163,12 +163,20 @@
             <div class="dashboard-content" id="dashboardContent">
                 <!-- Stats Cards -->
                 <div class="stats-grid">
-                    <div class="stat-card gradient-1">
+                    <div class="stat-card gradient-1 seller-revenue-stat">
                         <div class="stat-icon"><i class="fas fa-dollar-sign"></i></div>
                         <div class="stat-info">
                             <h3 id="revenueMetric">—</h3>
-                            <p>Total Revenue</p>
-                            <span class="stat-change positive" id="revenueMetricChange">Loading live data</span>
+                            <p data-seller-revenue-label id="revenueMetricLabel">Revenue · last 30 days</p>
+                            <div class="seller-revenue-period-control">
+                                <label for="revenuePeriod">Revenue period</label>
+                                <select id="revenuePeriod" data-seller-revenue-period aria-controls="revenueMetricChange revenueMetric">
+                                    <option value="7">Last 7 days</option>
+                                    <option value="30" selected>Last 30 days</option>
+                                    <option value="90">Last 90 days</option>
+                                </select>
+                            </div>
+                            <span class="stat-change seller-sales-trend" id="revenueMetricChange" data-seller-revenue-trend data-trend="neutral" role="status" aria-live="polite" aria-atomic="true">Loading dated order history…</span>
                         </div>
                     </div>
                     <div class="stat-card gradient-2">
