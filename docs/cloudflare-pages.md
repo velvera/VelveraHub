@@ -130,6 +130,11 @@ Run these files in order in the Supabase SQL editor:
       public verification badges.
 24. `database/seller-verification-case-history.sql` — allows new identity cases
       after a seller must resubmit, without overwriting prior review history.
+25. `database/admin-access-and-verification-hardening.sql` — adds primary-admin
+      role management, append-only role-change audit records, legacy profile
+      linking during authorized role changes, and per-account logistics-provider
+      document requirements. It must be followed by the trusted bootstrap
+      procedure before role grants are available in the dashboard.
 
 Deploy the private identity-document upload function from the repository root:
 

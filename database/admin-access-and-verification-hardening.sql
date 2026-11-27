@@ -241,7 +241,13 @@ BEGIN
               FROM public.profiles AS candidate
              WHERE candidate.user_id = auth_user.id
                 OR candidate.id = auth_user.id
-             ORDER BY (candidate.user_id = auth_user.id) DESC
+                OR (
+                    candidate.user_id IS NULL
+                    AND lower(candidate.email) = lower(auth_user.email)
+                )
+             ORDER BY (candidate.user_id = auth_user.id) DESC,
+                      (candidate.id = auth_user.id) DESC,
+                      (lower(candidate.email) = lower(auth_user.email)) DESC
              LIMIT 1
       ) AS profile ON TRUE
       CROSS JOIN public.admin_role_management_config AS config

@@ -14,6 +14,7 @@ const listingSubmissionFixes = read('database/student-listing-submission-fixes.s
 const mediaQuotaConflictFix = read('database/fix-product-media-upload-quota-conflict.sql');
 const phoneVerificationMigration = read('database/phone-verification.sql');
 const deletionStatusMigration = read('database/account-deletion-status.sql');
+const adminAccessMigration = read('database/admin-access-and-verification-hardening.sql');
 const adminWorkspace = read('admin-workspace/index.html');
 const adminWorkspaceJs = read('admin-workspace/admin.js');
 const sellerDashboard = read('assets/js/pages/seller-dashboard.js');
@@ -24,8 +25,8 @@ const cloudflareGuide = read('docs/cloudflare-pages.md');
 
 const migrations = [...migrationGuide.matchAll(/^\s*(\d+)\.\s+(database\/[^\s—]+)/gm)]
     .map((match) => ({ order: Number(match[1]), path: match[2] }));
-assert.equal(migrations.length, 22, 'the migration guide must list the full numbered migration set');
-assert.deepEqual(migrations.map(({ order }) => order), Array.from({ length: 22 }, (_, index) => index + 1));
+assert.equal(migrations.length, 25, 'the migration guide must list the full numbered migration set');
+assert.deepEqual(migrations.map(({ order }) => order), Array.from({ length: 25 }, (_, index) => index + 1));
 assert.equal(new Set(migrations.map(({ path }) => path)).size, migrations.length, 'migration files must not be duplicated');
 for (const { path } of migrations) assert.ok(fs.existsSync(new URL(`../${path}`, import.meta.url)), `${path} must exist`);
 const sqlFiles = fs.readdirSync(new URL('../database/', import.meta.url)).filter((name) => name.endsWith('.sql'));
@@ -62,6 +63,10 @@ for (const check of [
     'phone verification setting and verification state are server controlled',
     'phone verification signup and publishing triggers are installed',
     'public product and media reads use phone verification visibility',
+    'admin role management tables exist with RLS',
+    'admin role changes are primary-admin checked and audited',
+    'primary admin bootstrap is operator-only',
+    'delivery provider identity bucket remains private',
 ]) {
     assert.ok(verificationSql.includes(check), `read-only preflight must report: ${check}`);
 }
@@ -93,6 +98,12 @@ assert.match(phoneVerificationMigration, /enforce_phone_verification_before_publ
 assert.match(phoneVerificationMigration, /phone_verification_product_is_public/i);
 assert.match(phoneVerificationMigration, /phone_verification_product_media_is_public/i);
 assert.match(phoneVerificationMigration, /REVOKE ALL ON FUNCTION public\.admin_update_phone_verification\(BOOLEAN, BOOLEAN, BOOLEAN\) FROM PUBLIC, anon, authenticated/i);
+assert.match(adminAccessMigration, /admin_role_management_config/);
+assert.match(adminAccessMigration, /admin_role_management_audit/);
+assert.match(adminAccessMigration, /bootstrap_primary_admin_access/);
+assert.match(adminAccessMigration, /admin_update_user_admin_role/);
+assert.match(adminAccessMigration, /delivery-provider-verification-private[\s\S]*?FALSE/i);
+assert.match(adminAccessMigration, /document_manifest/);
 assert.match(read('supabase/functions/phone-verification/core.mjs'), /await requireAdmin\(request\)/);
 assert.match(read('supabase/functions/phone-verification/core.mjs'), /TERMII_API_KEY/);
 assert.match(read('docs/phone-verification.md'), /TERMII_API_KEY/);

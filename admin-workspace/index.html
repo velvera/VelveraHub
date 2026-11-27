@@ -68,6 +68,7 @@
                 <button class="admin-tab" id="mediaSettingsTab" type="button" aria-pressed="false" aria-controls="mediaSettingsPanel" data-admin-view="mediaSettings">Media limits</button>
                 <button class="admin-tab" id="phoneVerificationSettingsTab" type="button" aria-pressed="false" aria-controls="phoneVerificationSettingsPanel" data-admin-view="phoneVerificationSettings">Phone verification</button>
                 <button class="admin-tab" id="logisticsTab" type="button" aria-pressed="false" aria-controls="logisticsPanel" data-admin-view="logistics">Store locations &amp; delivery</button>
+                <button class="admin-tab" id="roleManagementTab" type="button" aria-pressed="false" aria-controls="roleManagementPanel" data-admin-view="roleManagement" hidden>Admin access</button>
             </div>
 
             <p class="admin-global-message" id="adminGlobalMessage" role="status" aria-live="polite" hidden></p>
@@ -374,6 +375,31 @@
                 <section class="queue-toolbar"><div><strong>Recent delivery activity</strong><p id="deliveryActivitySummary" aria-live="polite">Loading activity…</p></div></section>
                 <div class="verification-list" id="deliveryActivityList" aria-live="polite"></div>
             </section>
+            <section id="roleManagementPanel" aria-labelledby="roleManagementTab" hidden>
+                <div class="deletion-review-note">
+                    <strong>Primary administrator controls</strong>
+                    <span>Find an existing account and grant or revoke administrator access. Each change requires a reason and is recorded in an append-only audit history. Do not include passwords, identity numbers, or document details.</span>
+                </div>
+                <form class="admin-role-search" id="adminRoleSearchForm">
+                    <label for="adminRoleSearch">Find a registered account</label>
+                    <div class="admin-role-search-row">
+                        <input id="adminRoleSearch" name="query" type="search" minlength="3" maxlength="120" autocomplete="off" required placeholder="Search by email or name">
+                        <button class="admin-secondary-button" id="searchAdminRoles" type="submit">Search accounts</button>
+                    </div>
+                    <p id="adminRoleSearchSummary" role="status" aria-live="polite">Enter at least three characters to search.</p>
+                </form>
+                <div class="admin-role-results" id="adminRoleResults" aria-live="polite"></div>
+                <section class="admin-role-audit" aria-labelledby="adminRoleAuditHeading">
+                    <div class="queue-toolbar">
+                        <div>
+                            <h2 id="adminRoleAuditHeading">Recent access changes</h2>
+                            <p>Only the primary administrator can view this history.</p>
+                        </div>
+                        <button class="admin-secondary-button" id="refreshAdminRoleAudit" type="button">Refresh history</button>
+                    </div>
+                    <div class="admin-role-audit-list" id="adminRoleAuditList" aria-live="polite"></div>
+                </section>
+            </section>
         </section>
     </main>
 
@@ -382,6 +408,7 @@
     <script src="/assets/js/services/api.js"></script>
     <script src="/assets/js/services/publicSupabaseConfig.js"></script>
     <script src="/assets/js/services/supabaseClient.js"></script>
+    <script src="/assets/js/services/admin-access.js"></script>
     <script src="/assets/js/components/async-feedback.js"></script>
     <script src="/assets/js/components/focus-manager.js"></script>
     <script src="/assets/js/services/auth.js"></script>

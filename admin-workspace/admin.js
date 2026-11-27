@@ -22,6 +22,11 @@
         deliveryProviders: [],
         deliveryReports: [],
         deliveryActivity: null,
+        canManageAdminRoles: false,
+        roleUsers: [],
+        roleSearchLoading: false,
+        roleAuditLoading: false,
+        roleSearchQuery: '',
         activeView: 'verification'
     };
 
@@ -90,29 +95,203 @@
     }
 
     async function checkAdminAccess() {
-        const { data: { session } = {}, error: sessionError } = await state.supabase.auth.getSession();
-        if (sessionError) throw sessionError;
-        if (!session?.user) {
+        const access = await window.AdminWorkspaceAccess.resolve(state.supabase);
+        if (access.status === 'signed_out') {
+            state.canManageAdminRoles = false;
+            byId('roleManagementTab').hidden = true;
             showPanel('adminAuthPanel');
             return false;
         }
-
-        const { data: { user }, error: userError } = await state.supabase.auth.getUser();
-        if (userError) throw userError;
-        if (!user) {
-            showPanel('adminAuthPanel');
-            return false;
-        }
-
-        const { data: role, error } = await state.supabase.rpc('current_profile_role');
-        if (error) throw error;
-        if (role !== 'admin') {
+        if (access.status !== 'admin') {
+            state.canManageAdminRoles = false;
+            byId('roleManagementTab').hidden = true;
             showPanel('adminDeniedPanel');
             return false;
         }
         showPanel('adminWorkspace');
+        try {
+            state.canManageAdminRoles = await window.AdminWorkspaceAccess.canManageAdminRoles(state.supabase);
+        } catch (error) {
+            state.canManageAdminRoles = false;
+            const message = String(error?.message || '');
+            if (/admin_role_management_status|schema cache|could not find the function/i.test(message)) {
+                setGlobalMessage('Admin access management is not configured in this Supabase project. Follow the operator runbook to install the migration and designate the primary administrator.', true);
+            }
+        }
+        byId('roleManagementTab').hidden = !state.canManageAdminRoles;
+        if (!state.canManageAdminRoles && state.activeView === 'roleManagement') {
+            switchAdminView('verification');
+        }
         window.SellerVerification?.initAdmin(state.supabase);
         return true;
+    }
+
+    function renderAdminRoleUsers() {
+        const results = byId('adminRoleResults');
+        results.replaceChildren();
+        if (!state.roleUsers.length) return;
+
+        state.roleUsers.forEach((user) => {
+            const card = document.createElement('article');
+            card.className = 'admin-role-user';
+            const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ').trim();
+            const isAdmin = user.role === 'admin';
+            card.innerHTML = `
+                <header class="admin-role-user-heading">
+                    <div>
+                        <h3>${escapeHtml(fullName || user.email || 'Registered account')}</h3>
+                        <p>${escapeHtml(user.email || 'No email available')}</p>
+                    </div>
+                    <span class="admin-role-pill">${escapeHtml(user.is_primary ? 'Primary admin' : user.role || 'customer')}</span>
+                </header>
+                ${user.is_primary ? '<p class="admin-role-primary-note">The primary administrator is protected from removal here.</p>' : `
+                    <form data-admin-role-user="${escapeHtml(user.user_id)}">
+                        <label for="adminRoleReason-${escapeHtml(user.user_id)}">Reason <span>(5–500 characters; avoid sensitive information)</span></label>
+                        <textarea id="adminRoleReason-${escapeHtml(user.user_id)}" name="reason" minlength="5" maxlength="500" required placeholder="Record why this access change is needed."></textarea>
+                        <div class="review-action-buttons">
+                            <button class="review-action ${isAdmin ? 'reject' : 'approve'}" type="submit" data-grant-admin="${String(!isAdmin)}">
+                                ${isAdmin ? 'Revoke admin access' : 'Grant admin access'}
+                            </button>
+                        </div>
+                    </form>`}
+            `;
+            const form = card.querySelector('[data-admin-role-user]');
+            form?.addEventListener('submit', (event) => {
+                event.preventDefault();
+                const button = form.querySelector('[data-grant-admin]');
+                updateAdminRole(user, button?.dataset.grantAdmin === 'true', form, button);
+            });
+            results.append(card);
+        });
+    }
+
+    async function loadAdminRoleUsers() {
+        if (!state.canManageAdminRoles || state.roleSearchLoading) return;
+        const query = byId('adminRoleSearch').value.trim();
+        if (query.length < 3 || query.length > 120) {
+            byId('adminRoleSearchSummary').textContent = 'Enter 3–120 characters to search.';
+            return;
+        }
+
+        state.roleSearchLoading = true;
+        state.roleSearchQuery = query;
+        const searchButton = byId('searchAdminRoles');
+        searchButton.disabled = true;
+        byId('adminRoleSearchSummary').textContent = 'Searching registered accounts…';
+        window.AsyncFeedback?.render(byId('adminRoleResults'), 'loading', {
+            loadingTitle: 'Searching accounts',
+            loadingMessage: 'Looking up registered accounts for the primary administrator.'
+        });
+        try {
+            const { data, error } = await state.supabase.rpc('admin_find_role_management_users', {
+                p_query: query
+            });
+            if (error) throw error;
+            state.roleUsers = Array.isArray(data) ? data : [];
+            renderAdminRoleUsers();
+            byId('adminRoleSearchSummary').textContent = `${state.roleUsers.length} account${state.roleUsers.length === 1 ? '' : 's'} found.`;
+            if (!state.roleUsers.length) {
+                window.AsyncFeedback?.render(byId('adminRoleResults'), 'empty', {
+                    emptyTitle: 'No matching accounts',
+                    emptyMessage: 'Try another email address or name.'
+                });
+            }
+        } catch (error) {
+            state.roleUsers = [];
+            byId('adminRoleSearchSummary').textContent = 'Account search is unavailable.';
+            window.AsyncFeedback?.log('admin-role-search', window.AsyncFeedback?.createRequestId('admin-role-search'), error);
+            window.AsyncFeedback?.render(byId('adminRoleResults'), 'error', {
+                errorTitle: 'Account search unavailable',
+                errorMessage: 'We could not search registered accounts. Try again.',
+                onRetry: loadAdminRoleUsers
+            });
+        } finally {
+            state.roleSearchLoading = false;
+            searchButton.disabled = false;
+        }
+    }
+
+    async function updateAdminRole(user, grantAdmin, form, button) {
+        if (!state.canManageAdminRoles || !form.reportValidity()) return;
+        const reason = form.elements.reason.value.trim();
+        if (!grantAdmin && !window.confirm(`Revoke administrator access for ${user.email}?`)) return;
+
+        const reasonField = form.elements.reason;
+        reasonField.disabled = true;
+        button.disabled = true;
+        try {
+            const { data, error } = await state.supabase.rpc('admin_update_user_admin_role', {
+                p_target_user_id: user.user_id,
+                p_grant_admin: grantAdmin,
+                p_reason: reason
+            });
+            if (error) throw error;
+            setGlobalMessage(data?.changed
+                ? `${user.email} ${grantAdmin ? 'was granted' : 'no longer has'} administrator access.`
+                : `${user.email} already has the requested access state.`);
+            await Promise.all([loadAdminRoleUsers(), loadAdminRoleAudit()]);
+        } catch (error) {
+            window.AsyncFeedback?.log('admin-role-update', window.AsyncFeedback?.createRequestId('admin-role-update'), error);
+            setGlobalMessage(window.AsyncFeedback?.errorMessage(
+                error,
+                'The administrator role could not be changed. Please try again.',
+                'admin-role-update'
+            ) || 'The administrator role could not be changed. Please try again.', true);
+            reasonField.disabled = false;
+            button.disabled = false;
+        }
+    }
+
+    function renderAdminRoleAudit(entries) {
+        const list = byId('adminRoleAuditList');
+        list.replaceChildren();
+        if (!entries.length) {
+            const empty = document.createElement('section');
+            empty.className = 'queue-empty';
+            empty.textContent = 'No administrator access changes have been recorded.';
+            list.append(empty);
+            return;
+        }
+        entries.forEach((entry) => {
+            const row = document.createElement('article');
+            row.className = 'admin-role-audit-entry';
+            row.innerHTML = `
+                <header class="admin-role-audit-heading">
+                    <strong>${escapeHtml(entry.actor_email || 'Former administrator')} ${entry.new_role === 'admin' ? 'granted access to' : 'changed access for'} ${escapeHtml(entry.target_email || 'former account')}</strong>
+                    <time datetime="${escapeHtml(entry.created_at || '')}">${escapeHtml(formatDate(entry.created_at))}</time>
+                </header>
+                <p>${escapeHtml(entry.previous_role)} → ${escapeHtml(entry.new_role)} · ${escapeHtml(entry.reason)}</p>
+            `;
+            list.append(row);
+        });
+    }
+
+    async function loadAdminRoleAudit() {
+        if (!state.canManageAdminRoles || state.roleAuditLoading) return;
+        state.roleAuditLoading = true;
+        const refreshButton = byId('refreshAdminRoleAudit');
+        refreshButton.disabled = true;
+        window.AsyncFeedback?.render(byId('adminRoleAuditList'), 'loading', {
+            loadingTitle: 'Loading administrator access history',
+            loadingMessage: 'Checking the latest audited role changes.'
+        });
+        try {
+            const { data, error } = await state.supabase.rpc('admin_list_admin_role_changes', {
+                p_limit: 50
+            });
+            if (error) throw error;
+            renderAdminRoleAudit(Array.isArray(data) ? data : []);
+        } catch (error) {
+            window.AsyncFeedback?.log('admin-role-audit', window.AsyncFeedback?.createRequestId('admin-role-audit'), error);
+            window.AsyncFeedback?.render(byId('adminRoleAuditList'), 'error', {
+                errorTitle: 'Administrator access history unavailable',
+                errorMessage: 'We could not load the audit history. Try again.',
+                onRetry: loadAdminRoleAudit
+            });
+        } finally {
+            state.roleAuditLoading = false;
+            refreshButton.disabled = false;
+        }
     }
 
     function renderQueue() {
@@ -959,9 +1138,11 @@
             paymentSettings: ['paymentSettingsPanel', 'paymentSettingsTab'],
             mediaSettings: ['mediaSettingsPanel', 'mediaSettingsTab'],
             phoneVerificationSettings: ['phoneVerificationSettingsPanel', 'phoneVerificationSettingsTab'],
-            logistics: ['logisticsPanel', 'logisticsTab']
+            logistics: ['logisticsPanel', 'logisticsTab'],
+            roleManagement: ['roleManagementPanel', 'roleManagementTab']
         };
         if (!views[view]) return;
+        if (view === 'roleManagement' && !state.canManageAdminRoles) return;
         state.activeView = view;
         Object.entries(views).forEach(([name, [panelId, tabId]]) => {
             byId(panelId).hidden = name !== view;
@@ -982,6 +1163,7 @@
         else if (view === 'mediaSettings') loadMarketplaceMediaLimits();
         else if (view === 'phoneVerificationSettings') loadPhoneVerificationSettings();
         else if (view === 'logistics') loadLogisticsWorkspace();
+        else if (view === 'roleManagement') loadAdminRoleAudit();
         else loadQueue();
     }
 
@@ -1431,6 +1613,8 @@
             setGlobalMessage('We could not sign out. Please try again.', true);
             return;
         }
+        state.canManageAdminRoles = false;
+        byId('roleManagementTab').hidden = true;
         showPanel('adminAuthPanel');
     }
 
@@ -1498,9 +1682,18 @@
             else if (state.activeView === 'mediaSettings') loadMarketplaceMediaLimits();
             else if (state.activeView === 'phoneVerificationSettings') loadPhoneVerificationSettings();
             else if (state.activeView === 'logistics') loadLogisticsWorkspace();
+            else if (state.activeView === 'roleManagement') {
+                if (byId('adminRoleSearch').value.trim().length >= 3) loadAdminRoleUsers();
+                loadAdminRoleAudit();
+            }
             else loadQueue();
         });
         byId('refreshSystemErrors').addEventListener('click', loadSystemErrors);
+        byId('refreshAdminRoleAudit').addEventListener('click', loadAdminRoleAudit);
+        byId('adminRoleSearchForm').addEventListener('submit', (event) => {
+            event.preventDefault();
+            loadAdminRoleUsers();
+        });
         byId('queueStatus').addEventListener('change', loadQueue);
         byId('deletionStatus').addEventListener('change', loadDeletionQueue);
         byId('listingReviewStatus').addEventListener('change', loadProductReviewQueue);

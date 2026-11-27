@@ -4,7 +4,7 @@ This directory contains ordered migrations, conditional legacy/repair scripts,
 one read-only verification script, and one operator-only role-promotion script.
 Do not run every `.sql` file as one batch.
 
-For a new Supabase project, apply migrations 1–21 in order using a trusted
+For a new Supabase project, apply migrations 1–25 in order using a trusted
 Supabase SQL Editor session with a privileged database role. For an existing
 project, inspect its schema and migration history, then apply only the missing
 ordered migrations in this sequence. Do not put database credentials in browser
@@ -36,6 +36,7 @@ code or run schema changes from a storefront.
 22. database/location-logistics-market-readiness.sql — disables untouched seeded delivery markets until an administrator configures and enables them; preserves settings saved by an admin. Requires migrations 20–21.
 23. database/seller-trust-verification.sql — country-configured manual identity review, business-registry evidence, physical-premises inspection, append-only case history, and safe public badges. Requires migrations 1–22.
 24. database/seller-verification-case-history.sql — upgrades migration 23 so each resubmission gets a new case ID while earlier reviews remain available. Requires migration 23.
+25. database/admin-access-and-verification-hardening.sql — adds operator-bootstrapped primary-admin role management, audited grants/revocations, legacy profile-link repair during authorized role actions, and account-specific private delivery-provider evidence. Requires migrations 1–24. It does not promote an admin or apply itself to a Supabase project.
 
 Before applying step 15 to any Supabase project, verify the project's actual
 plan and global Storage file-size limit in the dashboard. Both must support at
@@ -59,6 +60,14 @@ local NGN or GBP currency while order totals remain in the existing USD base
 units. Apply migrations 20–22 before enabling the logistics pages.
 The market-readiness migration keeps provider matching disabled by default until
 an administrator explicitly configures rates and enables each market.
+
+Migration 25 is additive and includes the primary administrator bootstrap.
+After applying it to the intended non-production Supabase project, use the
+operator-only SQL procedure in `docs/operator-runbook.md` to designate the
+already-authorized primary administrator. Only that primary administrator can
+grant or revoke later admin roles from the admin workspace. Do not apply it to
+production until the operator explicitly selects that project and completes
+the staging access tests.
 
 ### Conditional legacy and repair scripts
 

@@ -883,6 +883,74 @@ WITH checks AS (
               AND policyname = 'public can read product images'
               AND qual LIKE '%phone_verification_product_media_is_public%'
         )
+    UNION ALL
+    SELECT
+        'admin role management tables exist with RLS',
+        to_regclass('public.admin_role_management_config') IS NOT NULL
+        AND to_regclass('public.admin_role_assignments') IS NOT NULL
+        AND to_regclass('public.admin_role_management_audit') IS NOT NULL
+        AND coalesce((
+            SELECT bool_and(relrowsecurity)
+            FROM pg_class
+            WHERE oid IN (
+                to_regclass('public.admin_role_management_config'),
+                to_regclass('public.admin_role_assignments'),
+                to_regclass('public.admin_role_management_audit')
+            )
+        ), false)
+    UNION ALL
+    SELECT
+        'admin role changes are primary-admin checked and audited',
+        to_regprocedure('public.admin_update_user_admin_role(uuid,boolean,text)') IS NOT NULL
+        AND to_regprocedure('public.admin_list_admin_role_changes(integer)') IS NOT NULL
+        AND EXISTS (
+            SELECT 1
+            FROM pg_proc
+            WHERE oid = to_regprocedure('public.admin_update_user_admin_role(uuid,boolean,text)')
+              AND position('require_primary_admin_role_manager' IN pg_get_functiondef(oid)) > 0
+        )
+        AND EXISTS (
+            SELECT 1
+            FROM pg_trigger
+            WHERE tgrelid = to_regclass('public.admin_role_management_audit')
+              AND tgname = 'prevent_admin_role_audit_mutation'
+              AND NOT tgisinternal
+        )
+        AND NOT has_function_privilege(
+            'anon',
+            to_regprocedure('public.admin_update_user_admin_role(uuid,boolean,text)'),
+            'EXECUTE'
+        )
+    UNION ALL
+    SELECT
+        'primary admin bootstrap is operator-only',
+        CASE
+            WHEN to_regprocedure('public.bootstrap_primary_admin_access(text)') IS NULL THEN false
+            ELSE has_function_privilege(
+                'service_role',
+                to_regprocedure('public.bootstrap_primary_admin_access(text)'),
+                'EXECUTE'
+            )
+            AND NOT has_function_privilege(
+                'authenticated',
+                to_regprocedure('public.bootstrap_primary_admin_access(text)'),
+                'EXECUTE'
+            )
+            AND NOT has_function_privilege(
+                'anon',
+                to_regprocedure('public.bootstrap_primary_admin_access(text)'),
+                'EXECUTE'
+            )
+        END
+    UNION ALL
+    SELECT
+        'delivery provider identity bucket remains private',
+        EXISTS (
+            SELECT 1
+            FROM storage.buckets
+            WHERE id = 'delivery-provider-verification-private'
+              AND public IS FALSE
+        )
 )
 SELECT check_name, passed
 FROM checks
