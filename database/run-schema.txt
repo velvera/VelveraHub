@@ -34,6 +34,7 @@ code or run schema changes from a storefront.
 20. database/physical-store-logistics.sql — separate physical shop locations, private provider identity verification, service areas, delivery requests, rider engagements, complaint queues, admin settings, and location/provider RPCs. Requires migrations 1–19.
 21. database/location-logistics-workflows.sql — buyer matching and order delivery, time-limited provider availability, buyer and seller tracking, provider status updates, next-day service coverage, and separate temporary/permanent workforce engagements. Requires migration 20.
 22. database/location-logistics-market-readiness.sql — disables untouched seeded delivery markets until an administrator configures and enables them; preserves settings saved by an admin. Requires migrations 20–21.
+23. database/seller-trust-verification.sql — country-configured manual identity review, business-registry evidence, physical-premises inspection, append-only case history, and safe public badges. Requires migrations 1–22.
 
 Before applying step 15 to any Supabase project, verify the project's actual
 plan and global Storage file-size limit in the dashboard. Both must support at
