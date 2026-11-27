@@ -125,6 +125,25 @@ Run these files in order in the Supabase SQL editor:
     tracking, and temporary/permanent rider hiring.
 22. `database/location-logistics-market-readiness.sql` — keeps new delivery
      markets disabled until an administrator configures and enables them.
+23. `database/seller-trust-verification.sql` — adds country-configured identity
+      review, business-registry evidence, physical-premises inspections, and
+      public verification badges.
+24. `database/seller-verification-case-history.sql` — allows new identity cases
+      after a seller must resubmit, without overwriting prior review history.
+
+Deploy the private identity-document upload function from the repository root:
+
+```sh
+supabase functions deploy seller-verification-documents
+```
+
+The function requires the Supabase project URL, public key, and service-role
+key only in the Edge Function runtime. Hosted Supabase normally supplies these
+built-in values; for a different runtime, configure them as server-side
+function secrets. Never put the service-role key in browser configuration.
+The identity flow stays in manual review until a qualified provider is
+contracted and explicitly integrated. Deploying this function does not verify
+an identity by itself.
 
 For an existing database that reports PostgreSQL error `42702` while removing
 or cleaning up failed listing media uploads, apply

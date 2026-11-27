@@ -65,7 +65,7 @@ USING (
 
 CREATE TABLE IF NOT EXISTS public.seller_identity_verification_cases (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    applicant_user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE RESTRICT,
+    applicant_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
     shop_id UUID REFERENCES public.shops(id) ON DELETE SET NULL,
     country_code TEXT NOT NULL REFERENCES public.seller_verification_country_config(country_code),
     seller_type TEXT NOT NULL
@@ -96,6 +96,9 @@ CREATE INDEX IF NOT EXISTS seller_identity_cases_queue_idx
     ON public.seller_identity_verification_cases(status, country_code, submitted_at);
 CREATE INDEX IF NOT EXISTS seller_identity_cases_assignment_idx
     ON public.seller_identity_verification_cases(assigned_reviewer_id, status);
+CREATE UNIQUE INDEX IF NOT EXISTS seller_identity_active_case_per_applicant_idx
+    ON public.seller_identity_verification_cases(applicant_user_id)
+    WHERE status IN ('draft', 'submitted', 'pending_provider', 'pending_review');
 ALTER TABLE public.seller_identity_verification_cases ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.seller_identity_verification_cases FROM PUBLIC, anon, authenticated;
 GRANT SELECT ON public.seller_identity_verification_cases TO authenticated;
@@ -358,6 +361,8 @@ BEGIN
       INTO v_case
       FROM public.seller_identity_verification_cases AS verification
      WHERE verification.applicant_user_id = v_user_id
+     ORDER BY verification.created_at DESC, verification.id DESC
+     LIMIT 1
      FOR UPDATE;
 
     IF FOUND AND v_case.status NOT IN ('draft', 'action_required', 'rejected', 'expired') THEN
@@ -365,7 +370,7 @@ BEGIN
             v_case.status USING ERRCODE = '23514';
     END IF;
 
-    IF v_case.id IS NULL THEN
+    IF v_case.id IS NULL OR v_case.status IN ('action_required', 'rejected', 'expired') THEN
         INSERT INTO public.seller_identity_verification_cases (
             applicant_user_id, shop_id, country_code, seller_type,
             legal_first_name, legal_last_name, identity_document_type,
@@ -491,32 +496,32 @@ SET search_path = public, pg_temp
 AS $$
 DECLARE
     v_case public.seller_identity_verification_cases%ROWTYPE;
-    v_expired_case_id UUID;
 BEGIN
     IF auth.uid() IS NULL THEN
         RAISE EXCEPTION 'Sign in to view identity verification' USING ERRCODE = '42501';
     END IF;
-    UPDATE public.seller_identity_verification_cases AS verification
-       SET status = 'expired', updated_at = now()
-     WHERE verification.applicant_user_id = auth.uid()
-       AND verification.status = 'approved'
-       AND verification.expires_at <= now()
-    RETURNING verification.id INTO v_expired_case_id;
-    IF v_expired_case_id IS NOT NULL THEN
-        INSERT INTO public.seller_identity_verification_events (
-            case_id, actor_user_id, event_type, from_status, to_status,
-            seller_message
-        )
-        VALUES (
-            v_expired_case_id, NULL, 'expired', 'approved', 'expired',
-            'Your identity verification has expired. Submit a new review if you still need it.'
-        );
-    END IF;
+    WITH expired_cases AS (
+        UPDATE public.seller_identity_verification_cases AS verification
+           SET status = 'expired', updated_at = now()
+         WHERE verification.applicant_user_id = auth.uid()
+           AND verification.status = 'approved'
+           AND verification.expires_at <= now()
+        RETURNING verification.id
+    )
+    INSERT INTO public.seller_identity_verification_events (
+        case_id, actor_user_id, event_type, from_status, to_status,
+        seller_message
+    )
+    SELECT expired_cases.id, NULL, 'expired', 'approved', 'expired',
+           'Your identity verification has expired. Submit a new review if you still need it.'
+    FROM expired_cases;
 
     SELECT verification.*
       INTO v_case
       FROM public.seller_identity_verification_cases AS verification
-     WHERE verification.applicant_user_id = auth.uid();
+     WHERE verification.applicant_user_id = auth.uid()
+     ORDER BY verification.created_at DESC, verification.id DESC
+     LIMIT 1;
     IF NOT FOUND THEN
         RETURN jsonb_build_object('status', 'not_started');
     END IF;
@@ -538,14 +543,19 @@ BEGIN
         'submission_count', v_case.submission_count,
         'history', coalesce((
             SELECT jsonb_agg(jsonb_build_object(
+                'case_id', event.case_id,
                 'event_type', event.event_type,
                 'from_status', event.from_status,
                 'to_status', event.to_status,
                 'seller_message', event.seller_message,
                 'created_at', event.created_at
-            ) ORDER BY event.created_at DESC)
+            ) ORDER BY event.created_at DESC, event.id DESC)
             FROM public.seller_identity_verification_events AS event
-            WHERE event.case_id = v_case.id
+            WHERE event.case_id IN (
+                SELECT previous_case.id
+                FROM public.seller_identity_verification_cases AS previous_case
+                WHERE previous_case.applicant_user_id = auth.uid()
+            )
         ), '[]'::JSONB)
     );
 END;
@@ -1555,13 +1565,14 @@ AS $$
             WHERE auth_user.id = owner.user_id
             LIMIT 1
         ), FALSE),
-        EXISTS (
-            SELECT 1
+        coalesce((
+            SELECT identity.status = 'approved'
+                   AND identity.expires_at > now()
             FROM public.seller_identity_verification_cases AS identity
             WHERE identity.applicant_user_id = owner.user_id
-              AND identity.status = 'approved'
-              AND identity.expires_at > now()
-        ),
+            ORDER BY identity.created_at DESC, identity.id DESC
+            LIMIT 1
+        ), FALSE),
         EXISTS (
             SELECT 1
             FROM public.shop_verification_submissions AS business

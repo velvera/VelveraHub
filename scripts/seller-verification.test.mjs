@@ -129,6 +129,7 @@ assert.equal(
 }
 
 const migration = read('database/seller-trust-verification.sql');
+const caseHistoryMigration = read('database/seller-verification-case-history.sql');
 assert.match(migration, /seller-identity-private[\s\S]*?\bFALSE\b/);
 assert.match(migration, /p_consent BOOLEAN DEFAULT FALSE[\s\S]*?p_consent IS NOT TRUE/);
 assert.match(migration, /seller_identity_admin_read_documents[\s\S]*?current_profile_role\(\) = 'admin'/);
@@ -136,6 +137,16 @@ assert.match(migration, /seller_identity_service_only_upload[\s\S]*?bucket_id <>
 assert.match(migration, /admin_review_shop_verification_with_basis/);
 assert.match(migration, /Approve a current identity verification for the business representative first/);
 assert.match(migration, /get_public_seller_verification_badges/);
+assert.doesNotMatch(migration, /applicant_user_id UUID NOT NULL UNIQUE/i);
+assert.match(migration, /seller_identity_active_case_per_applicant_idx[\s\S]*?WHERE status IN \('draft', 'submitted', 'pending_provider', 'pending_review'\)/);
+assert.match(migration, /ORDER BY verification\.created_at DESC, verification\.id DESC\s+LIMIT 1/);
+assert.match(migration, /WHERE event\.case_id IN \([\s\S]*?previous_case\.applicant_user_id = auth\.uid\(\)/);
+assert.match(migration, /SELECT identity\.status = 'approved'[\s\S]*?ORDER BY identity\.created_at DESC, identity\.id DESC/);
+assert.match(caseHistoryMigration, /DROP CONSTRAINT IF EXISTS seller_identity_verification_cases_applicant_user_id_key/);
+assert.match(caseHistoryMigration, /seller_identity_active_case_per_applicant_idx/);
+assert.match(caseHistoryMigration, /seller_get_identity_verification/);
+assert.match(caseHistoryMigration, /seller_prepare_identity_verification/);
+assert.match(caseHistoryMigration, /get_public_seller_verification_badges/);
 
 for (const appRoot of ['velverahub-ng', 'velverahub-uk', 'velverahub-shop', 'velverahub-admin']) {
     assert.ok(fs.existsSync(new URL(`${appRoot}/assets/js/services/seller-verification.js`, root)));
@@ -154,5 +165,7 @@ assert.match(read('admin-workspace/index.html'), /id="sellerIdentityQueue"/);
 assert.match(read('admin-workspace/index.html'), /id="sellerInspectionQueue"/);
 assert.match(read('admin-workspace/admin.js'), /admin_review_shop_verification_with_basis/);
 assert.match(read('admin-workspace/admin.js'), /SellerVerification\?\.initAdmin\(state\.supabase\)/);
+assert.match(read('velverahub-admin/admin.js'), /registry_source.*registry_reference.*business_evidence_reference.*representative_authorized/);
+assert.match(read('database/run-schema.txt'), /24\. database\/seller-verification-case-history\.sql/);
 
-console.log('Seller verification upload security and workflow wiring checks passed.');
+console.log('Seller verification upload security, case history, and workflow checks passed.');

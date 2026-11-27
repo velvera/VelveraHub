@@ -720,6 +720,9 @@
         const internalNote = form.elements.internal_note.value.trim();
         const error = form.querySelector('.review-action-message');
         const buttons = [...form.querySelectorAll('button')];
+        for (const name of ['registry_source', 'registry_reference', 'business_evidence_reference', 'representative_authorized']) {
+            if (form.elements[name]) form.elements[name].required = decision === 'approve';
+        }
         if (!form.reportValidity()) return;
         if (note.length < 3 || internalNote.length < 3) {
             error.textContent = 'Add a clear seller message and an internal review note.';
