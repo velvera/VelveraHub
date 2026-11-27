@@ -179,6 +179,7 @@ const UI = {
                         <img src="${sellerAvatar}" alt="${escapeProductHtml(sellerName)}" class="shop-avatar">
                         <div style="display:flex;flex-direction:column;overflow:hidden;min-width:0;">
                             <span class="shop-name">${escapeProductHtml(sellerName)}</span>
+                            ${window.TrustService?.renderVerificationBadges(shop) || ''}
                             ${coverageLabel ? `<span class="shop-location"><i class="fas fa-map-marker-alt"></i>${coverageLabel}</span>` : ''}
                         </div>
                     </div>
@@ -277,7 +278,7 @@ const UI = {
                 <div class="shop-card-content">
                     <div class="shop-avatar-container">
                         <img src="${escapeProductHtml(avatarUrl)}" alt="${shopName}" class="shop-avatar-lg" onerror="this.onerror=null;this.src='/img/basket.png';">
-                        ${shop.verified ? '<span class="shop-verified"><i class="fas fa-check"></i></span>' : ''}
+                        ${window.TrustService?.renderVerificationBadges(shop) || ''}
                     </div>
                     <div class="shop-info">
                         <div class="shop-header"><h4 class="shop-name-lg" style="margin: 0;">${shopName}</h4></div>

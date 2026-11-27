@@ -43,13 +43,13 @@ const TrustService = {
             });
         };
 
-        const identityVerified = shop.identity_verified ?? shop.verified;
+        const identityVerified = shop.verification_badges?.identity_verified === true;
         addSignal(
             'identity',
-            'Verified identity',
+            'Identity verification',
             identityVerified === true,
-            identityVerified === true ? 1 : null,
-            identityVerified === true ? 'Marketplace verification completed' : 'Verification has not been completed',
+            identityVerified ? 1 : null,
+            identityVerified ? 'Identity review completed' : 'Identity verification has not been completed',
             'fa-user-check'
         );
 
@@ -162,6 +162,44 @@ const TrustService = {
                 </span>
             </div>
         `;
+    },
+
+    renderVerificationBadges(shop = {}) {
+        const states = shop.verification_badges || {};
+        const labels = [
+            {
+                key: 'contact_verified',
+                label: 'Contact Verified',
+                detail: 'The seller’s account email and phone number have been confirmed. This does not verify legal identity.',
+                icon: 'fa-envelope-circle-check'
+            },
+            {
+                key: 'identity_verified',
+                label: 'Identity Verified',
+                detail: 'VelveraHub completed an identity review. This does not guarantee a product, delivery, or transaction outcome.',
+                icon: 'fa-user-check'
+            },
+            {
+                key: 'business_verified',
+                label: 'Business Verified',
+                detail: 'Business evidence and the applicant’s authority to represent the business were reviewed.',
+                icon: 'fa-building-circle-check'
+            },
+            {
+                key: 'physical_store_verified',
+                label: 'Physical Store Verified',
+                detail: 'A physical premises inspection was completed. A submitted shop photo alone does not qualify.',
+                icon: 'fa-store'
+            }
+        ].filter((badge) => states[badge.key] === true);
+
+        if (!labels.length) return '';
+        return `<div class="seller-verification-badges" aria-label="Seller verification">${labels.map((badge) => `
+            <details class="seller-verification-badge">
+                <summary><i class="fas ${badge.icon}" aria-hidden="true"></i><span>${badge.label}</span></summary>
+                <span class="seller-verification-badge-detail">${this.escape(badge.detail)}</span>
+            </details>
+        `).join('')}</div>`;
     },
 
     renderEvidencePanel(shop) {

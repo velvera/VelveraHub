@@ -84,7 +84,7 @@
         if (!context.shop?.id) return null;
         const { data, error } = await context.supabase
             .from('shop_verification_submissions')
-            .select('status, submitted_at, reviewed_at, registry_checked, registry_checked_at, representative_authorized')
+            .select('status, submitted_at, reviewed_at, registry_checked, registry_checked_at, representative_authorized, business_verification_basis')
             .eq('shop_id', context.shop.id)
             .maybeSingle();
         if (error) throw error;
@@ -115,7 +115,10 @@
         const currentShop = context.shop;
         const businessVerified = Boolean(
             business?.status === 'approved'
-            && business.registry_checked === true
+            && (
+                (business.business_verification_basis === 'registry' && business.registry_checked === true)
+                || business.business_verification_basis === 'sole_trader_manual'
+            )
             && business.representative_authorized === true
         );
         const identityEditable = ['not_started', 'draft', 'action_required', 'rejected', 'expired'].includes(identityStatus);
@@ -204,8 +207,8 @@
                     ${eventHistory}
                 </article>
                 <article class="seller-verification-card">
-                    <div class="seller-verification-card-heading"><div><h3>Business Verified</h3><p>Requires an approved shop application, an official registry check, and confirmation that you can represent the business.</p></div>${renderStatus(businessVerified ? 'approved' : business?.status || 'not_started', business?.reviewed_at ? `Reviewed ${formatDate(business.reviewed_at)}` : '')}</div>
-                    ${business?.status === 'approved' && !businessVerified ? '<p class="seller-verification-detail">Shop documents were reviewed, but the official registry and representative checks are not recorded. No Business Verified badge is shown.</p>' : ''}
+                    <div class="seller-verification-card-heading"><div><h3>Business Verified</h3><p>Registered businesses need an official registry check. Sole traders need documented evidence and confirmation that the applicant is the proprietor.</p></div>${renderStatus(businessVerified ? 'approved' : business?.status || 'not_started', business?.reviewed_at ? `Reviewed ${formatDate(business.reviewed_at)}` : '')}</div>
+                    ${business?.status === 'approved' && !businessVerified ? '<p class="seller-verification-detail">Shop documents were reviewed, but the required business evidence and representative checks are not recorded. No Business Verified badge is shown.</p>' : ''}
                     ${!currentShop ? '<p class="seller-verification-detail">Create a shop profile to start business verification. Existing shop onboarding rules are unchanged.</p>' : ''}
                 </article>
                 <article class="seller-verification-card">

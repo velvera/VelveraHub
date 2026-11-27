@@ -98,7 +98,7 @@ BEGIN
     IF length(trim(coalesce(p_legal_name, ''))) NOT BETWEEN 2 AND 160
        OR length(trim(coalesce(p_business_name, ''))) NOT BETWEEN 2 AND 160
        OR length(trim(coalesce(p_registration_number, ''))) > 120
-       OR p_business_type NOT IN ('individual', 'registered', 'partnership') THEN
+       OR p_business_type NOT IN ('individual', 'sole_trader', 'registered', 'partnership') THEN
         RAISE EXCEPTION 'Verification details are invalid';
     END IF;
 

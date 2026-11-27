@@ -1102,3 +1102,54 @@ h2,
         max-width: calc(100vw - 1.5rem);
     }
 }
+
+.seller-verification-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.35rem;
+}
+
+.seller-verification-badge {
+    position: relative;
+    color: #245a46;
+    font-size: 0.72rem;
+}
+
+.seller-verification-badge summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    min-height: 1.6rem;
+    padding: 0.15rem 0.45rem;
+    border: 1px solid #b7dfcd;
+    border-radius: 999px;
+    background: #f1fbf5;
+    cursor: pointer;
+    font-weight: 650;
+    list-style: none;
+}
+
+.seller-verification-badge summary::-webkit-details-marker {
+    display: none;
+}
+
+.seller-verification-badge summary:focus-visible {
+    outline: 2px solid #245a46;
+    outline-offset: 2px;
+}
+
+.seller-verification-badge-detail {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 0.35rem);
+    left: 0;
+    width: min(18rem, calc(100vw - 2rem));
+    padding: 0.65rem 0.75rem;
+    border: 1px solid #d5e5dc;
+    border-radius: 0.6rem;
+    background: #fff;
+    box-shadow: 0 8px 24px rgb(20 40 30 / 14%);
+    color: #27372f;
+    line-height: 1.45;
+}

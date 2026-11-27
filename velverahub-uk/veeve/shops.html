@@ -18,7 +18,7 @@
 <main class="landing-main"><div class="section-container"><header class="landing-hero"><span class="landing-eyebrow"><i class="fas fa-store"></i> Shop directory</span><h1>Active Shops</h1><p>Browse shops that are currently listed on VelveraHub. Review each listing and confirm delivery and payment details before ordering.</p><a href="/veeve/logistics.html">Delivery and rider services</a></header><section class="logistics-page logistics-card logistics-card--wide" aria-labelledby="physicalShopDiscoveryTitle"><h2 id="physicalShopDiscoveryTitle">Find a shop to visit</h2><p>Search a shop or place, or choose to share your location to see approved stores nearby.</p><form class="logistics-search" id="shopDiscoveryForm"><input id="shopDiscoveryQuery" maxlength="120" placeholder="Shop name, city, or area" aria-label="Search shops and locations"><button class="logistics-button" type="submit">Search stores</button><button class="logistics-button logistics-button--secondary" id="shopDiscoveryNearMe" type="button">Use my location</button></form><div class="logistics-map logistics-map--large" id="shopDiscoveryMap" aria-label="Map of approved physical store locations"></div><p class="logistics-map-attribution">Map data © OpenStreetMap contributors.</p><p class="logistics-status" id="shopDiscoveryStatus" role="status" aria-live="polite"></p><div class="logistics-results" id="shopDiscoveryResults" aria-live="polite"></div></section><section aria-labelledby="activeShopDirectoryTitle"><h2 id="activeShopDirectoryTitle">Browse active shops</h2><div class="shops-directory-grid" id="shopsDirectory" aria-live="polite"><div class="shops-directory-status"><i class="fas fa-spinner fa-spin"></i> Loading shops...</div></div></section></div></main>
     <nav class="mobile-bottom-nav"><div class="bottom-nav-items"><a class="bottom-nav-item" href="/"><i class="fas fa-home"></i><span>Home</span></a><a class="bottom-nav-item active" href="/veeve/shops.html"><i class="fas fa-store"></i><span>Shops</span></a><button class="bottom-nav-item" id="bottomCartBtn"><i class="fas fa-shopping-cart"></i><span>Cart</span></button><button class="bottom-nav-item" id="bottomAccountBtn"><i class="fas fa-user"></i><span>Account</span></button></div></nav>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="../assets/js/services/region.js"></script><script src="../assets/js/config.js"></script><script src="../assets/js/services/publicSupabaseConfig.js"></script><script src="../assets/js/services/observability.js"></script><script src="../assets/js/services/supabaseClient.js"></script><script src="../assets/js/components/async-feedback.js"></script><script src="../assets/js/components/focus-manager.js"></script>
+    <script src="../assets/js/services/region.js"></script><script src="../assets/js/config.js"></script><script src="../assets/js/services/publicSupabaseConfig.js"></script><script src="../assets/js/services/observability.js"></script><script src="../assets/js/services/supabaseClient.js"></script><script src="../assets/js/services/trust.js"></script><script src="../assets/js/components/async-feedback.js"></script><script src="../assets/js/components/focus-manager.js"></script>
 <script src="../assets/js/components/site-navigation.js"></script><script src="../assets/js/components/custom-select.js"></script><script src="../assets/js/components/smart-features.js"></script><script src="../assets/js/components/mobile-nav.js"></script>
     <script src="../assets/js/services/logistics.js"></script><script src="../assets/js/pages/shop-discovery.js"></script>
     <script>
@@ -38,7 +38,7 @@
                     </a>
                     <div class="shop-rank-body">
                         <img class="shop-rank-logo" src="${escapeHtml(shop.logo_url || imageFallback)}" alt="${name} logo" loading="lazy" onerror="this.src='${imageFallback}'">
-                        <div class="shop-rank-copy"><h2>${name}</h2><p>${description}</p></div>
+                        <div class="shop-rank-copy"><h2>${name}</h2>${window.TrustService?.renderVerificationBadges(shop) || ''}<p>${description}</p></div>
                     </div>
                     <div class="shop-rank-meta"><span>Active shop</span><a href="/veeve/shop.html?id=${shopId}">View listings</a></div>
                 </article>`;
@@ -62,6 +62,17 @@
                         .order('name', { ascending: true })
                         .limit(24);
                     if (error) throw error;
+                    if (Array.isArray(shops) && shops.length) {
+                        const { data: badgeRows, error: badgeError } = await supabase.rpc('get_public_seller_verification_badges', {
+                            p_shop_ids: shops.map((shop) => shop.id).filter(Boolean)
+                        });
+                        if (!badgeError && Array.isArray(badgeRows)) {
+                            const badgesByShop = new Map(badgeRows.map((item) => [String(item.shop_id), item]));
+                            shops.forEach((shop) => { shop.verification_badges = badgesByShop.get(String(shop.id)) || {}; });
+                        } else if (badgeError) {
+                            AsyncFeedback.log('seller-verification-badges', requestId, badgeError);
+                        }
+                    }
                     if (shops.length) directory.innerHTML = shops.map(renderShop).join('');
                     else AsyncFeedback.render(directory, 'empty', {
                         emptyTitle: 'No active shops yet',

@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS public.seller_verification_country_config (
     identity_document_types TEXT[] NOT NULL DEFAULT '{}',
     manual_review_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     provider_adapter TEXT,
+    business_registry_source TEXT,
     privacy_notice_version TEXT NOT NULL,
     retention_days INTEGER NOT NULL DEFAULT 365 CHECK (retention_days BETWEEN 30 AND 3650),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -25,14 +26,27 @@ CREATE TABLE IF NOT EXISTS public.seller_verification_country_config (
     )
 );
 
+ALTER TABLE public.seller_verification_country_config
+    ADD COLUMN IF NOT EXISTS business_registry_source TEXT;
+
 INSERT INTO public.seller_verification_country_config (
     country_code, country_name, identity_document_types,
-    manual_review_enabled, provider_adapter, privacy_notice_version
+    manual_review_enabled, provider_adapter, business_registry_source,
+    privacy_notice_version
 )
 VALUES
-    ('NG', 'Nigeria', ARRAY['passport', 'national_id', 'drivers_license', 'voters_card', 'other'], TRUE, NULL, '2026-11-27'),
-    ('GB', 'United Kingdom', ARRAY['passport', 'drivers_license', 'residence_permit', 'other'], TRUE, NULL, '2026-11-27')
-ON CONFLICT (country_code) DO NOTHING;
+    ('NG', 'Nigeria', ARRAY['passport', 'national_id', 'drivers_license', 'voters_card', 'other'], TRUE, NULL, 'CAC', '2026-11-27'),
+    ('GB', 'United Kingdom', ARRAY['passport', 'drivers_license', 'residence_permit', 'other'], TRUE, NULL, 'Companies House', '2026-11-27')
+ON CONFLICT (country_code) DO UPDATE SET
+    business_registry_source = coalesce(
+        public.seller_verification_country_config.business_registry_source,
+        EXCLUDED.business_registry_source
+    ),
+    updated_at = CASE
+        WHEN public.seller_verification_country_config.business_registry_source IS NULL
+            THEN now()
+        ELSE public.seller_verification_country_config.updated_at
+    END;
 
 ALTER TABLE public.seller_verification_country_config ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.seller_verification_country_config FROM PUBLIC, anon, authenticated;
@@ -784,7 +798,16 @@ ALTER TABLE public.shop_verification_submissions
     ADD COLUMN IF NOT EXISTS registry_source TEXT,
     ADD COLUMN IF NOT EXISTS registry_reference TEXT,
     ADD COLUMN IF NOT EXISTS representative_authorized BOOLEAN NOT NULL DEFAULT FALSE,
-    ADD COLUMN IF NOT EXISTS registry_checked_at TIMESTAMPTZ;
+    ADD COLUMN IF NOT EXISTS registry_checked_at TIMESTAMPTZ,
+    ADD COLUMN IF NOT EXISTS business_verification_basis TEXT,
+    ADD COLUMN IF NOT EXISTS business_evidence_reference TEXT;
+
+ALTER TABLE public.shop_verification_submissions
+    DROP CONSTRAINT IF EXISTS shop_verification_submissions_business_type_check;
+ALTER TABLE public.shop_verification_submissions
+    ADD CONSTRAINT shop_verification_submissions_business_type_check
+    CHECK (business_type IN ('individual', 'sole_trader', 'registered', 'partnership'));
+
 CREATE TABLE IF NOT EXISTS public.shop_business_registry_checks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     submission_id UUID NOT NULL
@@ -794,10 +817,17 @@ CREATE TABLE IF NOT EXISTS public.shop_business_registry_checks (
     registry_checked BOOLEAN NOT NULL,
     registry_source TEXT,
     registry_reference TEXT,
+    verification_basis TEXT,
+    business_evidence_reference TEXT,
     representative_authorized BOOLEAN NOT NULL,
     review_note TEXT NOT NULL CHECK (char_length(btrim(review_note)) BETWEEN 3 AND 2000),
+    internal_note TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+ALTER TABLE public.shop_business_registry_checks
+    ADD COLUMN IF NOT EXISTS verification_basis TEXT,
+    ADD COLUMN IF NOT EXISTS business_evidence_reference TEXT,
+    ADD COLUMN IF NOT EXISTS internal_note TEXT;
 CREATE INDEX IF NOT EXISTS shop_business_registry_checks_submission_idx
     ON public.shop_business_registry_checks(submission_id, created_at DESC);
 ALTER TABLE public.shop_business_registry_checks ENABLE ROW LEVEL SECURITY;
@@ -890,6 +920,139 @@ BEGIN
             CASE WHEN p_registry_checked IS TRUE THEN v_reference ELSE NULL END,
             (p_representative_authorized IS TRUE),
             left(btrim(coalesce(p_note, 'Recorded the shop review decision.')), 2000)
+        );
+    END IF;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.admin_review_shop_verification_with_basis(
+    p_submission_id UUID,
+    p_decision TEXT,
+    p_seller_message TEXT,
+    p_internal_note TEXT,
+    p_verification_basis TEXT DEFAULT NULL,
+    p_registry_source TEXT DEFAULT NULL,
+    p_registry_reference TEXT DEFAULT NULL,
+    p_business_evidence_reference TEXT DEFAULT NULL,
+    p_representative_authorized BOOLEAN DEFAULT FALSE
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+    v_submission public.shop_verification_submissions%ROWTYPE;
+    v_country TEXT;
+    v_country_code TEXT;
+    v_expected_registry_source TEXT;
+    v_registry_source TEXT := nullif(left(btrim(coalesce(p_registry_source, '')), 80), '');
+    v_registry_reference TEXT := nullif(left(btrim(coalesce(p_registry_reference, '')), 200), '');
+    v_evidence_reference TEXT := nullif(left(btrim(coalesce(p_business_evidence_reference, '')), 500), '');
+    v_note TEXT := nullif(left(btrim(coalesce(p_seller_message, '')), 2000), '');
+    v_internal_note TEXT := nullif(left(btrim(coalesce(p_internal_note, '')), 2000), '');
+BEGIN
+    IF public.current_profile_role() IS DISTINCT FROM 'admin' OR auth.uid() IS NULL THEN
+        RAISE EXCEPTION 'Access denied' USING ERRCODE = '42501';
+    END IF;
+    IF p_decision NOT IN ('approve', 'request_resubmission', 'reject') THEN
+        RAISE EXCEPTION 'Unsupported shop verification decision' USING ERRCODE = '22023';
+    END IF;
+    IF v_note IS NULL OR length(v_note) < 3 THEN
+        RAISE EXCEPTION 'Add a clear message for the seller before saving this decision' USING ERRCODE = '22023';
+    END IF;
+    IF v_internal_note IS NULL OR length(v_internal_note) < 3 THEN
+        RAISE EXCEPTION 'Record what was checked in an internal review note' USING ERRCODE = '22023';
+    END IF;
+
+    SELECT submission.* INTO v_submission
+    FROM public.shop_verification_submissions AS submission
+    WHERE submission.id = p_submission_id
+    FOR UPDATE;
+    IF NOT FOUND OR v_submission.status <> 'pending' THEN
+        RAISE EXCEPTION 'Only pending shop verification cases can be reviewed'
+            USING ERRCODE = '23514';
+    END IF;
+
+    IF p_decision = 'approve' THEN
+        IF v_submission.business_type IN ('registered', 'partnership') THEN
+            IF p_verification_basis IS DISTINCT FROM 'registry'
+               OR v_registry_source IS NULL OR v_registry_reference IS NULL
+               OR p_representative_authorized IS NOT TRUE THEN
+                RAISE EXCEPTION 'Confirm the official registry record and representative authority before approval'
+                    USING ERRCODE = '22023';
+            END IF;
+            SELECT shop.country::TEXT INTO v_country
+            FROM public.shops AS shop
+            WHERE shop.id = v_submission.shop_id;
+            SELECT config.country_code, config.business_registry_source
+              INTO v_country_code, v_expected_registry_source
+            FROM public.seller_verification_country_config AS config
+            WHERE lower(config.country_name) = lower(btrim(coalesce(v_country, '')))
+               OR config.country_code = upper(btrim(coalesce(v_country, '')))
+            ORDER BY (config.country_code = upper(btrim(coalesce(v_country, '')))) DESC
+            LIMIT 1;
+            IF v_expected_registry_source IS NULL
+               OR v_registry_source <> v_expected_registry_source THEN
+                RAISE EXCEPTION 'The selected registry is not configured for this country'
+                    USING ERRCODE = '22023';
+            END IF;
+        ELSIF v_submission.business_type = 'sole_trader' THEN
+            IF p_verification_basis IS DISTINCT FROM 'sole_trader_manual'
+               OR v_evidence_reference IS NULL
+               OR p_representative_authorized IS NOT TRUE THEN
+                RAISE EXCEPTION 'Record the sole-trader evidence reviewed and confirm the applicant is the proprietor'
+                    USING ERRCODE = '22023';
+            END IF;
+        ELSE
+            IF p_verification_basis IS NOT NULL THEN
+                RAISE EXCEPTION 'Individual shop approval does not establish business verification'
+                    USING ERRCODE = '22023';
+            END IF;
+        END IF;
+    END IF;
+
+    PERFORM public.admin_review_shop_verification(p_submission_id, p_decision, v_note);
+
+    IF p_decision = 'approve' THEN
+        UPDATE public.shop_verification_submissions
+           SET registry_checked = (p_verification_basis = 'registry'),
+               registry_source = CASE WHEN p_verification_basis = 'registry' THEN v_registry_source ELSE NULL END,
+               registry_reference = CASE WHEN p_verification_basis = 'registry' THEN v_registry_reference ELSE NULL END,
+               business_verification_basis = p_verification_basis,
+               business_evidence_reference = CASE
+                   WHEN p_verification_basis = 'sole_trader_manual' THEN v_evidence_reference
+                   ELSE NULL
+               END,
+               representative_authorized = (
+                   p_verification_basis IN ('registry', 'sole_trader_manual')
+                   AND p_representative_authorized IS TRUE
+               ),
+               registry_checked_at = CASE
+                   WHEN p_verification_basis = 'registry' THEN now()
+                   ELSE NULL
+               END
+         WHERE id = p_submission_id;
+
+        INSERT INTO public.shop_business_registry_checks (
+            submission_id, shop_id, reviewer_user_id, registry_checked,
+            registry_source, registry_reference, verification_basis,
+            business_evidence_reference, representative_authorized, review_note
+            , internal_note
+        )
+        VALUES (
+            p_submission_id, v_submission.shop_id, auth.uid(),
+            (p_verification_basis = 'registry'),
+            CASE WHEN p_verification_basis = 'registry' THEN v_registry_source ELSE NULL END,
+            CASE WHEN p_verification_basis = 'registry' THEN v_registry_reference ELSE NULL END,
+            p_verification_basis,
+            CASE WHEN p_verification_basis = 'sole_trader_manual' THEN v_evidence_reference ELSE NULL END,
+            (
+                p_verification_basis IN ('registry', 'sole_trader_manual')
+                AND p_representative_authorized IS TRUE
+            ),
+            v_note,
+            v_internal_note
         );
     END IF;
 END;
@@ -1271,9 +1434,20 @@ AS $$
             FROM public.shop_verification_submissions AS business
             WHERE business.shop_id = owner.shop_id
               AND business.status = 'approved'
-              AND business.registry_checked IS TRUE
-              AND business.registry_source IS NOT NULL
-              AND business.registry_reference IS NOT NULL
+              AND business.business_verification_basis IN ('registry', 'sole_trader_manual')
+              AND (
+                  (
+                      business.business_verification_basis = 'registry'
+                      AND business.registry_checked IS TRUE
+                      AND business.registry_source IS NOT NULL
+                      AND business.registry_reference IS NOT NULL
+                  )
+                  OR (
+                      business.business_verification_basis = 'sole_trader_manual'
+                      AND business.business_type = 'sole_trader'
+                      AND business.business_evidence_reference IS NOT NULL
+                  )
+              )
               AND business.representative_authorized IS TRUE
         ),
         EXISTS (
@@ -1283,6 +1457,15 @@ AS $$
               AND inspection.status = 'approved'
               AND inspection.outcome = 'passed'
               AND inspection.inspected_at IS NOT NULL
+              AND EXISTS (
+                  SELECT 1
+                  FROM public.shops AS shop
+                  JOIN public.shop_physical_locations AS location
+                    ON location.shop_id = shop.id
+                  WHERE shop.id = inspection.shop_id
+                    AND shop.status = 'active'
+                    AND location.review_status = 'approved'
+              )
         )
     FROM shop_owner AS owner
     WHERE owner.user_id IS NOT NULL;
@@ -1303,6 +1486,9 @@ REVOKE ALL ON FUNCTION public.admin_review_seller_identity_case(UUID, TEXT, TEXT
     FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.admin_review_shop_verification_with_registry(
     UUID, TEXT, TEXT, BOOLEAN, TEXT, TEXT, BOOLEAN
+) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.admin_review_shop_verification_with_basis(
+    UUID, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, BOOLEAN
 ) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.shop_owner_request_physical_store_inspection(UUID)
     FROM PUBLIC, anon;
@@ -1331,6 +1517,9 @@ GRANT EXECUTE ON FUNCTION public.admin_review_seller_identity_case(UUID, TEXT, T
     TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_review_shop_verification_with_registry(
     UUID, TEXT, TEXT, BOOLEAN, TEXT, TEXT, BOOLEAN
+) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_review_shop_verification_with_basis(
+    UUID, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, BOOLEAN
 ) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.shop_owner_request_physical_store_inspection(UUID)
     TO authenticated;

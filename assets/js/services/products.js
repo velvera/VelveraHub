@@ -13,6 +13,55 @@ const ProductsService = {
         return options.area || window.RegionService?.area || null;
     },
 
+    async attachSellerVerificationBadges(products, supabase = window.SupabaseClient?.get()) {
+        const rows = Array.isArray(products) ? products : [products];
+        if (!rows.length || !supabase?.rpc) return products;
+        const shops = new Map();
+        rows.forEach((product) => {
+            const shop = product?.shops;
+            if (shop?.id) {
+                const shopId = String(shop.id);
+                if (!shops.has(shopId)) shops.set(shopId, []);
+                shops.get(shopId).push(shop);
+            }
+        });
+        const shopIds = [...shops.keys()].slice(0, 1000);
+        if (!shopIds.length) return products;
+
+        try {
+            const { data, error } = await supabase.rpc('get_public_seller_verification_badges', {
+                p_shop_ids: shopIds
+            });
+            if (error) throw error;
+            const badgesByShop = new Map((Array.isArray(data) ? data : []).map((item) => [
+                String(item.shop_id),
+                {
+                    contact_verified: item.contact_verified === true,
+                    identity_verified: item.identity_verified === true,
+                    business_verified: item.business_verified === true,
+                    physical_store_verified: item.physical_store_verified === true
+                }
+            ]));
+            shops.forEach((targets, shopId) => {
+                const badges = badgesByShop.get(shopId) || {
+                    contact_verified: false,
+                    identity_verified: false,
+                    business_verified: false,
+                    physical_store_verified: false
+                };
+                targets.forEach((shop) => { shop.verification_badges = badges; });
+            });
+        } catch (error) {
+            window.Observability?.reportError(
+                'seller-verification-badges',
+                `seller-verification-badges-${Date.now().toString(36)}`,
+                error,
+                { source: 'catalogue-service' }
+            );
+        }
+        return products;
+    },
+
     getProductImage(product, fallback = '/img/product-placeholder.svg') {
         const images = Array.isArray(product?.product_images) && product.product_images.length
             ? product.product_images
@@ -334,6 +383,7 @@ const ProductsService = {
                         ? available
                         : available.slice(options.offset || 0, (options.offset || 0) + (options.limit || available.length));
                     const formatted = paged.map(p => this.formatSupabaseProduct(p));
+                    await this.attachSellerVerificationBadges(formatted, supabase);
                     await this.resolvePrivateProductMedia(formatted);
                     this.rememberProducts(formatted);
                     return {
@@ -362,6 +412,7 @@ const ProductsService = {
         try {
             const data = await this.requestProducts(options);
             const formatted = (data.products || []).map(p => this.formatProduct(p));
+            await this.attachSellerVerificationBadges(formatted);
             await this.resolvePrivateProductMedia(formatted);
             this.rememberProducts(formatted);
             return {
@@ -424,6 +475,7 @@ const ProductsService = {
                 else liveLookupError = error;
                 if (!error && data) {
                     const formatted = this.formatSupabaseProduct(data);
+                    await this.attachSellerVerificationBadges([formatted], supabase);
                     await this.resolvePrivateProductMedia([formatted]);
                     if (!data.shop_id && data.seller_id) {
                         const { data: contact, error: contactError } = await supabase
@@ -478,6 +530,7 @@ const ProductsService = {
             if (!response.ok) throw new Error('Product not found');
             const data = await response.json();
             const formatted = this.formatProduct(data);
+            await this.attachSellerVerificationBadges([formatted]);
             await this.resolvePrivateProductMedia([formatted]);
             this.rememberProducts([formatted]);
             return { data: formatted, error: null };
@@ -494,7 +547,9 @@ const ProductsService = {
         try {
             const current = JSON.parse(sessionStorage.getItem('velverahub_product_cache') || '{}');
             products.filter(product => product?.id != null).forEach(product => {
-                current[String(product.id)] = product;
+                const cached = { ...product, shops: { ...(product.shops || {}) } };
+                delete cached.shops.verification_badges;
+                current[String(product.id)] = cached;
             });
             sessionStorage.setItem('velverahub_product_cache', JSON.stringify(current));
         } catch (_) {
@@ -504,7 +559,9 @@ const ProductsService = {
 
     recalledProduct(id) {
         try {
-            return JSON.parse(sessionStorage.getItem('velverahub_product_cache') || '{}')[String(id)] || null;
+            const cached = JSON.parse(sessionStorage.getItem('velverahub_product_cache') || '{}')[String(id)] || null;
+            if (cached?.shops) delete cached.shops.verification_badges;
+            return cached;
         } catch (_) {
             return null;
         }

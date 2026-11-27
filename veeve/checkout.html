@@ -834,12 +834,11 @@
                 const qty = item.quantity || 1;
                 const shop = Array.isArray(product.shops) ? product.shops[0] || {} : product.shops || {};
                 const shopName = shop.name || product.shop_name || product.seller_display_name || '';
-                const shopVerified = shop.verified === true || product.shop_verified === true;
                 const imageMarkup = window.responsiveImageMarkup
                     ? responsiveImageMarkup(product, { width: 96, height: 96, alt: title })
                     : `<img src="${escapeCheckoutHtml(imageUrl)}" alt="${escapeCheckoutHtml(title)}" width="96" height="96" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='/img/product-placeholder.svg';">`;
                 const sellerMeta = shopName
-                    ? `<span class="summary-item-seller">Sold by ${escapeCheckoutHtml(shopName)}${shopVerified ? ' <span class="summary-item-verified"><i class="fas fa-circle-check" aria-hidden="true"></i> Verified</span>' : ''}</span>`
+                    ? `<span class="summary-item-seller">Sold by ${escapeCheckoutHtml(shopName)}</span>`
                     : '';
                 return `
                 <div class="summary-item">

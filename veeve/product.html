@@ -91,6 +91,7 @@
     <script src="../assets/js/services/publicSupabaseConfig.js"></script>
     <script src="../assets/js/services/campuses.js"></script>
     <script src="../assets/js/services/supabaseClient.js"></script>
+    <script src="../assets/js/services/trust.js"></script>
     <script src="../assets/js/services/auth.js"></script>
     <script src="../assets/js/services/products.js"></script>
     <script src="../assets/js/services/observability.js"></script>
@@ -162,7 +163,7 @@
             const shop = product.shops || {};
             const sellerName = product.seller?.display_name || shop.name || 'Seller';
             const hasShop = Boolean(product.shop_id || shop.id);
-            const verifiedShop = hasShop && shop.verified === true;
+            const manualPaymentAllowed = hasShop && shop.verified === true;
             const publicContact = hasShop ? shop : (product.seller?.contact || {});
             const contactActions = [];
             const addContactAction = (href, label, icon) => {
@@ -230,13 +231,13 @@
                 return `${methods.length ? `<ul class="product-delivery-options">${methods.map(([, label]) => `<li><i class="fas fa-circle-check" aria-hidden="true"></i>${esc(label)}</li>`).join('')}</ul>` : ''}${notes ? `<p class="product-delivery-notes">${esc(notes)}</p>` : ''}<p class="product-delivery-disclaimer">Confirm the delivery area, fee, and timing with the seller before payment.</p>`;
             };
             const renderPaymentOptions = () => {
-                if (!verifiedShop) {
-                    return '<p class="product-delivery-empty">Discuss payment with the seller in chat. Manual prepayment is not available for unverified sellers.</p>';
+                if (!manualPaymentAllowed) {
+                    return '<p class="product-delivery-empty">Discuss payment with the seller in chat. This shop is not currently approved for manual prepayment.</p>';
                 }
                 if (shop.manual_payment_preference === 'seller_direct' && shop.manual_payment_method) {
                     return `<p><strong>Seller’s preferred method:</strong> ${esc(shop.manual_payment_method)}</p><p class="product-delivery-disclaimer">Message the seller to agree on payment and delivery before arranging anything.</p>`;
                 }
-                return '<p><strong>VelveraHub manual payment</strong> is selected by this verified shop. Message the seller to agree on delivery and confirm payment details before paying. Transfer instructions are shown after checkout when the admin account is configured for this market.</p>';
+                return '<p><strong>VelveraHub manual payment</strong> is enabled for this shop under the current marketplace policy. Message the seller to agree on delivery and confirm payment details before paying. Transfer instructions are shown after checkout when the admin account is configured for this market.</p>';
             };
             target.innerHTML = `
                 <nav class="product-breadcrumbs" aria-label="Breadcrumb"><a href="/pages/products.html">Catalogue</a><span>/</span><strong>${esc(product.title)}</strong></nav>
@@ -262,7 +263,7 @@
                     <section class="product-info-panel product-delivery-panel"><h2>Delivery options</h2>${renderDeliveryOptions(product.delivery_options, esc)}</section>
                     <section class="product-info-panel product-payment-panel"><h2>Payment options</h2>${renderPaymentOptions()}</section>
                     <section class="product-info-panel"><h2>Details and specifications</h2><dl class="product-spec-grid">${specs.map(([label, value]) => `<div><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl></section>
-                    <section class="product-info-panel seller-panel"><div class="seller-panel-avatar">${shop.logo_url ? `<img src="${esc(shop.logo_url)}" alt="${esc(sellerName)} logo">` : '<i class="fas fa-store" aria-hidden="true"></i>'}</div><div class="seller-panel-details"><h2>${esc(sellerName)} ${verifiedShop ? '<span class="verified-mark" title="Shop verification reviewed">✓</span>' : ''}</h2>${[shop.city, shop.country].filter(Boolean).length ? `<p>${esc([shop.city, shop.country].filter(Boolean).join(', '))}</p>` : ''}</div><a class="btn btn-secondary" href="/pages/products.html">View more</a></section>
+                    <section class="product-info-panel seller-panel"><div class="seller-panel-avatar">${shop.logo_url ? `<img src="${esc(shop.logo_url)}" alt="${esc(sellerName)} logo">` : '<i class="fas fa-store" aria-hidden="true"></i>'}</div><div class="seller-panel-details"><h2>${esc(sellerName)}</h2>${window.TrustService?.renderVerificationBadges(shop) || ''}${[shop.city, shop.country].filter(Boolean).length ? `<p>${esc([shop.city, shop.country].filter(Boolean).join(', '))}</p>` : ''}</div><a class="btn btn-secondary" href="/pages/products.html">View more</a></section>
                     <section class="product-info-panel product-chat-panel" id="productMessagePanel" aria-labelledby="productMessageHeading">
                         <div class="product-chat-heading"><div><h2 id="productMessageHeading">Message the seller</h2></div><span class="product-chat-privacy"><i class="fas fa-lock" aria-hidden="true"></i> Only you and the seller</span></div>
                         <p class="product-chat-intro">Ask a question about this listing or agree on payment and delivery. Your conversation stays connected to this product.</p>
@@ -280,7 +281,7 @@
                         </form>
                         <p class="product-chat-status" data-chat-status role="status" aria-live="polite"></p>
                     </section>
-                    <section class="product-info-panel seller-contact-panel"><h2>Contact the seller</h2>${contactActions.length ? `<div class="seller-contact-actions">${contactActions.join('')}</div>` : '<p class="seller-contact-empty">The seller has not shared public contact details.</p>'}<p class="seller-trust-note">${hasShop ? (verifiedShop ? 'Shop documents have been reviewed by VelveraHub. Verification does not guarantee a product, delivery, refund, or seller outcome.' : 'This shop has not completed VelveraHub verification yet.') : 'This seller has not been identity-verified by VelveraHub. Contact details are shared by the seller and do not represent an identity check.'}</p></section>
+                    <section class="product-info-panel seller-contact-panel"><h2>Contact the seller</h2>${contactActions.length ? `<div class="seller-contact-actions">${contactActions.join('')}</div>` : '<p class="seller-contact-empty">The seller has not shared public contact details.</p>'}<p class="seller-trust-note">${hasShop ? 'Only the verification badges shown above describe checks currently recorded for this seller.' : 'No seller verification records are available for this listing. Contact details are shared by the seller and do not represent an identity check.'}</p></section>
                     <section class="product-info-panel"><h2>Reviews</h2><p>Verified-purchase reviews are not available yet. VelveraHub does not display unverified ratings.</p></section>
                     <section class="product-info-panel product-safety-panel"><h2>Safety tips</h2><ul class="product-safety-tips"><li>Use only payment methods presented in the official checkout.</li><li>Confirm the delivery area, fees, and timing before placing an order.</li><li>Review the product condition and seller details before checkout.</li><li>Keep your order reference and relevant messages.</li><li>Never share passwords, one-time codes, or payment credentials with a seller.</li></ul></section>
                 </div>
