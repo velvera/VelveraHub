@@ -11,6 +11,12 @@ const logisticsVerification = read('database/admin-access-and-verification-harde
 const phoneVerification = read('database/phone-verification.sql');
 const adminScript = read('admin-workspace/admin.js');
 const adminHtml = read('admin-workspace/index.html');
+const roleManagementGuard = adminMigration
+    .split('CREATE OR REPLACE FUNCTION public.require_primary_admin_role_manager()')[1]
+    .split('CREATE OR REPLACE FUNCTION public.bootstrap_primary_admin_access')[0];
+const roleChangeFunction = adminMigration
+    .split('CREATE OR REPLACE FUNCTION public.admin_update_user_admin_role(')[1]
+    .split('CREATE OR REPLACE FUNCTION public.admin_list_admin_role_changes')[0];
 
 const accessWindow = {};
 vm.runInNewContext(accessService, { window: accessWindow });
@@ -76,10 +82,20 @@ assert.match(adminMigration, /profile\.user_id = p_target_user_id[\s\S]*?profile
 assert.match(adminMigration, /v_target_linked_user_id <> p_target_user_id[\s\S]*?resolve the mapping first/i,
     'a profile linked to another Auth user must not be reassigned');
 assert.match(adminMigration, /primary administrator access is required/i);
+assert.match(roleManagementGuard, /v_actor UUID := auth\.uid\(\)[\s\S]*?v_actor IS NULL[\s\S]*?current_profile_role\(\) IS DISTINCT FROM 'admin'[\s\S]*?primary_admin_user_id = v_actor/i,
+    'every role-management action must verify an authenticated admin who is the configured primary admin');
 assert.match(adminMigration, /the primary administrator cannot be removed/i);
 assert.match(adminMigration, /the last administrator cannot be removed/i);
 assert.match(adminMigration, /char_length\(btrim\(coalesce\(p_reason, ''\)\)\) NOT BETWEEN 5 AND 500/i);
 assert.match(adminMigration, /prevent_admin_role_audit_mutation[\s\S]*?BEFORE UPDATE OR DELETE/i);
+assert.match(roleChangeFunction, /pg_advisory_xact_lock/,
+    'concurrent admin-role changes must serialize before checking safeguards');
+assert.match(roleChangeFunction, /INSERT INTO public\.admin_role_assignments[\s\S]*?v_previous_role[\s\S]*?UPDATE public\.profiles[\s\S]*?SET role = 'admin'/i,
+    'granting admin access must preserve the account role for later restoration');
+assert.match(roleChangeFunction, /SELECT assignment\.previous_role[\s\S]*?UPDATE public\.profiles[\s\S]*?SET role = v_previous_role[\s\S]*?DELETE FROM public\.admin_role_assignments/i,
+    'revoking admin access must restore the previous seller/customer role and clear its assignment');
+assert.match(roleChangeFunction, /INSERT INTO public\.admin_role_management_audit/i,
+    'each successful role change must write an audit record');
 assert.match(adminMigration, /REVOKE ALL ON FUNCTION public\.bootstrap_primary_admin_access\(TEXT\)[\s\S]*?FROM PUBLIC, anon, authenticated[\s\S]*?GRANT EXECUTE[\s\S]*?TO service_role/i);
 assert.match(adminMigration, /Initial primary administrator bootstrap/);
 assert.match(adminMigration, /REVOKE ALL ON FUNCTION public\.admin_update_user_admin_role\(UUID, BOOLEAN, TEXT\)[\s\S]*?FROM PUBLIC, anon[\s\S]*?GRANT EXECUTE[\s\S]*?TO authenticated/i);
@@ -108,4 +124,4 @@ assert.match(logisticsVerification, /v_provider\.provider_type = 'independent_ri
 assert.match(logisticsVerification, /v_verification\.identity_document_type <> 'national_id'/);
 assert.match(logisticsVerification, /representative_selfie[\s\S]*?drivers_license/);
 
-console.log('Admin access checks passed: linked-profile lookup, fresh role reads, primary-only changes, audit controls, and account-specific manual verification.');
+console.log('Admin access checks passed: profile linking, fresh role reads, primary-only grants and revocations, role restoration, audit controls, and account-specific manual verification.');
