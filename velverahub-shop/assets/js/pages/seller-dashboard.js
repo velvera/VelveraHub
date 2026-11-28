@@ -23,6 +23,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         window.VelveraHubDomains?.publicUrl && document.querySelectorAll('a[href="/"]').forEach((link) => {
             link.href = window.VelveraHubDomains.publicUrl('/');
         });
+        document.querySelectorAll('[data-marketplace-link]').forEach((link) => {
+            const path = link.dataset.marketplaceLink;
+            link.href = window.VelveraHubDomains?.publicUrl?.(path) || path;
+        });
         initSidebar();
         initModals();
         if (window.supabaseConfigReady) await withSellerBootTimeout(window.supabaseConfigReady, 'catalogue configuration');
@@ -32,7 +36,6 @@ document.addEventListener('DOMContentLoaded', async function() {
             return;
         }
         const context = await getSupabaseSellerContext();
-        void window.SellerVerification?.mountSellerPanel(context);
         updateSellerAvatar(context?.shop?.logo_url);
         updateShopNavigation(context);
         document.getElementById('userRoleLabel')?.replaceChildren(
@@ -337,6 +340,7 @@ async function renderShopPortalState(context) {
     const verificationPanel = document.getElementById('shopVerificationPanel');
     const verificationForm = document.getElementById('shopVerificationForm');
     if (!panel || !form || !settings) return;
+    void window.SellerVerification?.mountSellerPanel(context);
 
     panel.hidden = false;
     settings.classList.add('hidden');

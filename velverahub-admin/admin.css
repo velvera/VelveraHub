@@ -299,6 +299,157 @@ h3 {
     color: var(--brand-dark);
 }
 
+.admin-role-search {
+    display: grid;
+    gap: 8px;
+    width: min(100%, 680px);
+    margin: 0 0 18px;
+}
+
+.admin-role-search > label {
+    color: #334155;
+    font-size: .84rem;
+    font-weight: 600;
+}
+
+.admin-role-search-row {
+    display: flex;
+    gap: 10px;
+}
+
+.admin-role-search-row input,
+.admin-role-user textarea {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: 10px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    background: #fff;
+    color: var(--ink);
+}
+
+.admin-role-search-row input:focus,
+.admin-role-user textarea:focus {
+    border-color: var(--brand);
+    outline: 3px solid rgb(100 64 224 / 16%);
+}
+
+.admin-role-search-summary {
+    color: var(--muted);
+    font-size: .85rem;
+}
+
+.admin-role-results,
+.admin-role-audit-list {
+    display: grid;
+    gap: 12px;
+}
+
+.admin-role-user,
+.admin-role-audit-entry {
+    min-width: 0;
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface);
+}
+
+.admin-role-user-heading,
+.admin-role-audit-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.admin-role-user-heading h3,
+.admin-role-audit-heading strong {
+    margin: 0 0 4px;
+    overflow-wrap: anywhere;
+}
+
+.admin-role-user-heading p,
+.admin-role-audit-entry p {
+    margin: 0;
+    color: var(--muted);
+    overflow-wrap: anywhere;
+}
+
+.admin-role-pill {
+    flex: 0 0 auto;
+    padding: 5px 9px;
+    border-radius: 999px;
+    background: #f0edff;
+    color: var(--brand-dark);
+    font-size: .75rem;
+    font-weight: 700;
+    text-transform: capitalize;
+}
+
+.admin-role-user form {
+    display: grid;
+    gap: 8px;
+}
+
+.admin-role-user label {
+    color: #334155;
+    font-size: .82rem;
+    font-weight: 600;
+}
+
+.admin-role-user textarea {
+    min-height: 78px;
+    resize: vertical;
+}
+
+.admin-role-user .review-action-buttons {
+    justify-content: flex-start;
+}
+
+.admin-role-audit {
+    margin-top: 28px;
+}
+
+.admin-role-audit .queue-toolbar {
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.admin-role-audit .queue-toolbar h2 {
+    margin-bottom: 4px;
+}
+
+.admin-role-audit .queue-toolbar p {
+    margin: 0;
+    color: var(--muted);
+    font-size: .84rem;
+}
+
+.admin-role-audit-entry {
+    display: grid;
+    gap: 6px;
+}
+
+.admin-role-audit-entry time {
+    color: var(--muted);
+    font-size: .8rem;
+}
+
+@media (max-width: 560px) {
+    .admin-role-search-row,
+    .admin-role-user-heading,
+    .admin-role-audit .queue-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .admin-role-search-row .admin-secondary-button {
+        width: 100%;
+    }
+}
+
 .deletion-review-note {
     display: grid;
     gap: 4px;

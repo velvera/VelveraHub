@@ -32,14 +32,44 @@ the authenticated behavior tests.
 3. Apply migration 15 only after that check, then run the media acceptance
    cases below. The general Free-plan limit is not verification of this
    project's settings.
-4. Apply `database/account-deletion.sql` only if the target is a legacy schema
+4. Apply migrations 16–25 in order, including
+   `database/admin-access-and-verification-hardening.sql` as migration 25.
+   Record each migration result; do not assume local files or test-project
+   configuration prove it was applied.
+5. Apply `database/account-deletion.sql` only if the target is a legacy schema
    that lacks the request-queue objects. It is not an additional migration for
    a fresh/current schema.
-5. Run `database/safety-verification.sql` after migrations. It is read-only and
+6. Run `database/safety-verification.sql` after migrations. It is read-only and
    checks the effective schema, access grants, triggers, RPCs, and selected
    invariants. Save sanitized output. A passing metadata check does not prove
    the behavior of a signed-in browser role.
-6. Stop and investigate any `passed = false` result before running write tests.
+7. Stop and investigate any `passed = false` result before running write tests.
+
+## Primary administrator and manual identity review
+
+Use a dedicated, already-authorized administrator account. After migration 25,
+designate the first primary administrator once from a trusted SQL Editor session
+using the operator-only procedure in `docs/operator-runbook.md`. Then verify:
+
+| Case | Action | Expected result |
+| --- | --- | --- |
+| Unauthenticated visitor | Open the admin route | Sign-in screen only |
+| Ordinary account | Sign in without an admin role | Access denied; no admin data or role controls |
+| Admin, not primary | Sign in with an admin role | Normal admin tools work; role-management tab is hidden |
+| Primary admin | Open Admin access | Account search and recent access audit load |
+| Legacy profile link | Search a test account whose profile is unlinked but email matches | Account resolves by email without reassigning a conflicting Auth link |
+| Grant and revoke | Apply a reason between 5 and 500 characters; grant, then revoke a disposable account | Server-authorized change is reflected after refresh and appears in immutable audit history |
+| Protected account | Attempt to remove the primary administrator | Rejected |
+| Required reason | Submit a blank or too-short reason | Rejected before an access change |
+
+For manual identity review, use distinct disposable buyer, individual seller,
+registered business, logistics company, and independent rider accounts. Confirm
+buyers do not need identity documents; seller and business decisions stay
+manual; the logistics-company representative and business evidence are
+required; Nigerian riders provide NIN and selfie; private files are not
+publicly readable; and public seller badges expose only approved status
+booleans. Use a fresh session after role changes. Do not upload real identity
+documents or apply these write tests to production.
 
 ## Admin-controlled media settings
 
@@ -127,12 +157,12 @@ secret or card number in a staging run.
 
 ## Current evidence boundary
 
-As of 21 November 2026, this workspace still does not have a dedicated Supabase
-staging project or disposable test accounts. No staging migrations,
+As of 28 November 2026, the app is configured to a Supabase test project, not a
+production project. This work did not apply migrations to that database or run
 authenticated acceptance tests, real Storage uploads, or payment-confirmation
-checks have been run. Migration 15 and the admin controls are implemented
-locally but have not been verified in production. Local tests and preview checks
-are repository evidence only.
+checks. The local admin access controls and migration 25 have not been verified
+against a live signed-in Supabase session. Local tests and preview checks are
+repository evidence only.
 
 Historical production evidence from 29–30 October 2026: the manual-payment
 schema was applied on 29 October; read-only checks confirmed its tables, RLS,

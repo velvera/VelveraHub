@@ -1,0 +1,90 @@
+.logistics-page {
+    --logistics-ink: #171717;
+    --logistics-muted: #686772;
+    --logistics-border: #e6e5ea;
+    --logistics-accent: #6440e0;
+    width: min(1160px, calc(100% - 2rem));
+    margin: 1.5rem auto 5rem;
+    color: var(--logistics-ink);
+}
+.logistics-page * { box-sizing: border-box; }
+.logistics-hero, .logistics-card {
+    border: 1px solid var(--logistics-border);
+    border-radius: 1rem;
+    background: #fff;
+    box-shadow: 0 8px 24px rgba(23, 21, 29, .045);
+}
+.logistics-hero { padding: clamp(1.25rem, 4vw, 2.5rem); margin-bottom: 1.25rem; }
+.logistics-eyebrow { color: var(--logistics-accent); font-size: .76rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.logistics-hero h1 { margin: .45rem 0; font-size: clamp(1.8rem, 5vw, 2.8rem); line-height: 1.12; }
+.logistics-hero p, .logistics-card p { color: var(--logistics-muted); line-height: 1.6; }
+.logistics-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.1rem; }
+.logistics-card { min-width: 0; padding: clamp(1rem, 2vw, 1.4rem); overflow: visible; }
+.logistics-card--wide { grid-column: 1 / -1; }
+.logistics-card h2 { margin: 0 0 .35rem; font-size: 1.16rem; }
+.logistics-card h3 { font-size: 1rem; }
+.logistics-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem 1rem; }
+.logistics-field { display: grid; gap: .35rem; margin: .65rem 0; }
+.logistics-field--wide { grid-column: 1 / -1; }
+.logistics-field label { font-size: .84rem; font-weight: 700; }
+.logistics-field input, .logistics-field select, .logistics-field textarea,
+.logistics-search input, .logistics-search select {
+    width: 100%; min-width: 0; min-height: 46px; padding: .65rem .75rem;
+    border: 1px solid #d9d7e0; border-radius: .65rem; background: #fff;
+    color: var(--logistics-ink); font: inherit; font-size: 16px;
+}
+.logistics-field textarea { min-height: 88px; resize: vertical; }
+.logistics-field input:focus-visible, .logistics-field select:focus-visible,
+.logistics-field textarea:focus-visible, .logistics-search input:focus-visible,
+.logistics-search select:focus-visible, .logistics-button:focus-visible {
+    outline: 3px solid rgb(100 64 224 / 28%);
+    outline-offset: 2px;
+    border-color: var(--logistics-accent);
+}
+.logistics-field :user-invalid { border-color: #b42318; }
+.logistics-help { color: var(--logistics-muted); font-size: .8rem; line-height: 1.5; }
+.logistics-actions { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; margin-top: .8rem; }
+.logistics-button {
+    min-height: 44px; border: 0; border-radius: .7rem; padding: .7rem 1rem; background: #6440e0;
+    color: #fff; font: inherit; font-weight: 700; cursor: pointer;
+}
+.logistics-button:hover { background: #5331c4; }
+.logistics-button:disabled { cursor: wait; opacity: .58; }
+.logistics-button--secondary { border: 1px solid #d9d7e0; background: #f7f6fa; color: var(--logistics-ink); }
+.logistics-button--secondary:hover { background: #efedf5; }
+.logistics-button--danger { background: #a33236; }
+.logistics-notice { margin-top: .75rem; color: var(--logistics-muted); font-size: .88rem; }
+.logistics-notice[role="alert"] { color: #a33236; }
+.logistics-map { height: clamp(260px, 38vw, 380px); border: 1px solid var(--logistics-border); border-radius: .75rem; overflow: hidden; background: #f3f2f6; }
+.logistics-map--large { height: 380px; }
+.logistics-results { display: grid; gap: .65rem; margin-top: .8rem; }
+.logistics-result { padding: .9rem; border: 1px solid var(--logistics-border); border-radius: .75rem; background: #fbfdff; }
+.logistics-result header { display: flex; justify-content: space-between; gap: .8rem; align-items: flex-start; }
+.logistics-result strong { overflow-wrap: anywhere; }
+.logistics-result p { margin: .35rem 0; font-size: .88rem; }
+.logistics-badge { display: inline-flex; padding: .25rem .55rem; border-radius: 99px; background: #eeebf8; color: #5331c4; font-size: .74rem; font-weight: 750; }
+.logistics-checkline { display: flex; align-items: flex-start; gap: .55rem; margin: .75rem 0; color: var(--logistics-ink); font-size: .88rem; }
+.logistics-checkline input { margin-top: .22rem; }
+.logistics-search { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: .55rem; margin: .8rem 0; }
+.logistics-map-attribution { margin: .4rem 0; color: var(--logistics-muted); font-size: .75rem; }
+.logistics-hidden { display: none !important; }
+.logistics-status { min-height: 1.35rem; margin: .6rem 0 0; font-size: .86rem; }
+.logistics-status.is-error { color: #a33236; }
+.logistics-status.is-success { color: #137347; }
+.logistics-directions { font-weight: 700; color: #5331c4; }
+@media (max-width: 720px) {
+    .logistics-page { width: min(100% - 1rem, 1120px); margin: 1rem auto 5rem; }
+    .logistics-grid, .logistics-form-grid { grid-template-columns: 1fr; }
+    .logistics-card--wide, .logistics-field--wide { grid-column: auto; }
+    .logistics-search { grid-template-columns: minmax(0, 1fr); }
+    .logistics-search input { grid-column: auto; }
+    .logistics-map--large { height: 300px; }
+    .logistics-actions .logistics-button { flex: 1 1 12rem; }
+}
+@media (max-width: 420px) {
+    .logistics-page { width: calc(100% - 1rem); }
+    .logistics-hero { padding: 1rem; }
+    .logistics-card { padding: .9rem; }
+    .logistics-result header { flex-direction: column; }
+    .logistics-actions .logistics-button { flex-basis: 100%; }
+}

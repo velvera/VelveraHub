@@ -588,6 +588,7 @@
                             <select id="deliveryServiceType" aria-label="Delivery service type">
                                 <option value="standard">Standard delivery</option>
                                 <option value="same_day">Same-day delivery</option>
+                                <option value="next_day">Next-day delivery</option>
                                 <option value="express">Express delivery</option>
                                 <option value="scheduled">Scheduled delivery</option>
                             </select>
@@ -837,8 +838,11 @@
                 const imageMarkup = window.responsiveImageMarkup
                     ? responsiveImageMarkup(product, { width: 96, height: 96, alt: title })
                     : `<img src="${escapeCheckoutHtml(imageUrl)}" alt="${escapeCheckoutHtml(title)}" width="96" height="96" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='/img/product-placeholder.svg';">`;
+                const verifiedBadge = shop.verified === true
+                    ? '<span class="summary-item-verified" aria-label="Verified seller"><i class="fas fa-circle-check" aria-hidden="true"></i> Verified</span>'
+                    : '';
                 const sellerMeta = shopName
-                    ? `<span class="summary-item-seller">Sold by ${escapeCheckoutHtml(shopName)}</span>`
+                    ? `<span class="summary-item-seller">Sold by ${escapeCheckoutHtml(shopName)} ${verifiedBadge}</span>`
                     : '';
                 return `
                 <div class="summary-item">

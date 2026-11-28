@@ -2956,16 +2956,8 @@ body::-webkit-scrollbar-thumb,
     }
 }
 
-/* Seller revenue and analytics remain neutral, with restrained violet accents. */
-.stat-card.seller-revenue-stat {
-    min-width: 0;
-    background: #fff !important;
-    color: #171717;
-    border: 1px solid #e6e5ea;
-    border-inline-start: 4px solid #6440e0;
-    box-shadow: none;
-}
-
+/* Seller revenue and analytics stay neutral and readable at every viewport. */
+.stat-card.seller-revenue-stat { min-width: 0; background: #fff !important; color: #171717; border: 1px solid #e6e5ea; border-inline-start: 4px solid #6440e0; box-shadow: none; }
 .seller-revenue-stat .stat-icon,
 .seller-analytics-metric__icon { background: #f2efff; color: #6440e0; }
 .seller-revenue-stat .stat-info,

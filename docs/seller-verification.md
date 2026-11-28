@@ -24,7 +24,11 @@ authorized admin reviews each case; an upload never marks a seller verified.
    Hosted Supabase provides the project URL, anon key, and service-role key to
    the function runtime. If deploying elsewhere, configure them only as
    server-side function secrets.
-5. In a dedicated non-production Supabase project, verify seller submission,
+5. Apply `database/admin-access-and-verification-hardening.sql` (migration 25)
+   after migrations 1–24 when enabling administrator role management or the
+   account-specific logistics-provider document workflow. It does not promote
+   the primary administrator; follow `docs/operator-runbook.md`.
+6. In a dedicated non-production Supabase project, verify seller submission,
    private upload, admin review, and public badges with disposable accounts
    before enabling the feature for real sellers.
 
@@ -32,14 +36,32 @@ Run the local checks with:
 
 ```sh
 npm run test:seller-verification
+npm run test:admin-access
+npm run test:supabase-readiness
 npm run apps:check
 ```
+
+## Account-specific checks
+
+- Buyers keep email and phone verification separate from identity KYC; no
+  identity document is required to buy.
+- Individual sellers submit identity evidence through the manual seller review
+  flow. Business sellers also need separately reviewed registry or proprietor
+  evidence before a business badge is returned.
+- Logistics companies submit representative identity and business evidence.
+  Independent riders submit identity and a selfie; Nigerian riders must use
+  NIN, while a driver’s licence is an additional document when applicable.
+- All document buckets remain private. Public badge RPCs return booleans only,
+  and phone verification alone cannot produce an identity or business badge.
 
 ## Current operational boundaries
 
 - Identity checks are **manual review only**. No Smile ID or UK KYC provider is
   integrated, and no submitted document or provider response is treated as an
   automatic approval.
+- Case submission, status, review decisions, and history stay separate from
+  provider integration. A future adapter should feed the existing case flow;
+  provider results must not grant public badges or approval on their own.
 - Business registry evidence is reviewed by an administrator. CAC and
   Companies House checks are not live registry integrations.
 - The existing phone OTP provider covers Nigeria only. UK phone verification

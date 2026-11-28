@@ -913,12 +913,12 @@
         for (const name of ['registry_source', 'registry_reference', 'business_evidence_reference', 'representative_authorized']) {
             if (form.elements[name]) form.elements[name].required = decision === 'approve';
         }
-        if (!form.reportValidity()) return;
         if (note.length < 3 || internalNote.length < 3) {
             error.textContent = 'Add a clear seller message and an internal review note.';
             error.hidden = false;
             return;
         }
+        if (!form.reportValidity()) return;
         if (decision === 'approve' && !window.confirm(`Approve ${application.shop_name} and enable its shop listings?`)) {
             return;
         }

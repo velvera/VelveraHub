@@ -145,10 +145,10 @@
                     if (!document.hidden) loadMessages().catch(() => {});
                 });
                 setStatus(status, conversationId
-                    ? 'This is your private conversation about this listing.'
-                    : 'Your message will open a private conversation with the seller.');
+                    ? 'This is a conversation about this listing.'
+                    : 'Your message will be sent to the seller.');
             } else {
-                setStatus(status, 'Sign in to send a private message. Your contact options remain available below.');
+                setStatus(status, 'Sign in to message the seller. Contact options remain available below.');
             }
         } catch (error) {
             setStatus(status, window.AsyncFeedback?.errorMessage(

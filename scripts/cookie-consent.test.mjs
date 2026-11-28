@@ -9,7 +9,8 @@ const legalPage = read('veeve/legal.html');
 const homePage = read('index.html');
 const intelligence = read('assets/js/services/marketplace-intelligence.js');
 
-assert.match(cookieStyles, /background:\s*linear-gradient\(112deg,\s*#57158f 0%,\s*#6520c3 52%,\s*#7c35ee 100%\)/);
+assert.match(cookieStyles, /\.cookie-consent-banner\s*\{[\s\S]*?color:\s*#171717;[\s\S]*?background:\s*#fff;/);
+assert.match(cookieStyles, /\.cookie-consent-actions button\[data-cookie-choice="granted"\]\s*\{[\s\S]*?background:\s*#6440e0;/);
 assert.match(cookieStyles, /padding:\s*0\.9rem 1\.15rem/);
 assert.match(cookieStyles, /@media \(max-width: 360px\)/);
 assert.match(cookieScript, /We use essential storage to keep VelveraHub working\. Optional analytics and browsing-based recommendations are off unless you accept\./);

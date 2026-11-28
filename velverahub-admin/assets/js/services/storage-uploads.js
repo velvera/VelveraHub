@@ -155,8 +155,20 @@
         });
     }
 
-    function resumableUpload(projectUrl, anonKey, token, bucket, path, file, options, setTusUpload, onProgress, isCancelled) {
+    function resumableUpload(projectUrl, anonKey, token, bucket, path, file, options, setCancelUpload, onProgress, isCancelled) {
         return loadTusClient().then((tus) => new Promise((resolve, reject) => {
+            let settled = false;
+            let cancellation = null;
+            const rejectOnce = (error) => {
+                if (settled) return;
+                settled = true;
+                reject(error);
+            };
+            const resolveOnce = (result) => {
+                if (settled) return;
+                settled = true;
+                resolve(result);
+            };
             const upload = new tus.Upload(file, {
                 endpoint: tusEndpoint(projectUrl),
                 retryDelays: [0, 3000, 5000, 10000, 20000],
@@ -173,22 +185,45 @@
                     contentType: options.contentType || file.type || 'application/octet-stream',
                     cacheControl: options.cacheControl || '3600'
                 },
-                onError: (error) => reject(isCancelled() ? abortError() : error),
+                onError: (error) => {
+                    if (isCancelled()) {
+                        cancelUpload();
+                        return;
+                    }
+                    rejectOnce(error);
+                },
                 onProgress: (uploaded, total) => {
                     if (typeof onProgress === 'function' && total > 0) {
                         onProgress(Math.min(99, Math.round((uploaded / total) * 100)));
                     }
                 },
                 onSuccess: () => {
+                    if (isCancelled()) {
+                        cancelUpload();
+                        return;
+                    }
                     if (typeof onProgress === 'function') onProgress(100);
-                    resolve({ data: { path, uploadUrl: upload.url }, error: null });
+                    resolveOnce({ data: { path, uploadUrl: upload.url }, error: null });
                 }
             });
-            setTusUpload(upload);
+            function cancelUpload() {
+                if (cancellation) return cancellation;
+                cancellation = Promise.resolve()
+                    .then(() => upload.abort(true))
+                    .catch((error) => {
+                        try {
+                            options.onCancelCleanupError?.(error);
+                        } catch (_) {
+                            // A cleanup-reporting callback must not block cancellation.
+                        }
+                    })
+                    .then(() => rejectOnce(abortError()));
+                return cancellation;
+            }
+            setCancelUpload(cancelUpload);
             upload.findPreviousUploads().then((previous) => {
                 if (isCancelled()) {
-                    upload.abort(true).catch(() => {});
-                    reject(abortError());
+                    cancelUpload();
                     return;
                 }
                 const match = previous.find((item) =>
@@ -196,13 +231,13 @@
                 );
                 if (match) upload.resumeFromPreviousUpload(match);
                 upload.start();
-            }).catch(reject);
+            }).catch(rejectOnce);
         }));
     }
 
     function upload(supabase, bucket, path, file, options = {}) {
         let xhr = null;
-        let tusUpload = null;
+        let cancelTusUpload = null;
         let cancelled = false;
 
         const promise = (async () => {
@@ -223,7 +258,7 @@
                     path,
                     file,
                     options,
-                    (activeUpload) => { tusUpload = activeUpload; },
+                    (cancelUpload) => { cancelTusUpload = cancelUpload; },
                     onProgress,
                     () => cancelled
                 );
@@ -244,10 +279,11 @@
         return {
             promise,
             cancel() {
-                if (cancelled) return;
+                if (cancelled) return cancelTusUpload?.() || Promise.resolve();
                 cancelled = true;
-                if (tusUpload) tusUpload.abort(true).catch(() => {});
+                if (cancelTusUpload) return cancelTusUpload();
                 if (xhr && xhr.readyState !== XMLHttpRequest.DONE) xhr.abort();
+                return Promise.resolve();
             }
         };
     }

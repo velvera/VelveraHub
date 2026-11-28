@@ -64,6 +64,7 @@ assert.match(success, /get_order_manual_payment_details/);
 assert.match(success, /line\.append\(title, document\.createTextNode\(String\(value\)\)\)/);
 assert.match(success, /orders remain pending|order is pending/i);
 assert.match(docs, /remain `pending` until confirmed/);
-assert.match(staging, /does not have a dedicated Supabase\s+staging project or disposable test accounts/);
+assert.match(staging, /configured to a Supabase test project, not a\s+production project/);
+assert.match(staging, /This work did not apply migrations to that database/);
 
 console.log('Manual-payment safety/source checks passed.');

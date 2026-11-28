@@ -81,6 +81,7 @@ assert.match(adminMigration, /the last administrator cannot be removed/i);
 assert.match(adminMigration, /char_length\(btrim\(coalesce\(p_reason, ''\)\)\) NOT BETWEEN 5 AND 500/i);
 assert.match(adminMigration, /prevent_admin_role_audit_mutation[\s\S]*?BEFORE UPDATE OR DELETE/i);
 assert.match(adminMigration, /REVOKE ALL ON FUNCTION public\.bootstrap_primary_admin_access\(TEXT\)[\s\S]*?FROM PUBLIC, anon, authenticated[\s\S]*?GRANT EXECUTE[\s\S]*?TO service_role/i);
+assert.match(adminMigration, /Initial primary administrator bootstrap/);
 assert.match(adminMigration, /REVOKE ALL ON FUNCTION public\.admin_update_user_admin_role\(UUID, BOOLEAN, TEXT\)[\s\S]*?FROM PUBLIC, anon[\s\S]*?GRANT EXECUTE[\s\S]*?TO authenticated/i);
 assert.match(adminPromotion, /GRANT EXECUTE ON FUNCTION public\.assign_admin_role\(text\) TO service_role/i);
 

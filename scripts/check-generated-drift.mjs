@@ -22,6 +22,7 @@ const sharedFiles = [
     'assets/js/components/site-navigation.js',
     'assets/js/components/ui.js',
     'assets/js/services/domain-routing.js',
+    'assets/js/services/admin-access.js',
     'assets/js/services/products.js',
     'assets/js/services/region.js',
     'assets/js/services/publicSupabaseConfig.js',

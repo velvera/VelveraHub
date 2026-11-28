@@ -15,7 +15,6 @@
     <link href="../assets/css/components/navbar.css" rel="stylesheet">
     <link href="../assets/css/components/custom-select.css" rel="stylesheet">
     <link href="../assets/css/components/legal.css" rel="stylesheet">
-    <link href="../assets/css/components/logistics.css" rel="stylesheet">
     <style>
         .checkout-container {
             max-width: 1200px;
@@ -478,9 +477,9 @@
         }
     </style>
 <link href="../assets/css/components/footer.css" rel="stylesheet">
+<link href="../assets/css/components/checkout-responsive.css" rel="stylesheet">
     <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
     <link rel="manifest" href="../manifest.webmanifest">
-    <link href="../assets/css/components/checkout-responsive.css" rel="stylesheet">
 </head>
 <body class="checkout-page" data-header-search="false">
     <nav class="navbar" id="navbar">
@@ -549,18 +548,6 @@
                     </div>
                 </div>
                 
-                <div class="form-section logistics-page" id="deliveryProviderPicker">
-                    <h2 class="form-section-title"><i class="fas fa-truck-fast"></i> Choose a delivery provider</h2>
-                    <p class="logistics-help">Optional. Compare approved providers currently available for both this shop and your delivery address. Provider requests are checked again when the order is placed.</p>
-                    <div class="logistics-form-grid">
-                        <div class="logistics-field"><label for="deliveryServiceType">Delivery service</label><select id="deliveryServiceType"><option value="same_day">Same day</option><option value="next_day">Next day</option><option value="scheduled">Scheduled</option><option value="standard">Standard</option></select></div>
-                    </div>
-                    <div class="logistics-actions"><button class="logistics-button logistics-button--secondary" type="button" id="findDeliveryProviders">Find available providers</button></div>
-                    <div class="logistics-results" id="deliveryProviderMatches" aria-live="polite"></div>
-                    <p class="logistics-help" id="deliveryProviderQuote" aria-live="polite"></p>
-                    <p class="logistics-status" id="deliveryProviderStatus" role="status" aria-live="polite"></p>
-                </div>
-
                 <div class="form-section">
                     <h2 class="form-section-title"><i class="fas fa-map-marker-alt"></i> Shipping Address</h2>
                     <div class="form-group">
@@ -596,6 +583,23 @@
                             </select>
                         </div>
                     </div>
+                    <section class="logistics-card" aria-labelledby="deliveryProviderHeading" id="deliveryProviderPicker">
+                        <h2 id="deliveryProviderHeading"><i class="fas fa-truck-fast"></i> Choose a delivery provider</h2>
+                        <p class="payment-disclaimer">This is an optional, separate delivery request. Only currently available, approved providers covering both the shop and your destination are shown. For multi-shop carts, arrange delivery with each seller.</p>
+                        <div class="logistics-search">
+                            <select id="deliveryServiceType" aria-label="Delivery service type">
+                                <option value="standard">Standard delivery</option>
+                                <option value="same_day">Same-day delivery</option>
+                                <option value="next_day">Next-day delivery</option>
+                                <option value="express">Express delivery</option>
+                                <option value="scheduled">Scheduled delivery</option>
+                            </select>
+                            <button class="logistics-button logistics-button--secondary" id="findDeliveryProviders" type="button">Find available providers</button>
+                        </div>
+                        <div class="logistics-results" id="deliveryProviderMatches" aria-live="polite"></div>
+                        <p class="logistics-help" id="deliveryProviderQuote" aria-live="polite"></p>
+                        <p class="logistics-status" id="deliveryProviderStatus" role="status" aria-live="polite"></p>
+                    </section>
                 </div>
                 
                 <div class="form-section">
@@ -681,6 +685,7 @@
     <script src="../assets/js/services/logistics.js"></script>
     <script src="../assets/js/pages/checkout-logistics.js"></script>
     <link href="../assets/css/components/smart-features.css" rel="stylesheet">
+    <link href="../assets/css/components/logistics.css" rel="stylesheet">
     <style>
         .payment-disclaimer {
             margin: 1rem 0 0;
@@ -835,8 +840,11 @@
                 const imageMarkup = window.responsiveImageMarkup
                     ? responsiveImageMarkup(product, { width: 96, height: 96, alt: title })
                     : `<img src="${escapeCheckoutHtml(imageUrl)}" alt="${escapeCheckoutHtml(title)}" width="96" height="96" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='/img/product-placeholder.svg';">`;
+                const verifiedBadge = shop.verified === true
+                    ? '<span class="summary-item-verified" aria-label="Verified seller"><i class="fas fa-circle-check" aria-hidden="true"></i> Verified</span>'
+                    : '';
                 const sellerMeta = shopName
-                    ? `<span class="summary-item-seller">Sold by ${escapeCheckoutHtml(shopName)}</span>`
+                    ? `<span class="summary-item-seller">Sold by ${escapeCheckoutHtml(shopName)} ${verifiedBadge}</span>`
                     : '';
                 return `
                 <div class="summary-item">
@@ -1116,7 +1124,7 @@
                     if (!preflight.cart.length) {
                         renderCheckoutCorrections(preflight.corrections);
                         setCheckoutButton('Return to cart');
-                        btn.onclick = () => window.location.assign('/veeve/cart.html');
+                        btn.onclick = () => window.location.assign('/pages/cart.html');
                         return;
                     }
                     if (preflight.corrections.length && !checkoutUpdatesAccepted) {
@@ -1195,15 +1203,19 @@
                         throw new Error('Order confirmation was incomplete. Please retry.');
                     }
 
-                    let deliveryRequestState = 'not-requested';
+                    let deliveryRequestState = null;
                     if (window.CheckoutLogistics?.hasSelection()) {
-                        deliveryRequestState = 'request-failed';
-                        if (/^[0-9a-f-]{36}$/i.test(String(orderId || ''))) {
+                        if (!/^[0-9a-f-]{36}$/i.test(String(orderId || ''))) {
+                            deliveryRequestState = 'request-failed';
+                        } else {
                             try {
                                 const deliveryRequest = await window.CheckoutLogistics.requestProvider(orderId);
                                 deliveryRequestState = deliveryRequest?.requested ? 'requested' : 'request-failed';
                             } catch (deliveryError) {
-                                AsyncFeedback.log('checkout-delivery-request', AsyncFeedback.createRequestId('delivery-request'), deliveryError);
+                                deliveryRequestState = 'request-failed';
+                                AsyncFeedback.log('checkout-provider-request', AsyncFeedback.createRequestId('delivery-request'), deliveryError, {
+                                    order_id: orderId
+                                });
                             }
                         }
                     }
@@ -1214,7 +1226,7 @@
                     window.Observability?.completeCheckout();
                     const successParams = new URLSearchParams({ type: 'order' });
                     if (orderReference) successParams.set('order', orderReference);
-                    if (deliveryRequestState !== 'not-requested') successParams.set('delivery', deliveryRequestState);
+                    if (deliveryRequestState) successParams.set('delivery', deliveryRequestState);
                     if (orderInput.p_payment_method === 'bank_transfer') {
                         successParams.set('payment', 'manual');
                         if (/^[0-9a-f-]{36}$/i.test(String(orderId || ''))) {

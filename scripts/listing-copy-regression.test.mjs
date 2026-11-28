@@ -92,10 +92,11 @@ for (const root of storefrontRoots) {
     const css = read(`${root}veeve/pages.css`);
     const product = read(`${root}veeve/product.html`);
     assert.match(css, /\.related-products-section\s*\{[\s\S]*?width:\s*100%;[\s\S]*?min-width:\s*0;/);
-    assert.match(css, /\.related-products-grid\s*\{[\s\S]*?width:\s*100%;[\s\S]*?min-width:\s*0;[\s\S]*?grid-template-columns:\s*repeat\(auto-fit,\s*minmax\(min\(100%,\s*16rem\),\s*1fr\)\)/);
+    assert.match(css, /\.related-products-grid\s*\{[\s\S]*?width:\s*100%;[\s\S]*?min-width:\s*0;[\s\S]*?grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/);
+    assert.match(css, /@media \(max-width:\s*1024px\)[\s\S]*?\.related-products-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/);
     assert.match(css, /\.related-products-grid \.product-card\s*\{[\s\S]*?width:\s*100%;[\s\S]*?min-width:\s*0;/);
-    assert.match(css, /@media \(max-width:\s*480px\)[\s\S]*?\.related-products-grid\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
-    assert.match(product, /href="pages\.css\?v=20261125-1"/);
+    assert.match(css, /@media \(max-width:\s*560px\)[\s\S]*?\.related-products-grid\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+    assert.match(product, /href="pages\.css\?v=20261126-1"/);
 }
 
 assert.match(read('server.js'), /const LOCAL_ASSET_VERSION = '20261125-1'/);

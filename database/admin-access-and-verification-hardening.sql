@@ -146,7 +146,10 @@ BEGIN
       FROM public.profiles AS profile
      WHERE profile.user_id = v_user_id
         OR profile.id = v_user_id
-        OR lower(profile.email) = v_email
+        OR (
+            profile.user_id IS NULL
+            AND lower(profile.email) = v_email
+        )
      ORDER BY (profile.user_id = v_user_id) DESC,
               (profile.id = v_user_id) DESC
      LIMIT 1
@@ -171,10 +174,22 @@ BEGIN
         RAISE EXCEPTION 'A primary administrator is already configured'
             USING ERRCODE = '23505';
     END IF;
+    IF v_current_primary = v_user_id THEN
+        RETURN v_user_id;
+    END IF;
 
     UPDATE public.admin_role_management_config
        SET primary_admin_user_id = v_user_id
      WHERE singleton IS TRUE;
+
+    INSERT INTO public.admin_role_management_audit (
+        actor_user_id, actor_email, target_user_id, target_email,
+        previous_role, new_role, reason
+    )
+    VALUES (
+        NULL, 'trusted SQL operator', v_user_id, v_email,
+        'admin', 'admin', 'Initial primary administrator bootstrap'
+    );
     RETURN v_user_id;
 END;
 $$;
@@ -310,7 +325,10 @@ BEGIN
       FROM public.profiles AS profile
      WHERE profile.user_id = p_target_user_id
         OR profile.id = p_target_user_id
-        OR lower(profile.email) = lower(v_target_email)
+        OR (
+            profile.user_id IS NULL
+            AND lower(profile.email) = lower(v_target_email)
+        )
      ORDER BY (profile.user_id = p_target_user_id) DESC,
               (profile.id = p_target_user_id) DESC
      LIMIT 1

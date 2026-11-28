@@ -85,20 +85,9 @@
         if (!button || button.dataset.shareBound === 'true') return;
         button.dataset.noProcessing = 'true';
         button.classList.add('copy-action');
-        const label = button.querySelector('[data-share-label]');
         const status = document.getElementById('productShareStatus');
-        const originalLabel = label?.textContent || 'Share';
-        let resetTimer;
-
-        const announce = (message, nextLabel) => {
+        const announce = (message) => {
             if (status) status.textContent = message;
-            if (label && nextLabel) {
-                label.textContent = nextLabel;
-                window.clearTimeout(resetTimer);
-                resetTimer = window.setTimeout(() => {
-                    label.textContent = originalLabel;
-                }, 2400);
-            }
         };
 
         button.addEventListener('click', async () => {
@@ -107,10 +96,9 @@
                 const copied = await copyText(url);
                 announce(
                     copied ? 'Product link copied to clipboard.' : 'Could not copy the link. Select and copy the address from your browser.',
-                    copied ? 'Copied' : 'Try again'
                 );
             } catch (_) {
-                announce('Could not share this product. Please copy the address from your browser.', 'Try again');
+                announce('Could not share this product. Please copy the address from your browser.');
             } finally {
                 button.disabled = false;
             }

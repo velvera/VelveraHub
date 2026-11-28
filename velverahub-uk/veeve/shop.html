@@ -135,14 +135,15 @@
                 </div>
             </header>
 
+            <section class="logistics-page logistics-card logistics-card--wide logistics-hidden" id="publicShopLocation" aria-labelledby="publicShopLocationTitle">
+                <h2 id="publicShopLocationTitle">Visit this shop</h2>
+                <p id="publicShopAddress"></p>
+                <div class="logistics-map logistics-map--large" id="publicShopMap" aria-label="Approved physical shop location map"></div>
+                <p class="logistics-map-attribution">Map data © OpenStreetMap contributors.</p>
+                <a class="logistics-directions" id="publicShopDirections" target="_blank" rel="noopener noreferrer">Open directions</a>
+            </section>
+
             <main class="page-main">
-                <section class="logistics-page logistics-card logistics-card--wide logistics-hidden" id="publicShopLocation" aria-labelledby="publicShopLocationTitle">
-                    <h2 id="publicShopLocationTitle">Visit this shop</h2>
-                    <p id="publicShopAddress"></p>
-                    <div class="logistics-map logistics-map--large" id="publicShopMap" aria-label="Approved physical shop location map"></div>
-                    <p class="logistics-map-attribution">Map data © OpenStreetMap contributors.</p>
-                    <a class="logistics-directions" id="publicShopDirections" target="_blank" rel="noopener noreferrer">Open directions</a>
-                </section>
                 <section class="products-page-section">
                     <div class="section-container">
                         <div class="products-header">
@@ -335,6 +336,9 @@
                 }
                 await window.ProductsService?.attachSellerVerificationBadges([{ shops: shop }], supabase);
 
+                window.dispatchEvent(new CustomEvent('velveraShopLoaded', {
+                    detail: { shopId: shop.id, shopName: shop.name }
+                }));
                 const logo = document.createElement('img');
                 const logoUrl = String(shop.logo_url || '').trim();
                 try {
@@ -361,7 +365,6 @@
                 window.RegionService?.syncLocationSelect(locationSelect);
                 window.RegionService?.syncLocationSelect(document.getElementById("headerLocationSelect"));
                 document.title = `${shop.name} - VelveraHub`;
-                window.dispatchEvent(new CustomEvent('velveraShopLoaded', { detail: { shopId: shop.id } }));
             }
 
             function renderShopUnavailable(message) {

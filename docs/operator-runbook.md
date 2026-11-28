@@ -52,6 +52,7 @@ COMMIT;
 The migration does not choose or promote a first administrator. The bootstrap
 function is service-role/operator-only and refuses to replace an existing
 primary administrator or link a profile already owned by another Auth user.
+The initial bootstrap is recorded in the same append-only audit history.
 After this one-time setup, the primary administrator can search for registered
 accounts in the guarded admin workspace and grant or revoke access with a
 reason. Those changes are written to an append-only audit log. The primary
