@@ -5,6 +5,7 @@ import vm from 'node:vm';
 const read = (path) => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const accessService = read('assets/js/services/admin-access.js');
 const adminMigration = read('database/admin-access-and-verification-hardening.sql');
+const primaryHandoverMigration = read('database/admin-primary-handover.sql');
 const adminPromotion = read('database/admin.sql');
 const sellerVerification = read('database/seller-trust-verification.sql');
 const logisticsVerification = read('database/admin-access-and-verification-hardening.sql');
@@ -17,6 +18,9 @@ const roleManagementGuard = adminMigration
 const roleChangeFunction = adminMigration
     .split('CREATE OR REPLACE FUNCTION public.admin_update_user_admin_role(')[1]
     .split('CREATE OR REPLACE FUNCTION public.admin_list_admin_role_changes')[0];
+const primaryHandoverFunction = primaryHandoverMigration
+    .split('CREATE OR REPLACE FUNCTION public.operator_transfer_primary_admin(')[1]
+    .split('REVOKE ALL ON FUNCTION public.operator_transfer_primary_admin')[0];
 
 const accessWindow = {};
 vm.runInNewContext(accessService, { window: accessWindow });
@@ -99,6 +103,22 @@ assert.match(roleChangeFunction, /INSERT INTO public\.admin_role_management_audi
 assert.match(adminMigration, /REVOKE ALL ON FUNCTION public\.bootstrap_primary_admin_access\(TEXT\)[\s\S]*?FROM PUBLIC, anon, authenticated[\s\S]*?GRANT EXECUTE[\s\S]*?TO service_role/i);
 assert.match(adminMigration, /Initial primary administrator bootstrap/);
 assert.match(adminMigration, /REVOKE ALL ON FUNCTION public\.admin_update_user_admin_role\(UUID, BOOLEAN, TEXT\)[\s\S]*?FROM PUBLIC, anon[\s\S]*?GRANT EXECUTE[\s\S]*?TO authenticated/i);
+assert.match(primaryHandoverFunction, /auth\.role\(\)[\s\S]*?service_role/i,
+    'primary-admin handover must be restricted to a trusted operator');
+assert.match(primaryHandoverFunction, /FROM auth\.users[\s\S]*?lower\(auth_user\.email\) = v_email/i,
+    'handover must resolve an already-registered Supabase Auth account');
+assert.match(primaryHandoverFunction, /v_previous_primary_user_id[\s\S]*?profile\.role = 'admin'/i,
+    'handover must preserve a valid existing administrator');
+assert.match(primaryHandoverFunction, /admin_role_assignments[\s\S]*?previous_role/i,
+    'promoting the target must preserve its marketplace role for later revocation');
+assert.match(primaryHandoverFunction, /primary_admin_user_id = v_previous_primary_user_id/i,
+    'handover must update the primary only if the previous primary is still current');
+assert.match(primaryHandoverFunction, /Primary administrator handover/i,
+    'handover must be written to the append-only audit log');
+assert.doesNotMatch(primaryHandoverFunction, /UPDATE\s+auth\.users|password/i,
+    'handover must not change Auth credentials');
+assert.match(primaryHandoverMigration, /REVOKE ALL ON FUNCTION public\.operator_transfer_primary_admin\(TEXT, TEXT\)[\s\S]*?FROM PUBLIC, anon, authenticated[\s\S]*?GRANT EXECUTE[\s\S]*?TO service_role/i);
+assert.match(read('database/run-schema.txt'), /26\. database\/admin-primary-handover\.sql/);
 assert.match(adminPromotion, /GRANT EXECUTE ON FUNCTION public\.assign_admin_role\(text\) TO service_role/i);
 
 assert.match(adminHtml, /id="roleManagementTab"[^>]*data-admin-view="roleManagement"[^>]*hidden/);

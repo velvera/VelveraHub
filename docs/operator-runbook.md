@@ -35,7 +35,7 @@ not available to browser users:
 - `public.assign_seller_role(email)` in `database/seller.sql`
 - `public.assign_admin_role(email)` in `database/admin.sql`
 
-Run a promotion only after the ordered migrations, including migration 25, from
+Run a promotion only after the ordered migrations, including migrations 25–26, from
 a trusted Supabase SQL Editor session. The profile-security trigger deliberately
 ignores role changes without the transaction-local service-role claim. For the
 first administrator, promote the already-registered and explicitly authorized
@@ -49,15 +49,35 @@ SELECT public.bootstrap_primary_admin_access('registered-email@example.com');
 COMMIT;
 ```
 
-The migration does not choose or promote a first administrator. The bootstrap
-function is service-role/operator-only and refuses to replace an existing
-primary administrator or link a profile already owned by another Auth user.
-The initial bootstrap is recorded in the same append-only audit history.
+The bootstrap function is service-role/operator-only and refuses to replace an
+existing primary administrator or link a profile already owned by another Auth
+user. The initial bootstrap is recorded in the append-only audit history.
 After this one-time setup, the primary administrator can search for registered
 accounts in the guarded admin workspace and grant or revoke access with a
 reason. Those changes are written to an append-only audit log. The primary
 account and last administrator are protected from removal. Do not place the
 operator claim, a password, or a service credential in browser code.
+
+For an explicitly authorized primary-admin handover after migration 26, use a
+trusted SQL Editor transaction. This promotes the target if needed, preserves
+the previous administrator's admin role, and records both the role change and
+the primary handover. It does not change the target's Supabase Auth email or
+password:
+
+```sql
+BEGIN;
+SELECT set_config('request.jwt.claim.role', 'service_role', true);
+SELECT public.operator_transfer_primary_admin(
+    'registered-email@example.com',
+    'Reason for the authorized primary administrator handover'
+);
+COMMIT;
+```
+
+The handover function is unavailable to browser roles, rejects unregistered
+emails and conflicting profile links, and serializes against other admin-role
+changes. Confirm the target is the intended registered account before running
+the transaction.
 
 For seller repair, replace the function with
 `public.assign_seller_role('registered-email@example.com')`. The function
